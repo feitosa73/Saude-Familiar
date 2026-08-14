@@ -1,0 +1,6 @@
+{
+  "name": "Saúde Familiar",
+  "description": "Aplicação para organização e centralização privada de informações de saúde de familiares idosos (medicamentos, consultas, exames, documentos e histórico).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
