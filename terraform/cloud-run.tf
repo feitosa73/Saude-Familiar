@@ -24,15 +24,19 @@ resource "google_cloud_run_v2_service" "saude_familiar" {
         }
       }
 
-      startup_probe {
-        initial_delay_seconds = 0
-        timeout_seconds       = 3
-        period_seconds        = 5
-        failure_threshold     = 6
+      dynamic "startup_probe" {
+        for_each = var.enable_startup_probe ? [1] : []
 
-        http_get {
-          path = "/api/health"
-          port = var.container_port
+        content {
+          initial_delay_seconds = 0
+          timeout_seconds       = 3
+          period_seconds        = 5
+          failure_threshold     = 6
+
+          http_get {
+            path = "/api/health"
+            port = var.container_port
+          }
         }
       }
     }
