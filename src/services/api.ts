@@ -15,10 +15,11 @@ import { authService } from './authService';
 const BASE_URL = '/api';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const currentUser = authService.getCurrentUser();
+  const idToken = await authService.getIdToken();
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(currentUser ? { 'x-user-id': currentUser.id } : {}),
+    ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
     ...(options?.headers as Record<string, string>),
   };
 
@@ -29,6 +30,9 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      await authService.logout();
+    }
     throw new Error(errorData.error || `Erro na requisição: ${response.statusText}`);
   }
 
@@ -36,6 +40,9 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Firebase Auth Verified Current User
+  getMe: () => request<{ uid: string; email: string | null; authenticated: boolean }>('/me'),
+
   // Current User & Mock Users
   getCurrentUser: () => request<User & { accesses: PatientAccess[] }>('/user/me'),
   getMockUsers: () => request<(User & { accesses: PatientAccess[] })[]>('/auth/users'),

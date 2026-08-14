@@ -3,32 +3,49 @@ import { IHealthRepository } from '../repositories/IRepository';
 import { MockDataRepository } from '../repositories/MockDataRepository';
 import { TimelineEventType, PatientRole } from '../types';
 import { ServerAuthorizationService } from '../services/authorizationService';
+import { requireAuth, AuthenticatedRequest } from '../middlewares/requireAuth';
 
 export function createApiRouter(repository: IHealthRepository = new MockDataRepository()): Router {
   const router = Router();
   const authzService = new ServerAuthorizationService(repository);
 
-  // Helper for simulated authentication / current user context
-  // When Firebase Authentication is connected, this will verify the Bearer token:
-  // e.g., const decodedToken = await admin.auth().verifyIdToken(token);
-  // and load or create the user in the repository.
-  const getCurrentUser = async (req: Request) => {
-    const requestedUserId = req.headers['x-user-id'] as string;
-    if (requestedUserId) {
-      const user = await repository.getUserById(requestedUserId);
-      if (user) return user;
+  // Protected endpoint verifying Firebase ID Token and returning derived identity
+  router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const authUser = req.user;
+    if (!authUser) {
+      return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
     }
-    // Default to first user (Paulo - ADMIN) for development fallback
-    const users = await repository.getUsers();
-    return users[0] || null;
+
+    res.json({
+      uid: authUser.uid,
+      email: authUser.email || null,
+      authenticated: true,
+    });
+  });
+
+  // Helper for current user context: derives identity exclusively from verified token (req.user)
+  const getCurrentUser = async (req: Request) => {
+    const authUser = (req as AuthenticatedRequest).user;
+    if (!authUser?.uid) {
+      return null;
+    }
+    const user = await repository.getUserById(authUser.uid);
+    if (user) return user;
+    return {
+      id: authUser.uid,
+      name: authUser.email?.split('@')[0] || 'Usuário',
+      email: authUser.email || '',
+      avatarUrl: undefined,
+      patientIds: [],
+    };
   };
 
-  // Auth / Current User
-  router.get('/user/me', async (req: Request, res: Response) => {
+  // Auth / Current User (Protected)
+  router.get('/user/me', requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await getCurrentUser(req);
       if (!user) {
-        return res.status(404).json({ error: 'Usuário não encontrado' });
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
       }
       const accesses = await repository.getPatientAccesses(undefined, user.id);
       res.json({
@@ -41,7 +58,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // List mock users for development persona switching
+  // List mock users for development persona switching (Dev only)
   router.get('/auth/users', async (req: Request, res: Response) => {
     try {
       const users = await repository.getUsers();
@@ -57,7 +74,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Mock Login endpoint
+  // Mock Login endpoint (Dev only - without default user fallback)
   router.post('/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, userId } = req.body;
@@ -71,15 +88,13 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
       }
 
       if (!matchedUser) {
-        // Fallback to first user for dev convenience
-        matchedUser = users[0];
+        return res.status(401).json({ error: 'Credenciais inválidas' });
       }
 
       const accesses = await repository.getPatientAccesses(undefined, matchedUser.id);
       res.json({
         user: matchedUser,
         accesses,
-        token: `mock-jwt-token-${matchedUser.id}`,
       });
     } catch (error) {
       console.error('Error logging in:', error);
@@ -87,8 +102,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Patient Access Management Routes
-  router.get('/patients/:patientId/access', async (req: Request, res: Response) => {
+  // Patient Access Management Routes (Protected)
+  router.get('/patients/:patientId/access', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
@@ -119,7 +134,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/access', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/access', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const { userId, role } = req.body as { userId: string; role: PatientRole };
@@ -150,7 +165,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/patients/:patientId/access/:id', async (req: Request, res: Response) => {
+  router.delete('/patients/:patientId/access/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId, id } = req.params;
       const currentUser = await getCurrentUser(req);
@@ -173,11 +188,13 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Patients
-  router.get('/patients', async (req: Request, res: Response) => {
+  // Patients (Protected)
+  router.get('/patients', requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await getCurrentUser(req);
-      const patients = await repository.getPatients(user?.id);
+      if (!user) return res.status(401).json({ error: 'Não autenticado' });
+
+      const patients = await repository.getPatients(user.id);
       res.json(patients);
     } catch (error) {
       console.error('Error fetching patients:', error);
@@ -185,7 +202,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.get('/patients/:id', async (req: Request, res: Response) => {
+  router.get('/patients/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const patient = await repository.getPatientById(req.params.id);
       if (!patient) {
@@ -198,9 +215,11 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients', async (req: Request, res: Response) => {
+  router.post('/patients', requireAuth, async (req: Request, res: Response) => {
     try {
       const currentUser = await getCurrentUser(req);
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
       const { name, birthDate, bloodType, allergies, emergencyContacts, notes, primaryDoctor, healthInsurance, healthInsuranceNumber } = req.body;
       if (!name || !birthDate) {
         return res.status(400).json({ error: 'Nome e data de nascimento são obrigatórios' });
@@ -217,7 +236,7 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
           healthInsurance: healthInsurance || '',
           healthInsuranceNumber: healthInsuranceNumber || '',
         },
-        currentUser?.id
+        currentUser.id
       );
       res.status(201).json(newPatient);
     } catch (error) {
@@ -226,14 +245,14 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.put('/patients/:id', async (req: Request, res: Response) => {
+  router.put('/patients/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canEdit = await authzService.canEditPatient(currentUser.id, req.params.id);
-        if (!canEdit) {
-          return res.status(403).json({ error: 'Apenas Administradores podem alterar os dados cadastrais do paciente' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canEdit = await authzService.canEditPatient(currentUser.id, req.params.id);
+      if (!canEdit) {
+        return res.status(403).json({ error: 'Apenas Administradores podem alterar os dados cadastrais do paciente' });
       }
 
       const updated = await repository.updatePatient(req.params.id, req.body);
@@ -247,14 +266,14 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/patients/:id', async (req: Request, res: Response) => {
+  router.delete('/patients/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canDelete = await authzService.canDeletePatient(currentUser.id, req.params.id);
-        if (!canDelete) {
-          return res.status(403).json({ error: 'Apenas Administradores podem excluir pacientes' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canDelete = await authzService.canDeletePatient(currentUser.id, req.params.id);
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir pacientes' });
       }
 
       const deleted = await repository.deletePatient(req.params.id);
@@ -268,8 +287,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Consolidated Dashboard for a Patient
-  router.get('/patients/:patientId/dashboard', async (req: Request, res: Response) => {
+  // Consolidated Dashboard for a Patient (Protected)
+  router.get('/patients/:patientId/dashboard', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const patient = await repository.getPatientById(patientId);
@@ -319,8 +338,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Medications
-  router.get('/patients/:patientId/medications', async (req: Request, res: Response) => {
+  // Medications (Protected)
+  router.get('/patients/:patientId/medications', requireAuth, async (req: Request, res: Response) => {
     try {
       const medications = await repository.getMedications(req.params.patientId);
       res.json(medications);
@@ -330,15 +349,15 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/medications', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/medications', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
-        if (!canCreate) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para cadastrar medicamentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
+      if (!canCreate) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para cadastrar medicamentos' });
       }
 
       const { name, dosage, frequency, times, startDate, endDate, prescribingDoctor, notes, active } = req.body;
@@ -364,17 +383,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.put('/medications/:id', async (req: Request, res: Response) => {
+  router.put('/medications/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const med = await repository.getMedicationById(req.params.id);
       if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canEdit = await authzService.canEditRecord(currentUser.id, med.patientId);
-        if (!canEdit) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para editar medicamentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canEdit = await authzService.canEditRecord(currentUser.id, med.patientId);
+      if (!canEdit) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para editar medicamentos' });
       }
 
       const updated = await repository.updateMedication(req.params.id, req.body);
@@ -385,17 +404,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/medications/:id', async (req: Request, res: Response) => {
+  router.delete('/medications/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const med = await repository.getMedicationById(req.params.id);
       if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canDelete = await authzService.canDeleteRecord(currentUser.id, med.patientId);
-        if (!canDelete) {
-          return res.status(403).json({ error: 'Apenas Administradores podem excluir medicamentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canDelete = await authzService.canDeleteRecord(currentUser.id, med.patientId);
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir medicamentos' });
       }
 
       const deleted = await repository.deleteMedication(req.params.id);
@@ -406,8 +425,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Appointments
-  router.get('/patients/:patientId/appointments', async (req: Request, res: Response) => {
+  // Appointments (Protected)
+  router.get('/patients/:patientId/appointments', requireAuth, async (req: Request, res: Response) => {
     try {
       const appointments = await repository.getAppointments(req.params.patientId);
       res.json(appointments);
@@ -417,15 +436,15 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/appointments', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/appointments', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
-        if (!canCreate) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para agendar consultas' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
+      if (!canCreate) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para agendar consultas' });
       }
 
       const { specialty, professional, location, dateTime, reason, notes, status, postConsultationNotes, postConsultationGuidance } = req.body;
@@ -451,17 +470,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.put('/appointments/:id', async (req: Request, res: Response) => {
+  router.put('/appointments/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const appt = await repository.getAppointmentById(req.params.id);
       if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canEdit = await authzService.canEditRecord(currentUser.id, appt.patientId);
-        if (!canEdit) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar consultas' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canEdit = await authzService.canEditRecord(currentUser.id, appt.patientId);
+      if (!canEdit) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar consultas' });
       }
 
       const updated = await repository.updateAppointment(req.params.id, req.body);
@@ -472,17 +491,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/appointments/:id', async (req: Request, res: Response) => {
+  router.delete('/appointments/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const appt = await repository.getAppointmentById(req.params.id);
       if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canDelete = await authzService.canDeleteRecord(currentUser.id, appt.patientId);
-        if (!canDelete) {
-          return res.status(403).json({ error: 'Apenas Administradores podem excluir consultas' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canDelete = await authzService.canDeleteRecord(currentUser.id, appt.patientId);
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir consultas' });
       }
 
       const deleted = await repository.deleteAppointment(req.params.id);
@@ -493,8 +512,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Exams
-  router.get('/patients/:patientId/exams', async (req: Request, res: Response) => {
+  // Exams (Protected)
+  router.get('/patients/:patientId/exams', requireAuth, async (req: Request, res: Response) => {
     try {
       const exams = await repository.getExams(req.params.patientId);
       res.json(exams);
@@ -504,15 +523,15 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/exams', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/exams', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
-        if (!canCreate) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para cadastrar exames' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
+      if (!canCreate) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para cadastrar exames' });
       }
 
       const { name, requestDate, requestingDoctor, executionDate, status, notes, documentId } = req.body;
@@ -536,17 +555,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.put('/exams/:id', async (req: Request, res: Response) => {
+  router.put('/exams/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const exam = await repository.getExamById(req.params.id);
       if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canEdit = await authzService.canEditRecord(currentUser.id, exam.patientId);
-        if (!canEdit) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar exames' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canEdit = await authzService.canEditRecord(currentUser.id, exam.patientId);
+      if (!canEdit) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar exames' });
       }
 
       const updated = await repository.updateExam(req.params.id, req.body);
@@ -557,17 +576,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/exams/:id', async (req: Request, res: Response) => {
+  router.delete('/exams/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const exam = await repository.getExamById(req.params.id);
       if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canDelete = await authzService.canDeleteRecord(currentUser.id, exam.patientId);
-        if (!canDelete) {
-          return res.status(403).json({ error: 'Apenas Administradores podem excluir exames' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canDelete = await authzService.canDeleteRecord(currentUser.id, exam.patientId);
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir exames' });
       }
 
       const deleted = await repository.deleteExam(req.params.id);
@@ -578,8 +597,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Documents
-  router.get('/patients/:patientId/documents', async (req: Request, res: Response) => {
+  // Documents (Protected)
+  router.get('/patients/:patientId/documents', requireAuth, async (req: Request, res: Response) => {
     try {
       const docs = await repository.getDocuments(req.params.patientId);
       res.json(docs);
@@ -589,15 +608,15 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/documents', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/documents', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
-        if (!canCreate) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para anexar documentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
+      if (!canCreate) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para anexar documentos' });
       }
 
       const { title, category, fileUrl, fileName, fileType, fileSize, date, doctor, notes, relatedExamId } = req.body;
@@ -624,17 +643,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.put('/documents/:id', async (req: Request, res: Response) => {
+  router.put('/documents/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const doc = await repository.getDocumentById(req.params.id);
       if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canEdit = await authzService.canEditRecord(currentUser.id, doc.patientId);
-        if (!canEdit) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar documentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canEdit = await authzService.canEditRecord(currentUser.id, doc.patientId);
+      if (!canEdit) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para alterar documentos' });
       }
 
       const updated = await repository.updateDocument(req.params.id, req.body);
@@ -645,17 +664,17 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/documents/:id', async (req: Request, res: Response) => {
+  router.delete('/documents/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const doc = await repository.getDocumentById(req.params.id);
       if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canDelete = await authzService.canDeleteRecord(currentUser.id, doc.patientId);
-        if (!canDelete) {
-          return res.status(403).json({ error: 'Apenas Administradores podem excluir documentos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canDelete = await authzService.canDeleteRecord(currentUser.id, doc.patientId);
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir documentos' });
       }
 
       const deleted = await repository.deleteDocument(req.params.id);
@@ -666,8 +685,8 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // Timeline
-  router.get('/patients/:patientId/timeline', async (req: Request, res: Response) => {
+  // Timeline (Protected)
+  router.get('/patients/:patientId/timeline', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const { category, type, startDate, endDate } = req.query as {
@@ -689,15 +708,15 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.post('/patients/:patientId/timeline', async (req: Request, res: Response) => {
+  router.post('/patients/:patientId/timeline', requireAuth, async (req: Request, res: Response) => {
     try {
       const { patientId } = req.params;
       const currentUser = await getCurrentUser(req);
-      if (currentUser) {
-        const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
-        if (!canCreate) {
-          return res.status(403).json({ error: 'Visualizadores não possuem permissão para registrar eventos' });
-        }
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
+      const canCreate = await authzService.canCreateRecord(currentUser.id, patientId);
+      if (!canCreate) {
+        return res.status(403).json({ error: 'Visualizadores não possuem permissão para registrar eventos' });
       }
 
       const { type, title, description, date, category, doctor, important } = req.body;
@@ -721,10 +740,11 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  router.delete('/timeline/:id', async (req: Request, res: Response) => {
+  router.delete('/timeline/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const currentUser = await getCurrentUser(req);
-      // Timeline deletion is an admin action
+      if (!currentUser) return res.status(401).json({ error: 'Não autenticado' });
+
       const deleted = await repository.deleteTimelineEvent(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: 'Evento não encontrado' });

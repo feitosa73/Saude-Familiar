@@ -1,4 +1,13 @@
 import { User, PatientAccess } from '../types';
+import {
+  auth,
+  googleProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged as onFirebaseAuthStateChanged,
+  isFirebaseConfigured,
+  FirebaseUser,
+} from '../lib/firebase';
 
 export interface AuthCredentials {
   email?: string;
@@ -9,6 +18,7 @@ export interface AuthCredentials {
 
 export interface IAuthService {
   getCurrentUser(): User | null;
+  getIdToken(forceRefresh?: boolean): Promise<string | null>;
   login(credentials?: AuthCredentials): Promise<User>;
   logout(): Promise<void>;
   isAuthenticated(): boolean;
@@ -91,20 +101,15 @@ const AUTH_STORAGE_KEY = 'saude_familiar_auth_user';
 const ACCESS_STORAGE_KEY = 'saude_familiar_patient_accesses';
 
 /**
- * Authentication Service (Prepared for Firebase Authentication)
- *
- * Currently operates in development mock mode using client & server simulation.
- * To connect to real Firebase Auth in the future:
- * 1. Define VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, etc. in .env
- * 2. Initialize firebase/auth (signInWithPopup with GoogleAuthProvider or signInWithEmailAndPassword)
- * 3. Pass user credential token to API requests via Authorization: Bearer <token>
+ * Authentication Service (Integrated with Firebase Authentication)
  */
 class AuthServiceImplementation implements IAuthService {
   private currentUser: User | null = null;
+  private currentFirebaseUser: FirebaseUser | null = null;
   private listeners: ((user: User | null) => void)[] = [];
 
   constructor() {
-    // Restore session from localStorage if present
+    // Restore cached session for UI state if present
     const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
     if (savedUser) {
       try {
@@ -114,10 +119,46 @@ class AuthServiceImplementation implements IAuthService {
         this.currentUser = null;
       }
     }
+
+    // Subscribe to Firebase Auth state if configured
+    if (auth && isFirebaseConfigured) {
+      onFirebaseAuthStateChanged(auth, async (fbUser) => {
+        this.currentFirebaseUser = fbUser;
+        if (fbUser) {
+          const user: User = {
+            id: fbUser.uid,
+            name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário',
+            email: fbUser.email || '',
+            avatarUrl: fbUser.photoURL || undefined,
+            patientIds: ['pat-1'],
+          };
+          this.currentUser = user;
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        } else if (!this.currentUser) {
+          this.currentUser = null;
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+        this.notifyListeners();
+      });
+    }
   }
 
   getCurrentUser(): User | null {
     return this.currentUser;
+  }
+
+  async getIdToken(forceRefresh = false): Promise<string | null> {
+    if (this.currentFirebaseUser) {
+      try {
+        const token = await this.currentFirebaseUser.getIdToken(forceRefresh);
+        if (token) {
+          return token;
+        }
+      } catch (error) {
+        console.error('[Auth] Erro ao obter Firebase ID Token:', error);
+      }
+    }
+    return null;
   }
 
   isAuthenticated(): boolean {
@@ -129,8 +170,35 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async login(credentials?: AuthCredentials): Promise<User> {
-    // Simulate network latency for authentic feel
-    await new Promise((res) => setTimeout(res, 350));
+    // Google Sign-In with Firebase Auth
+    if (credentials?.provider === 'google') {
+      if (auth && isFirebaseConfigured) {
+        try {
+          const result = await signInWithPopup(auth, googleProvider);
+          const fbUser = result.user;
+          this.currentFirebaseUser = fbUser;
+          const user: User = {
+            id: fbUser.uid,
+            name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário Google',
+            email: fbUser.email || '',
+            avatarUrl: fbUser.photoURL || undefined,
+            patientIds: ['pat-1'],
+          };
+          this.currentUser = user;
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+          this.notifyListeners();
+          return user;
+        } catch (error: any) {
+          console.error('[Auth] Erro no Google Sign-In via Firebase:', error);
+          throw new Error(error.message || 'Falha ao autenticar com Google');
+        }
+      } else {
+        throw new Error('Firebase Authentication não está configurado neste ambiente.');
+      }
+    }
+
+    // Persona selection for UI inspection
+    await new Promise((res) => setTimeout(res, 250));
 
     let user: User | undefined;
 
@@ -139,17 +207,13 @@ class AuthServiceImplementation implements IAuthService {
     } else if (credentials?.email) {
       user = MOCK_USERS.find((u) => u.email.toLowerCase() === credentials.email!.toLowerCase());
       if (!user) {
-        // Create an ad-hoc demo user or map to first
         user = {
-          id: `usr-custom-${Date.now()}`,
+          id: `usr-${Date.now()}`,
           name: credentials.email.split('@')[0],
           email: credentials.email,
           patientIds: ['pat-1'],
         };
       }
-    } else if (credentials?.provider === 'google') {
-      // Default to Paulo (Admin) for standard Google sign-in demo
-      user = MOCK_USERS[0];
     } else {
       user = MOCK_USERS[0];
     }
@@ -161,7 +225,14 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async logout(): Promise<void> {
-    await new Promise((res) => setTimeout(res, 150));
+    if (auth && isFirebaseConfigured) {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.error('[Auth] Erro ao deslogar do Firebase:', e);
+      }
+    }
+    this.currentFirebaseUser = null;
     this.currentUser = null;
     localStorage.removeItem(AUTH_STORAGE_KEY);
     this.notifyListeners();
@@ -172,6 +243,7 @@ class AuthServiceImplementation implements IAuthService {
     if (!user) {
       throw new Error(`Usuário mock ${userId} não encontrado`);
     }
+    this.currentFirebaseUser = null;
     this.currentUser = user;
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentUser));
     this.notifyListeners();
@@ -193,7 +265,6 @@ class AuthServiceImplementation implements IAuthService {
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
     this.listeners.push(callback);
-    // Trigger immediately with current state
     callback(this.currentUser);
     return () => {
       this.listeners = this.listeners.filter((l) => l !== callback);

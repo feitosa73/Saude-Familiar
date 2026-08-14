@@ -531,7 +531,7 @@ export class MockDataRepository implements IHealthRepository {
     };
     this.patients.push(newPatient);
 
-    const creatorId = createdByUserId || this.users[0]?.id || 'usr-admin';
+    const creatorId = createdByUserId || 'system';
 
     // Auto grant ADMIN access to creator
     this.patientAccesses.push({
