@@ -24,7 +24,6 @@ export interface IAuthService {
   isAuthenticated(): boolean;
   onAuthStateChanged(callback: (user: User | null) => void): () => void;
   getMockUsers(): User[];
-  switchMockUser(userId: string): Promise<User>;
   getUserAccesses(userId: string): Promise<PatientAccess[]>;
 }
 
@@ -109,17 +108,6 @@ class AuthServiceImplementation implements IAuthService {
   private listeners: ((user: User | null) => void)[] = [];
 
   constructor() {
-    // Restore cached session for UI state if present
-    const savedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (savedUser) {
-      try {
-        this.currentUser = JSON.parse(savedUser);
-      } catch (e) {
-        console.error('Failed to parse cached auth user', e);
-        this.currentUser = null;
-      }
-    }
-
     // Subscribe to Firebase Auth state if configured
     if (auth && isFirebaseConfigured) {
       onFirebaseAuthStateChanged(auth, async (fbUser) => {
@@ -134,8 +122,9 @@ class AuthServiceImplementation implements IAuthService {
           };
           this.currentUser = user;
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-        } else if (!this.currentUser) {
+        } else {
           this.currentUser = null;
+          this.currentFirebaseUser = null;
           localStorage.removeItem(AUTH_STORAGE_KEY);
         }
         this.notifyListeners();
@@ -162,7 +151,7 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser !== null;
+    return this.currentFirebaseUser !== null && this.currentUser !== null;
   }
 
   getMockUsers(): User[] {
@@ -190,6 +179,12 @@ class AuthServiceImplementation implements IAuthService {
           return user;
         } catch (error: any) {
           console.error('[Auth] Erro no Google Sign-In via Firebase:', error);
+          if (error.code === 'auth/unauthorized-domain') {
+            const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+            throw new Error(
+              `Domínio não autorizado no Firebase Auth (${currentHost}). Adicione este domínio em: Console Firebase > Authentication > Settings > Authorized domains.`
+            );
+          }
           throw new Error(error.message || 'Falha ao autenticar com Google');
         }
       } else {
@@ -197,31 +192,7 @@ class AuthServiceImplementation implements IAuthService {
       }
     }
 
-    // Persona selection for UI inspection
-    await new Promise((res) => setTimeout(res, 250));
-
-    let user: User | undefined;
-
-    if (credentials?.userId) {
-      user = MOCK_USERS.find((u) => u.id === credentials.userId);
-    } else if (credentials?.email) {
-      user = MOCK_USERS.find((u) => u.email.toLowerCase() === credentials.email!.toLowerCase());
-      if (!user) {
-        user = {
-          id: `usr-${Date.now()}`,
-          name: credentials.email.split('@')[0],
-          email: credentials.email,
-          patientIds: ['pat-1'],
-        };
-      }
-    } else {
-      user = MOCK_USERS[0];
-    }
-
-    this.currentUser = user || MOCK_USERS[0];
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentUser));
-    this.notifyListeners();
-    return this.currentUser;
+    throw new Error('Autenticação via Firebase Authentication (Google Sign-In) obrigatória.');
   }
 
   async logout(): Promise<void> {
@@ -236,18 +207,6 @@ class AuthServiceImplementation implements IAuthService {
     this.currentUser = null;
     localStorage.removeItem(AUTH_STORAGE_KEY);
     this.notifyListeners();
-  }
-
-  async switchMockUser(userId: string): Promise<User> {
-    const user = MOCK_USERS.find((u) => u.id === userId);
-    if (!user) {
-      throw new Error(`Usuário mock ${userId} não encontrado`);
-    }
-    this.currentFirebaseUser = null;
-    this.currentUser = user;
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentUser));
-    this.notifyListeners();
-    return this.currentUser;
   }
 
   async getUserAccesses(userId: string): Promise<PatientAccess[]> {

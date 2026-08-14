@@ -58,50 +58,6 @@ export function createApiRouter(repository: IHealthRepository = new MockDataRepo
     }
   });
 
-  // List mock users for development persona switching (Dev only)
-  router.get('/auth/users', async (req: Request, res: Response) => {
-    try {
-      const users = await repository.getUsers();
-      const accesses = await repository.getPatientAccesses();
-      const usersWithAccess = users.map((u) => ({
-        ...u,
-        accesses: accesses.filter((a) => a.userId === u.id),
-      }));
-      res.json(usersWithAccess);
-    } catch (error) {
-      console.error('Error fetching mock users:', error);
-      res.status(500).json({ error: 'Erro ao listar usuários' });
-    }
-  });
-
-  // Mock Login endpoint (Dev only - without default user fallback)
-  router.post('/auth/login', async (req: Request, res: Response) => {
-    try {
-      const { email, userId } = req.body;
-      const users = await repository.getUsers();
-      let matchedUser = null;
-
-      if (userId) {
-        matchedUser = users.find((u) => u.id === userId);
-      } else if (email) {
-        matchedUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      }
-
-      if (!matchedUser) {
-        return res.status(401).json({ error: 'Credenciais inválidas' });
-      }
-
-      const accesses = await repository.getPatientAccesses(undefined, matchedUser.id);
-      res.json({
-        user: matchedUser,
-        accesses,
-      });
-    } catch (error) {
-      console.error('Error logging in:', error);
-      res.status(500).json({ error: 'Erro ao realizar login' });
-    }
-  });
-
   // Patient Access Management Routes (Protected)
   router.get('/patients/:patientId/access', requireAuth, async (req: Request, res: Response) => {
     try {

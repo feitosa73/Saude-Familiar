@@ -43,9 +43,8 @@ export const api = {
   // Firebase Auth Verified Current User
   getMe: () => request<{ uid: string; email: string | null; authenticated: boolean }>('/me'),
 
-  // Current User & Mock Users
+  // Current User
   getCurrentUser: () => request<User & { accesses: PatientAccess[] }>('/user/me'),
-  getMockUsers: () => request<(User & { accesses: PatientAccess[] })[]>('/auth/users'),
 
   // Patient Access
   getPatientAccesses: (patientId: string) =>

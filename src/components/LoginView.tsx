@@ -7,7 +7,6 @@ export const LoginView: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState<string>('usr-admin');
   const [authError, setAuthError] = useState<string | null>(null);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -30,15 +29,6 @@ export const LoginView: React.FC = () => {
       await login({ provider: 'google' });
     } catch (err: any) {
       setAuthError(err.message || 'Erro ao conectar com Google.');
-    }
-  };
-
-  const handleQuickPersonaLogin = async (userId: string) => {
-    setAuthError(null);
-    try {
-      await login({ userId });
-    } catch (err: any) {
-      setAuthError(err.message || 'Erro ao entrar com perfil de teste.');
     }
   };
 
@@ -177,14 +167,14 @@ export const LoginView: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Mock Persona Switcher (Development Testing Tool) */}
+          {/* Persona Roles Overview */}
           <div className="pt-3 border-t border-slate-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                 <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                Perfis de Teste (Cenários Mock)
+                Papéis e Permissões do Sistema
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">Modo Dev</span>
+              <span className="text-[10px] text-slate-400 font-medium">RBAC</span>
             </div>
 
             <div className="space-y-1.5">
@@ -192,18 +182,16 @@ export const LoginView: React.FC = () => {
                 const isPaulo = u.id === 'usr-admin';
                 const isMariana = u.id === 'usr-caregiver';
                 const roleBadge = isPaulo
-                  ? { label: 'ADMIN', desc: 'Acesso total e gestão de acessos', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+                  ? { label: 'ADMIN', desc: 'Acesso total e gestão de acessos familiares', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
                   : isMariana
-                  ? { label: 'CAREGIVER', desc: 'Cuidados, meds e agenda (sem excluir)', color: 'bg-blue-50 text-blue-800 border-blue-200' }
-                  : { label: 'VIEWER', desc: 'Apenas visualização e relatórios', color: 'bg-slate-100 text-slate-700 border-slate-300' };
+                  ? { label: 'CAREGIVER', desc: 'Cuidados, medicações e consultas', color: 'bg-blue-50 text-blue-800 border-blue-200' }
+                  : { label: 'VIEWER', desc: 'Apenas visualização de prontuário e relatórios', color: 'bg-slate-100 text-slate-700 border-slate-300' };
 
                 return (
-                  <button
+                  <div
                     key={u.id}
-                    id={`persona-login-${u.id}`}
-                    type="button"
-                    onClick={() => handleQuickPersonaLogin(u.id)}
-                    className="w-full text-left p-2.5 rounded-lg border border-slate-200 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/50 transition-all flex items-center justify-between gap-2 group"
+                    id={`persona-info-${u.id}`}
+                    className="w-full text-left p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between gap-2"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
@@ -219,10 +207,7 @@ export const LoginView: React.FC = () => {
                         <div className="text-[10px] text-slate-500 truncate">{roleBadge.desc}</div>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0">
-                      Entrar →
-                    </span>
-                  </button>
+                  </div>
                 );
               })}
             </div>

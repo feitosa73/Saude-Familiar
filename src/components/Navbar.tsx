@@ -26,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
     setSelectedPatientId,
     setOpenPatientProfile,
   } = usePatient();
-  const { user, logout, switchMockUser, mockUsers, getPermissionsForPatient } = useAuth();
+  const { user, logout, getPermissionsForPatient } = useAuth();
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -306,67 +306,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                       </div>
                     </div>
 
-                    {/* Quick Mock Persona Switcher */}
-                    <div className="px-2">
-                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <UserCheck className="w-3 h-3 text-blue-600" />
-                        Alternar Usuário Mock (Dev)
-                      </div>
-                      <div className="space-y-1 mt-1">
-                        {mockUsers.map((mUser) => {
-                          const isCurrent = mUser.id === user?.id;
-                          const userRole = selectedPatient
-                            ? authorizationService.getUserRole(mUser.id, selectedPatient.id, [
-                                { id: '1', userId: 'usr-admin', patientId: selectedPatient.id, role: 'ADMIN', createdAt: '', createdBy: '' },
-                                { id: '2', userId: 'usr-caregiver', patientId: selectedPatient.id, role: selectedPatient.id === 'pat-1' ? 'CAREGIVER' : 'VIEWER', createdAt: '', createdBy: '' },
-                                { id: '3', userId: 'usr-viewer', patientId: selectedPatient.id, role: 'VIEWER', createdAt: '', createdBy: '' },
-                              ])
-                            : null;
-
-                          return (
-                            <button
-                              key={mUser.id}
-                              id={`switch-user-${mUser.id}`}
-                              onClick={() => {
-                                switchMockUser(mUser.id);
-                                setUserMenuOpen(false);
-                              }}
-                              className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors ${
-                                isCurrent
-                                  ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
-                                  : 'text-slate-700 hover:bg-slate-50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
-                                  {mUser.name.charAt(0)}
-                                </div>
-                                <span>{mUser.name.split(' ')[0]}</span>
-                                {userRole && (
-                                  <span className="text-[10px] text-slate-400 font-normal">
-                                    ({authorizationService.getRoleLabel(userRole)})
-                                  </span>
-                                )}
-                              </div>
-                              {isCurrent && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
                     {/* Logout Option */}
-                    <div className="border-t border-slate-100 pt-1 px-2">
+                    <div className="pt-1 px-2 border-t border-slate-100">
                       <button
                         id="logout-btn"
                         onClick={() => {
                           setUserMenuOpen(false);
                           logout();
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                        className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
                       >
-                        <LogOut className="w-4 h-4 text-rose-600" />
-                        Sair da Conta
+                        <LogOut className="w-4 h-4" />
+                        <span>Sair da conta</span>
                       </button>
                     </div>
                   </div>

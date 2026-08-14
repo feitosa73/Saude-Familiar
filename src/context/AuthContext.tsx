@@ -11,7 +11,6 @@ interface AuthContextType {
   mockUsers: User[];
   login: (credentials?: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
-  switchMockUser: (userId: string) => Promise<void>;
   getUserRoleForPatient: (patientId: string) => PatientRole | null;
   getPermissionsForPatient: (patientId: string) => PatientPermissions;
   refreshAccesses: () => Promise<void>;
@@ -78,17 +77,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const switchMockUser = async (userId: string) => {
-    setIsLoading(true);
-    try {
-      const switchedUser = await authService.switchMockUser(userId);
-      setUser(switchedUser);
-      await fetchAccesses(switchedUser.id);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const getUserRoleForPatient = useCallback(
     (patientId: string): PatientRole | null => {
       if (!user) return null;
@@ -133,7 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mockUsers: MOCK_USERS,
         login,
         logout,
-        switchMockUser,
         getUserRoleForPatient,
         getPermissionsForPatient,
         refreshAccesses,
