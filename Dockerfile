@@ -24,7 +24,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
 # Instala apenas dependências de produção necessárias
 COPY package.json package-lock.json* ./
@@ -36,7 +36,7 @@ COPY --from=builder /app/dist ./dist
 # Usuário sem privilégios de root para segurança em Cloud Run
 USER node
 
-EXPOSE 3000
+EXPOSE 8080
 
 # Executa o servidor Node Express que serve os endpoints /api e a SPA compilada
 CMD ["node", "dist/server.cjs"]
