@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { IHealthRepository } from '../repositories/IRepository';
-import { MockDataRepository } from '../repositories/MockDataRepository';
+import { FirestoreHealthRepository } from '../repositories/FirestoreHealthRepository';
 import { IFamilyRepository } from '../repositories/IFamilyRepository';
 import { FirestoreFamilyRepository } from '../repositories/FirestoreFamilyRepository';
 import { TimelineEventType, PatientRole, UserMeResponse } from '../types';
@@ -13,7 +13,7 @@ import {
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 
 export function createApiRouter(
-  repository: IHealthRepository = new MockDataRepository(),
+  repository: IHealthRepository = new FirestoreHealthRepository(),
   familyRepository: IFamilyRepository = new FirestoreFamilyRepository()
 ): Router {
   const router = Router();
@@ -144,16 +144,17 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canView = await authzService.canViewPatient(userId, patientId);
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
         if (!canView && req.membership?.role !== 'owner') {
           return res.status(403).json({ error: 'Acesso negado para este paciente' });
         }
 
-        const accesses = await repository.getPatientAccesses(patientId);
-        const allUsers = await repository.getUsers();
+        const accesses = await repository.getPatientAccesses(patientId, undefined, familyId);
+        const allUsers = await repository.getUsers(familyId);
 
         const accessWithUserDetails = accesses.map((acc) => {
           const u = allUsers.find((user) => user.id === acc.userId);
@@ -179,12 +180,13 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const { userId, role } = req.body as { userId: string; role: PatientRole };
         const currentUserId = getCurrentUserId(req);
 
         // Only ADMIN on patient or Family OWNER can manage access
-        const canManage = await authzService.canManageAccess(currentUserId, patientId);
+        const canManage = await authzService.canManageAccess(currentUserId, patientId, familyId);
         if (!canManage && req.membership?.role !== 'owner') {
           return res.status(403).json({ error: 'Apenas Administradores podem gerenciar acessos' });
         }
@@ -193,12 +195,15 @@ export function createApiRouter(
           return res.status(400).json({ error: 'userId e role são obrigatórios' });
         }
 
-        const newAccess = await repository.createPatientAccess({
-          patientId,
-          userId,
-          role,
-          createdBy: currentUserId,
-        });
+        const newAccess = await repository.createPatientAccess(
+          {
+            patientId,
+            userId,
+            role,
+            createdBy: currentUserId,
+          },
+          familyId
+        );
 
         res.status(201).json(newAccess);
       } catch (error) {
@@ -214,15 +219,16 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId, id } = req.params;
         const currentUserId = getCurrentUserId(req);
 
-        const canManage = await authzService.canManageAccess(currentUserId, patientId);
+        const canManage = await authzService.canManageAccess(currentUserId, patientId, familyId);
         if (!canManage && req.membership?.role !== 'owner') {
           return res.status(403).json({ error: 'Apenas Administradores podem remover acessos' });
         }
 
-        const deleted = await repository.deletePatientAccess(id);
+        const deleted = await repository.deletePatientAccess(id, familyId, patientId);
         if (!deleted) {
           return res.status(404).json({ error: 'Registro de acesso não encontrado' });
         }
@@ -242,10 +248,12 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const userId = getCurrentUserId(req);
         // Owner sees all family patients; members see accessible patients
         const patients = await repository.getPatients(
-          req.membership?.role === 'owner' ? undefined : userId
+          req.membership?.role === 'owner' ? undefined : userId,
+          familyId
         );
         res.json(patients);
       } catch (error) {
@@ -261,7 +269,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const patient = await repository.getPatientById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const patient = await repository.getPatientById(req.params.id, familyId);
         if (!patient) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
@@ -279,6 +288,7 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const userId = getCurrentUserId(req);
         const {
           name,
@@ -308,7 +318,8 @@ export function createApiRouter(
             healthInsurance: healthInsurance || '',
             healthInsuranceNumber: healthInsuranceNumber || '',
           },
-          userId
+          userId,
+          familyId
         );
         res.status(201).json(newPatient);
       } catch (error) {
@@ -324,15 +335,16 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditPatient(userId, req.params.id);
+        const canEdit = await authzService.canEditPatient(userId, req.params.id, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem alterar os dados cadastrais do paciente',
           });
         }
 
-        const updated = await repository.updatePatient(req.params.id, req.body);
+        const updated = await repository.updatePatient(req.params.id, req.body, familyId);
         if (!updated) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
@@ -351,7 +363,8 @@ export function createApiRouter(
     requireFamilyOwner, // Administrative operation restricted to Owner
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const deleted = await repository.deletePatient(req.params.id);
+        const familyId = req.membership!.familyId;
+        const deleted = await repository.deletePatient(req.params.id, familyId);
         if (!deleted) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
@@ -370,18 +383,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
-        const patient = await repository.getPatientById(patientId);
+        const patient = await repository.getPatientById(patientId, familyId);
         if (!patient) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
 
         const [medications, appointments, exams, documents, timeline] = await Promise.all([
-          repository.getMedications(patientId),
-          repository.getAppointments(patientId),
-          repository.getExams(patientId),
-          repository.getDocuments(patientId),
-          repository.getTimelineEvents(patientId),
+          repository.getMedications(patientId, familyId),
+          repository.getAppointments(patientId, familyId),
+          repository.getExams(patientId, familyId),
+          repository.getDocuments(patientId, familyId),
+          repository.getTimelineEvents(patientId, undefined, familyId),
         ]);
 
         const activeMedications = medications.filter((m) => m.active);
@@ -426,7 +440,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const medications = await repository.getMedications(req.params.patientId);
+        const familyId = req.membership!.familyId;
+        const medications = await repository.getMedications(req.params.patientId, familyId);
         res.json(medications);
       } catch (error) {
         console.error('Error fetching medications:', error);
@@ -441,10 +456,11 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId);
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para cadastrar medicamentos',
@@ -465,18 +481,21 @@ export function createApiRouter(
         if (!name || !dosage || !frequency) {
           return res.status(400).json({ error: 'Nome, dosagem e frequência são obrigatórios' });
         }
-        const newMed = await repository.createMedication({
-          patientId,
-          name,
-          dosage,
-          frequency,
-          times: Array.isArray(times) ? times : ['08:00'],
-          startDate: startDate || new Date().toISOString().split('T')[0],
-          endDate,
-          prescribingDoctor,
-          notes,
-          active: active !== undefined ? Boolean(active) : true,
-        });
+        const newMed = await repository.createMedication(
+          {
+            patientId,
+            name,
+            dosage,
+            frequency,
+            times: Array.isArray(times) ? times : ['08:00'],
+            startDate: startDate || new Date().toISOString().split('T')[0],
+            endDate,
+            prescribingDoctor,
+            notes,
+            active: active !== undefined ? Boolean(active) : true,
+          },
+          familyId
+        );
         res.status(201).json(newMed);
       } catch (error) {
         console.error('Error creating medication:', error);
@@ -491,18 +510,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const med = await repository.getMedicationById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const med = await repository.getMedicationById(req.params.id, familyId);
         if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditRecord(userId, med.patientId);
+        const canEdit = await authzService.canEditRecord(userId, med.patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para editar medicamentos',
           });
         }
 
-        const updated = await repository.updateMedication(req.params.id, req.body);
+        const updated = await repository.updateMedication(req.params.id, req.body, familyId, med.patientId);
         res.json(updated);
       } catch (error) {
         console.error('Error updating medication:', error);
@@ -517,18 +537,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const med = await repository.getMedicationById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const med = await repository.getMedicationById(req.params.id, familyId);
         if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canDelete = await authzService.canDeleteRecord(userId, med.patientId);
+        const canDelete = await authzService.canDeleteRecord(userId, med.patientId, familyId);
         if (!canDelete && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem excluir medicamentos',
           });
         }
 
-        await repository.deleteMedication(req.params.id);
+        await repository.deleteMedication(req.params.id, familyId, med.patientId);
         res.json({ success: true });
       } catch (error) {
         console.error('Error deleting medication:', error);
@@ -544,7 +565,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const appointments = await repository.getAppointments(req.params.patientId);
+        const familyId = req.membership!.familyId;
+        const appointments = await repository.getAppointments(req.params.patientId, familyId);
         res.json(appointments);
       } catch (error) {
         console.error('Error fetching appointments:', error);
@@ -559,10 +581,11 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId);
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para agendar consultas',
@@ -583,18 +606,21 @@ export function createApiRouter(
         if (!specialty || !dateTime) {
           return res.status(400).json({ error: 'Especialidade e data/hora são obrigatórios' });
         }
-        const newAppt = await repository.createAppointment({
-          patientId,
-          specialty,
-          professional: professional || 'Profissional de Saúde',
-          location: location || 'Consultório / Clínica',
-          dateTime,
-          reason: reason || 'Acompanhamento de rotina',
-          notes,
-          status: status || 'agendada',
-          postConsultationNotes,
-          postConsultationGuidance,
-        });
+        const newAppt = await repository.createAppointment(
+          {
+            patientId,
+            specialty,
+            professional: professional || 'Profissional de Saúde',
+            location: location || 'Consultório / Clínica',
+            dateTime,
+            reason: reason || 'Acompanhamento de rotina',
+            notes,
+            status: status || 'agendada',
+            postConsultationNotes,
+            postConsultationGuidance,
+          },
+          familyId
+        );
         res.status(201).json(newAppt);
       } catch (error) {
         console.error('Error creating appointment:', error);
@@ -609,18 +635,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const appt = await repository.getAppointmentById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const appt = await repository.getAppointmentById(req.params.id, familyId);
         if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditRecord(userId, appt.patientId);
+        const canEdit = await authzService.canEditRecord(userId, appt.patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para alterar consultas',
           });
         }
 
-        const updated = await repository.updateAppointment(req.params.id, req.body);
+        const updated = await repository.updateAppointment(req.params.id, req.body, familyId, appt.patientId);
         res.json(updated);
       } catch (error) {
         console.error('Error updating appointment:', error);
@@ -635,18 +662,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const appt = await repository.getAppointmentById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const appt = await repository.getAppointmentById(req.params.id, familyId);
         if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
         const userId = getCurrentUserId(req);
-        const canDelete = await authzService.canDeleteRecord(userId, appt.patientId);
+        const canDelete = await authzService.canDeleteRecord(userId, appt.patientId, familyId);
         if (!canDelete && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem excluir consultas',
           });
         }
 
-        await repository.deleteAppointment(req.params.id);
+        await repository.deleteAppointment(req.params.id, familyId, appt.patientId);
         res.json({ success: true });
       } catch (error) {
         console.error('Error deleting appointment:', error);
@@ -662,7 +690,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const exams = await repository.getExams(req.params.patientId);
+        const familyId = req.membership!.familyId;
+        const exams = await repository.getExams(req.params.patientId, familyId);
         res.json(exams);
       } catch (error) {
         console.error('Error fetching exams:', error);
@@ -677,10 +706,11 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId);
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para cadastrar exames',
@@ -692,16 +722,19 @@ export function createApiRouter(
         if (!name) {
           return res.status(400).json({ error: 'Nome do exame é obrigatório' });
         }
-        const newExam = await repository.createExam({
-          patientId,
-          name,
-          requestDate: requestDate || new Date().toISOString().split('T')[0],
-          requestingDoctor: requestingDoctor || 'Médico Assistente',
-          executionDate,
-          status: status || 'solicitado',
-          notes,
-          documentId,
-        });
+        const newExam = await repository.createExam(
+          {
+            patientId,
+            name,
+            requestDate: requestDate || new Date().toISOString().split('T')[0],
+            requestingDoctor: requestingDoctor || 'Médico Assistente',
+            executionDate,
+            status: status || 'solicitado',
+            notes,
+            documentId,
+          },
+          familyId
+        );
         res.status(201).json(newExam);
       } catch (error) {
         console.error('Error creating exam:', error);
@@ -716,18 +749,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const exam = await repository.getExamById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const exam = await repository.getExamById(req.params.id, familyId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditRecord(userId, exam.patientId);
+        const canEdit = await authzService.canEditRecord(userId, exam.patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para alterar exames',
           });
         }
 
-        const updated = await repository.updateExam(req.params.id, req.body);
+        const updated = await repository.updateExam(req.params.id, req.body, familyId, exam.patientId);
         res.json(updated);
       } catch (error) {
         console.error('Error updating exam:', error);
@@ -742,18 +776,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const exam = await repository.getExamById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const exam = await repository.getExamById(req.params.id, familyId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canDelete = await authzService.canDeleteRecord(userId, exam.patientId);
+        const canDelete = await authzService.canDeleteRecord(userId, exam.patientId, familyId);
         if (!canDelete && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem excluir exames',
           });
         }
 
-        await repository.deleteExam(req.params.id);
+        await repository.deleteExam(req.params.id, familyId, exam.patientId);
         res.json({ success: true });
       } catch (error) {
         console.error('Error deleting exam:', error);
@@ -769,7 +804,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const docs = await repository.getDocuments(req.params.patientId);
+        const familyId = req.membership!.familyId;
+        const docs = await repository.getDocuments(req.params.patientId, familyId);
         res.json(docs);
       } catch (error) {
         console.error('Error fetching documents:', error);
@@ -784,10 +820,11 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId);
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para anexar documentos',
@@ -809,19 +846,22 @@ export function createApiRouter(
         if (!title || !category) {
           return res.status(400).json({ error: 'Título e categoria são obrigatórios' });
         }
-        const newDoc = await repository.createDocument({
-          patientId,
-          title,
-          category,
-          fileUrl: fileUrl || '/mock-files/documento-anexado.pdf',
-          fileName: fileName || `${title.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-          fileType: fileType || 'application/pdf',
-          fileSize: fileSize || '1.2 MB',
-          date: date || new Date().toISOString().split('T')[0],
-          doctor,
-          notes,
-          relatedExamId,
-        });
+        const newDoc = await repository.createDocument(
+          {
+            patientId,
+            title,
+            category,
+            fileUrl: fileUrl || '/mock-files/documento-anexado.pdf',
+            fileName: fileName || `${title.toLowerCase().replace(/\s+/g, '-')}.pdf`,
+            fileType: fileType || 'application/pdf',
+            fileSize: fileSize || '1.2 MB',
+            date: date || new Date().toISOString().split('T')[0],
+            doctor,
+            notes,
+            relatedExamId,
+          },
+          familyId
+        );
         res.status(201).json(newDoc);
       } catch (error) {
         console.error('Error creating document:', error);
@@ -836,18 +876,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const doc = await repository.getDocumentById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const doc = await repository.getDocumentById(req.params.id, familyId);
         if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditRecord(userId, doc.patientId);
+        const canEdit = await authzService.canEditRecord(userId, doc.patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para alterar documentos',
           });
         }
 
-        const updated = await repository.updateDocument(req.params.id, req.body);
+        const updated = await repository.updateDocument(req.params.id, req.body, familyId, doc.patientId);
         res.json(updated);
       } catch (error) {
         console.error('Error updating document:', error);
@@ -862,18 +903,19 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const doc = await repository.getDocumentById(req.params.id);
+        const familyId = req.membership!.familyId;
+        const doc = await repository.getDocumentById(req.params.id, familyId);
         if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
         const userId = getCurrentUserId(req);
-        const canDelete = await authzService.canDeleteRecord(userId, doc.patientId);
+        const canDelete = await authzService.canDeleteRecord(userId, doc.patientId, familyId);
         if (!canDelete && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem excluir documentos',
           });
         }
 
-        await repository.deleteDocument(req.params.id);
+        await repository.deleteDocument(req.params.id, familyId, doc.patientId);
         res.json({ success: true });
       } catch (error) {
         console.error('Error deleting document:', error);
@@ -889,6 +931,7 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const { category, type, startDate, endDate } = req.query as {
           category?: string;
@@ -896,12 +939,16 @@ export function createApiRouter(
           startDate?: string;
           endDate?: string;
         };
-        const events = await repository.getTimelineEvents(patientId, {
-          category,
-          type,
-          startDate,
-          endDate,
-        });
+        const events = await repository.getTimelineEvents(
+          patientId,
+          {
+            category,
+            type,
+            startDate,
+            endDate,
+          },
+          familyId
+        );
         res.json(events);
       } catch (error) {
         console.error('Error fetching timeline:', error);
@@ -916,10 +963,11 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
+        const familyId = req.membership!.familyId;
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId);
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Visualizadores não possuem permissão para registrar eventos',
@@ -930,16 +978,19 @@ export function createApiRouter(
         if (!title || !description) {
           return res.status(400).json({ error: 'Título e descrição são obrigatórios' });
         }
-        const newEvent = await repository.createTimelineEvent({
-          patientId,
-          type: type || 'evento_manual',
-          title,
-          description,
-          date: date || new Date().toISOString().split('T')[0],
-          category: category || 'Geral',
-          doctor: doctor || '',
-          important: Boolean(important),
-        });
+        const newEvent = await repository.createTimelineEvent(
+          {
+            patientId,
+            type: type || 'evento_manual',
+            title,
+            description,
+            date: date || new Date().toISOString().split('T')[0],
+            category: category || 'Geral',
+            doctor: doctor || '',
+            important: Boolean(important),
+          },
+          familyId
+        );
         res.status(201).json(newEvent);
       } catch (error) {
         console.error('Error creating timeline event:', error);
@@ -954,7 +1005,8 @@ export function createApiRouter(
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
-        const deleted = await repository.deleteTimelineEvent(req.params.id);
+        const familyId = req.membership!.familyId;
+        const deleted = await repository.deleteTimelineEvent(req.params.id, familyId);
         if (!deleted) {
           return res.status(404).json({ error: 'Evento não encontrado' });
         }

@@ -34,71 +34,71 @@ export class ServerAuthorizationService {
   /**
    * Retrieves the specific access rule for a user on a given patient
    */
-  async getAccess(userId: string, patientId: string): Promise<PatientAccess | null> {
-    return this.repository.getPatientAccess(userId, patientId);
+  async getAccess(userId: string, patientId: string, familyId?: string): Promise<PatientAccess | null> {
+    return this.repository.getPatientAccess(userId, patientId, familyId);
   }
 
   /**
    * Returns the role ('ADMIN' | 'CAREGIVER' | 'VIEWER') of a user for a patient, or null if no access
    */
-  async getUserRole(userId: string, patientId: string): Promise<PatientRole | null> {
-    const access = await this.getAccess(userId, patientId);
+  async getUserRole(userId: string, patientId: string, familyId?: string): Promise<PatientRole | null> {
+    const access = await this.getAccess(userId, patientId, familyId);
     return access ? access.role : null;
   }
 
   /**
    * Check if user can view patient data
    */
-  async canViewPatient(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canViewPatient(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER';
   }
 
   /**
    * Check if user can edit primary patient profile
    */
-  async canEditPatient(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canEditPatient(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN';
   }
 
   /**
    * Check if user can delete patient profile
    */
-  async canDeletePatient(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canDeletePatient(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN';
   }
 
   /**
    * Check if user can create clinical records (medications, appointments, exams, docs, timeline)
    */
-  async canCreateRecord(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canCreateRecord(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN' || role === 'CAREGIVER';
   }
 
   /**
    * Check if user can edit clinical records
    */
-  async canEditRecord(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canEditRecord(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN' || role === 'CAREGIVER';
   }
 
   /**
    * Check if user can delete clinical records
    */
-  async canDeleteRecord(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canDeleteRecord(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN';
   }
 
   /**
    * Check if user can invite/manage permissions for other users
    */
-  async canManageAccess(userId: string, patientId: string): Promise<boolean> {
-    const role = await this.getUserRole(userId, patientId);
+  async canManageAccess(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
     return role === 'ADMIN';
   }
 }
