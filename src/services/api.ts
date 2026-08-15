@@ -13,6 +13,8 @@ import {
   MembershipRole,
   MembershipStatus,
   AccessRequest,
+  FamilyInvitation,
+  CreateInvitationResponse,
 } from '../types';
 import { authService } from './authService';
 
@@ -280,6 +282,50 @@ export const api = {
   deleteTimelineEvent: (id: string) =>
     request<{ success: boolean }>(`/timeline/${id}`, {
       method: 'DELETE',
+    }),
+
+  // Invitations (Convite de Familiar)
+  createInvitation: (data: {
+    patientId: string;
+    invitedEmail: string;
+    role: 'VIEWER' | 'CAREGIVER';
+  }) =>
+    request<CreateInvitationResponse>('/invitations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getInvitations: () => request<FamilyInvitation[]>('/invitations'),
+
+  revokeInvitation: (invitationId: string) =>
+    request<{ success: boolean; message: string; invitation: FamilyInvitation }>(
+      `/invitations/${invitationId}/revoke`,
+      {
+        method: 'POST',
+      }
+    ),
+
+  getInvitationInfo: (token: string) =>
+    request<{
+      valid: boolean;
+      status?: string;
+      invitedEmailMasked?: string;
+      role?: 'VIEWER' | 'CAREGIVER';
+      expiresAt?: string;
+      message?: string;
+    }>(`/invitations/info/${encodeURIComponent(token)}`),
+
+  acceptInvitation: (token: string) =>
+    request<{
+      success: boolean;
+      message: string;
+      familyId: string;
+      patientId: string;
+      patientName?: string;
+      role: string;
+    }>('/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     }),
 };
 

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { IHealthRepository } from '../repositories/IRepository';
 import { FirestoreHealthRepository } from '../repositories/FirestoreHealthRepository';
 import { IFamilyRepository } from '../repositories/IFamilyRepository';
@@ -395,6 +396,288 @@ export function createApiRouter(
       }
     }
   );
+
+  // ==========================================
+  // FAMILY INVITATIONS (CONVITE DE FAMILIAR)
+  // ==========================================
+
+  // 1. Criar novo convite para familiar/cuidador (somente Owner)
+  router.post(
+    '/invitations',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const ownerUid = req.user!.uid;
+        const familyId = req.membership!.familyId;
+        const { patientId, invitedEmail, role } = req.body;
+
+        if (!patientId || typeof patientId !== 'string' || !patientId.trim()) {
+          return res.status(400).json({
+            error: 'Selecione o paciente para o qual o convite será emitido.',
+            code: 'PATIENT_REQUIRED',
+          });
+        }
+
+        if (!invitedEmail || typeof invitedEmail !== 'string' || !invitedEmail.includes('@')) {
+          return res.status(400).json({
+            error: 'Informe um endereço de e-mail válido para o convidado.',
+            code: 'INVALID_EMAIL',
+          });
+        }
+
+        const cleanEmail = invitedEmail.trim().toLowerCase();
+
+        // Strict Role Check: Only VIEWER or CAREGIVER are permitted. OWNER is forbidden via invitation.
+        if (role !== 'VIEWER' && role !== 'CAREGIVER') {
+          return res.status(400).json({
+            error: 'Papel inválido. Apenas Visualizador(a) (VIEWER) ou Cuidador(a) (CAREGIVER) podem ser atribuídos por convite.',
+            code: 'INVALID_ROLE',
+          });
+        }
+
+        // Validate that patient exists and belongs to this family
+        const patient = await repository.getPatientById(patientId, familyId);
+        if (!patient) {
+          return res.status(404).json({
+            error: 'Paciente não encontrado nesta família.',
+            code: 'PATIENT_NOT_FOUND',
+          });
+        }
+
+        // Check if there is already an active pending invitation for this (family, patient, email)
+        const existingPending = await familyRepository.findPendingInvitation(
+          familyId,
+          patientId,
+          cleanEmail
+        );
+        if (existingPending) {
+          try {
+            await familyRepository.revokeInvitation(familyId, existingPending.id, ownerUid);
+          } catch (_) {}
+        }
+
+        // Generate cryptographically secure random token (32 bytes = 64 hex characters)
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        const invitation = await familyRepository.createInvitation({
+          familyId,
+          patientId,
+          patientName: patient.name,
+          invitedEmail: cleanEmail,
+          role,
+          createdBy: ownerUid,
+          tokenHash,
+          expiresAt,
+        });
+
+        // Build invitation URL and friendly share message
+        const host = req.get('host') || 'saudefamiliar.fiqueok.com.br';
+        const protocol = req.protocol === 'http' && host.includes('localhost') ? 'http' : 'https';
+        const inviteUrl = `${protocol}://${host}/invite/${rawToken}`;
+        const shareMessage = `Você foi convidado(a) para acessar informações de saúde compartilhadas de ${patient.name} no Saúde Familiar.\nAcesse o link abaixo e entre com o e-mail convidado (${cleanEmail}):\n${inviteUrl}`;
+
+        // Return raw token to frontend once, omit tokenHash from response
+        const { tokenHash: _, ...safeInvitation } = invitation;
+
+        return res.status(201).json({
+          success: true,
+          invitation: safeInvitation,
+          token: rawToken,
+          inviteUrl,
+          shareMessage,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao criar convite:', error);
+        return res.status(500).json({
+          error: error.message || 'Erro ao gerar convite no sistema.',
+          code: 'CREATE_INVITATION_FAILED',
+        });
+      }
+    }
+  );
+
+  // 2. Listar convites da família (somente Owner)
+  router.get(
+    '/invitations',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const invitations = await familyRepository.listInvitations(familyId);
+
+        // Sanitize: strip tokenHash from all returned items
+        const sanitized = invitations.map(({ tokenHash, ...rest }) => rest);
+        return res.json(sanitized);
+      } catch (error: any) {
+        console.error('[API] Erro ao listar convites:', error);
+        return res.status(500).json({
+          error: 'Erro ao listar convites da família.',
+          code: 'LIST_INVITATIONS_FAILED',
+        });
+      }
+    }
+  );
+
+  // 3. Revogar convite (somente Owner)
+  router.post(
+    '/invitations/:id/revoke',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const invitationId = req.params.id;
+        const ownerUid = req.user!.uid;
+
+        const updated = await familyRepository.revokeInvitation(
+          familyId,
+          invitationId,
+          ownerUid
+        );
+
+        const { tokenHash: _, ...safe } = updated;
+        return res.json({
+          success: true,
+          message: 'Convite revogado com sucesso.',
+          invitation: safe,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao revogar convite:', error);
+        return res.status(400).json({
+          error: error.message || 'Não foi possível revogar o convite.',
+          code: 'REVOKE_FAILED',
+        });
+      }
+    }
+  );
+
+  // 4. Informações públicas do convite (Sem expor dados clínicos antes da autenticação)
+  router.get('/invitations/info/:token', async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ valid: false, message: 'Token não fornecido.' });
+      }
+
+      const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+      const invitation = await familyRepository.getInvitationByTokenHash(tokenHash);
+
+      if (!invitation) {
+        return res.status(404).json({
+          valid: false,
+          status: 'not_found',
+          message: 'Convite não encontrado ou link inválido.',
+        });
+      }
+
+      if (invitation.status === 'revoked') {
+        return res.status(410).json({
+          valid: false,
+          status: 'revoked',
+          message: 'Este convite foi revogado pelo administrador da família.',
+        });
+      }
+
+      if (invitation.status === 'accepted') {
+        return res.status(410).json({
+          valid: false,
+          status: 'accepted',
+          message: 'Este convite já foi aceito e utilizado anteriormente.',
+        });
+      }
+
+      const nowTime = new Date().getTime();
+      if (new Date(invitation.expiresAt).getTime() <= nowTime) {
+        return res.status(410).json({
+          valid: false,
+          status: 'expired',
+          message: 'Este convite expirou (validade de 7 dias ultrapassada).',
+        });
+      }
+
+      // Mask email for privacy (e.g. ro***@gmail.com)
+      const [emailUser, emailDomain] = invitation.invitedEmail.split('@');
+      let maskedEmail = invitation.invitedEmail;
+      if (emailDomain && emailUser) {
+        maskedEmail =
+          emailUser.length <= 2
+            ? `${emailUser[0]}***@${emailDomain}`
+            : `${emailUser.slice(0, 2)}***${emailUser.slice(-1)}@${emailDomain}`;
+      }
+
+      // Never return clinical data, patient diagnoses, medications, or full patient profiles
+      return res.json({
+        valid: true,
+        status: 'pending',
+        invitedEmailMasked: maskedEmail,
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao consultar info do convite:', error);
+      return res.status(500).json({
+        valid: false,
+        message: 'Erro ao consultar status do convite.',
+      });
+    }
+  });
+
+  // 5. Aceitar convite autenticado (Garante casamento de e-mail e operações atômicas)
+  router.post('/invitations/accept', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({
+          error: 'Unauthorized: Usuário não autenticado',
+          code: 'UNAUTHENTICATED',
+        });
+      }
+
+      const { token } = req.body;
+      if (!token || typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({
+          error: 'Token do convite é obrigatório.',
+          code: 'TOKEN_REQUIRED',
+        });
+      }
+
+      const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+      const result = await familyRepository.acceptInvitation(tokenHash, {
+        uid: authUser.uid,
+        email: authUser.email || '',
+        displayName: (authUser as any).name || authUser.email?.split('@')[0],
+      });
+
+      return res.json({
+        success: true,
+        message: 'Convite aceito com sucesso! Seu acesso ao paciente foi configurado.',
+        familyId: result.invitation.familyId,
+        patientId: result.invitation.patientId,
+        patientName: result.invitation.patientName,
+        role: result.invitation.role,
+      });
+    } catch (err: any) {
+      console.error('[API] Erro ao aceitar convite:', err);
+      if (err.code === 'EMAIL_MISMATCH') {
+        return res.status(403).json({
+          error: err.message,
+          code: 'EMAIL_MISMATCH',
+        });
+      }
+      return res.status(400).json({
+        error: err.message || 'Não foi possível aceitar o convite.',
+        code: err.code || 'ACCEPT_INVITATION_FAILED',
+      });
+    }
+  });
 
   // Helper for current user ID context in clinical services
   const getCurrentUserId = (req: Request): string => {

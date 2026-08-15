@@ -16,7 +16,21 @@ import { TimelineView } from './components/TimelineView';
 import { PatientProfileModal } from './components/PatientProfileModal';
 import { NewPatientModal } from './components/NewPatientModal';
 import { NotificationToast } from './components/NotificationToast';
+import { InviteAcceptView } from './components/InviteAcceptView';
 import { AnimatePresence, motion } from 'motion/react';
+
+const getInitialInviteToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname;
+  if (path.startsWith('/invite/')) {
+    const raw = path.replace('/invite/', '').split('/')[0].split('?')[0];
+    if (raw && raw.trim()) return raw.trim();
+  }
+  const params = new URLSearchParams(window.location.search);
+  const queryToken = params.get('invite') || params.get('token');
+  if (queryToken && queryToken.trim()) return queryToken.trim();
+  return null;
+};
 
 const MainContent: React.FC = () => {
   const {
@@ -30,6 +44,8 @@ const MainContent: React.FC = () => {
     isLoading: isAuthLoading,
   } = useAuth();
   const { activeTab, isInitialLoading, patients } = usePatient();
+
+  const [inviteToken, setInviteToken] = useState<string | null>(() => getInitialInviteToken());
 
   // Modal triggers across views
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -46,6 +62,19 @@ const MainContent: React.FC = () => {
     setExamIdForDoc(examId);
     setIsDocModalOpen(true);
   };
+
+  // If user opened an invitation link (/invite/:token), show dedicated invite screen
+  if (inviteToken) {
+    return (
+      <InviteAcceptView
+        token={inviteToken}
+        onAccepted={() => {
+          setInviteToken(null);
+          refreshUserMe();
+        }}
+      />
+    );
+  }
 
   // If unauthenticated (no Firebase Auth user), render Login Screen
   if (accessStatus === 'unauthenticated' || (!user && accessStatus !== 'loading')) {

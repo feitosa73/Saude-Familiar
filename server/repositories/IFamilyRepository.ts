@@ -4,6 +4,8 @@ import {
   AccessRequest,
   AccessRequestStatus,
   PatientAccess,
+  FamilyInvitation,
+  InvitationStatus,
 } from '../types';
 
 export interface UserDocument {
@@ -53,4 +55,37 @@ export interface IFamilyRepository {
     ownerUid: string
   ): Promise<AccessRequest>;
   countPendingRequestsForOwner(ownerUid: string): Promise<number>;
+
+  // Family Invitations management
+  createInvitation(data: {
+    familyId: string;
+    patientId: string;
+    patientName: string;
+    invitedEmail: string;
+    role: 'VIEWER' | 'CAREGIVER';
+    createdBy: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<FamilyInvitation>;
+  getInvitationByTokenHash(tokenHash: string): Promise<FamilyInvitation | null>;
+  getInvitation(familyId: string, invitationId: string): Promise<FamilyInvitation | null>;
+  findPendingInvitation(
+    familyId: string,
+    patientId: string,
+    invitedEmail: string
+  ): Promise<FamilyInvitation | null>;
+  listInvitations(familyId: string): Promise<FamilyInvitation[]>;
+  revokeInvitation(
+    familyId: string,
+    invitationId: string,
+    revokedBy: string
+  ): Promise<FamilyInvitation>;
+  acceptInvitation(
+    tokenHash: string,
+    user: { uid: string; email: string; displayName?: string | null }
+  ): Promise<{
+    invitation: FamilyInvitation;
+    membership: FamilyMembership;
+    patientAccess: PatientAccess;
+  }>;
 }

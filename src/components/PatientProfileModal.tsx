@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { usePatient } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { EmergencyContact } from '../types';
+import { InviteMemberModal } from './InviteMemberModal';
 import {
   User,
   Phone,
@@ -13,6 +15,7 @@ import {
   Trash2,
   PhoneCall,
   Calendar,
+  Send,
 } from 'lucide-react';
 
 export const PatientProfileModal: React.FC = () => {
@@ -23,7 +26,9 @@ export const PatientProfileModal: React.FC = () => {
     refreshPatients,
     showToast,
   } = usePatient();
+  const { isOwner } = useAuth();
 
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -449,7 +454,19 @@ export const PatientProfileModal: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {isOwner ? (
+                <button
+                  type="button"
+                  id="btn-patient-modal-invite"
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Convidar familiar para este paciente</span>
+                </button>
+              ) : <div />}
+
               <button
                 type="button"
                 onClick={() => setOpenPatientProfile(false)}
@@ -461,6 +478,12 @@ export const PatientProfileModal: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Invite Member Modal */}
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+      />
     </div>
   );
 };

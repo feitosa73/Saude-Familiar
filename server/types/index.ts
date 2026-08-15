@@ -24,6 +24,33 @@ export interface FamilyMembership {
 
 export type AccessRequestStatus = 'pending' | 'approved' | 'rejected';
 
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export interface FamilyInvitation {
+  id: string;
+  familyId: string;
+  patientId: string;
+  patientName: string;
+  invitedEmail: string;
+  role: 'VIEWER' | 'CAREGIVER';
+  status: InvitationStatus;
+  tokenHash: string;
+  createdBy: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  acceptedBy?: string | null;
+  revokedAt?: string | null;
+  revokedBy?: string | null;
+}
+
+export interface CreateInvitationResponse {
+  invitation: Omit<FamilyInvitation, 'tokenHash'>;
+  token: string;
+  inviteUrl: string;
+  shareMessage: string;
+}
+
 export interface AccessRequest {
   id: string;
   familyId: string;

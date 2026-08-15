@@ -5,6 +5,8 @@ import {
   AccessRequest,
   AccessRequestStatus,
   PatientAccess,
+  FamilyInvitation,
+  InvitationStatus,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 
@@ -662,6 +664,417 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       }
     }
     return count;
+  }
+
+  // ==========================================
+  // FAMILY INVITATIONS MANAGEMENT
+  // ==========================================
+
+  async createInvitation(data: {
+    familyId: string;
+    patientId: string;
+    patientName: string;
+    invitedEmail: string;
+    role: 'VIEWER' | 'CAREGIVER';
+    createdBy: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<FamilyInvitation> {
+    const invRef = this.db
+      .collection('families')
+      .doc(data.familyId)
+      .collection('invitations')
+      .doc();
+
+    const invitationId = invRef.id;
+    const now = new Date().toISOString();
+    const cleanEmail = data.invitedEmail.trim().toLowerCase();
+
+    const invitation: FamilyInvitation = {
+      id: invitationId,
+      familyId: data.familyId,
+      patientId: data.patientId,
+      patientName: data.patientName,
+      invitedEmail: cleanEmail,
+      role: data.role,
+      status: 'pending',
+      tokenHash: data.tokenHash,
+      createdBy: data.createdBy,
+      createdAt: now,
+      expiresAt: data.expiresAt,
+      acceptedAt: null,
+      acceptedBy: null,
+      revokedAt: null,
+      revokedBy: null,
+    };
+
+    try {
+      const batch = this.db.batch();
+      batch.set(invRef, invitation);
+
+      // Fast, index-independent top-level lookup pointer by tokenHash
+      const lookupRef = this.db.collection('invitations_lookup').doc(data.tokenHash);
+      batch.set(lookupRef, {
+        familyId: data.familyId,
+        invitationId: invitationId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+        status: 'pending',
+        createdAt: now,
+      });
+
+      await batch.commit();
+      console.log(`[FirestoreFamilyRepository] Convite ${invitationId} criado para ${cleanEmail} na família ${data.familyId}`);
+      return invitation;
+    } catch (error: any) {
+      console.error('[FirestoreFamilyRepository] Erro ao criar convite no Firestore:', error?.code || error?.message);
+      throw error;
+    }
+  }
+
+  async getInvitationByTokenHash(tokenHash: string): Promise<FamilyInvitation | null> {
+    try {
+      // 1. Fast lookup from invitations_lookup pointer
+      const lookupSnap = await this.db.collection('invitations_lookup').doc(tokenHash).get();
+      if (lookupSnap.exists) {
+        const lookupData = lookupSnap.data() || {};
+        if (lookupData.familyId && lookupData.invitationId) {
+          const invSnap = await this.db
+            .collection('families')
+            .doc(lookupData.familyId)
+            .collection('invitations')
+            .doc(lookupData.invitationId)
+            .get();
+
+          if (invSnap.exists) {
+            return invSnap.data() as FamilyInvitation;
+          }
+        }
+      }
+
+      // 2. Fallback: try collectionGroup if lookup document is missing
+      try {
+        const groupSnap = await this.db
+          .collectionGroup('invitations')
+          .where('tokenHash', '==', tokenHash)
+          .limit(1)
+          .get();
+
+        if (!groupSnap.empty) {
+          return groupSnap.docs[0].data() as FamilyInvitation;
+        }
+      } catch (grpErr: any) {
+        console.warn('[FirestoreFamilyRepository] collectionGroup lookup failed for invitation tokenHash:', grpErr?.code || grpErr?.message);
+      }
+
+      return null;
+    } catch (error: any) {
+      console.error('[FirestoreFamilyRepository] Erro ao buscar convite por tokenHash:', error?.code || error?.message);
+      throw error;
+    }
+  }
+
+  async getInvitation(familyId: string, invitationId: string): Promise<FamilyInvitation | null> {
+    try {
+      const snap = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('invitations')
+        .doc(invitationId)
+        .get();
+
+      if (!snap.exists) return null;
+      return snap.data() as FamilyInvitation;
+    } catch (error: any) {
+      console.error(`[FirestoreFamilyRepository] Erro ao buscar convite ${invitationId}:`, error?.code || error?.message);
+      throw error;
+    }
+  }
+
+  async findPendingInvitation(
+    familyId: string,
+    patientId: string,
+    invitedEmail: string
+  ): Promise<FamilyInvitation | null> {
+    try {
+      const cleanEmail = invitedEmail.trim().toLowerCase();
+      const snap = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('invitations')
+        .where('invitedEmail', '==', cleanEmail)
+        .where('patientId', '==', patientId)
+        .where('status', '==', 'pending')
+        .get();
+
+      if (snap.empty) return null;
+
+      const now = new Date().getTime();
+      for (const doc of snap.docs) {
+        const inv = doc.data() as FamilyInvitation;
+        if (new Date(inv.expiresAt).getTime() > now) {
+          return inv;
+        }
+      }
+
+      return null;
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Erro ao buscar convite pendente existente:', error?.code || error?.message);
+      return null;
+    }
+  }
+
+  async listInvitations(familyId: string): Promise<FamilyInvitation[]> {
+    try {
+      const snap = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('invitations')
+        .get();
+
+      const list = snap.docs.map((doc) => doc.data() as FamilyInvitation);
+      const now = new Date().getTime();
+
+      // Check expired status on the fly
+      const processed = list.map((inv) => {
+        if (inv.status === 'pending' && new Date(inv.expiresAt).getTime() <= now) {
+          return { ...inv, status: 'expired' as const };
+        }
+        return inv;
+      });
+
+      return processed.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } catch (error: any) {
+      console.error(`[FirestoreFamilyRepository] Erro ao listar convites da família ${familyId}:`, error?.code || error?.message);
+      throw error;
+    }
+  }
+
+  async revokeInvitation(
+    familyId: string,
+    invitationId: string,
+    revokedBy: string
+  ): Promise<FamilyInvitation> {
+    const inv = await this.getInvitation(familyId, invitationId);
+    if (!inv) {
+      throw new Error('Convite não encontrado.');
+    }
+
+    if (inv.status !== 'pending') {
+      throw new Error(`Não é possível revogar um convite com status "${inv.status}".`);
+    }
+
+    const now = new Date().toISOString();
+    const updated: FamilyInvitation = {
+      ...inv,
+      status: 'revoked',
+      revokedAt: now,
+      revokedBy,
+    };
+
+    try {
+      const batch = this.db.batch();
+      const invRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('invitations')
+        .doc(invitationId);
+      batch.set(invRef, updated, { merge: true });
+
+      const lookupRef = this.db.collection('invitations_lookup').doc(inv.tokenHash);
+      batch.set(lookupRef, { status: 'revoked', revokedAt: now, revokedBy }, { merge: true });
+
+      await batch.commit();
+      console.log(`[FirestoreFamilyRepository] Convite ${invitationId} revogado por ${revokedBy}.`);
+      return updated;
+    } catch (error: any) {
+      console.error(`[FirestoreFamilyRepository] Erro ao revogar convite ${invitationId}:`, error?.code || error?.message);
+      throw error;
+    }
+  }
+
+  async acceptInvitation(
+    tokenHash: string,
+    user: { uid: string; email: string; displayName?: string | null }
+  ): Promise<{
+    invitation: FamilyInvitation;
+    membership: FamilyMembership;
+    patientAccess: PatientAccess;
+  }> {
+    const inv = await this.getInvitationByTokenHash(tokenHash);
+    if (!inv) {
+      throw new Error('Convite não encontrado ou link inválido.');
+    }
+
+    if (inv.status === 'accepted') {
+      throw new Error('Este convite já foi aceito anteriormente.');
+    }
+
+    if (inv.status === 'revoked') {
+      throw new Error('Este convite foi revogado pelo administrador da família.');
+    }
+
+    const nowTime = new Date().getTime();
+    if (new Date(inv.expiresAt).getTime() <= nowTime) {
+      // Mark as expired
+      try {
+        await this.db
+          .collection('families')
+          .doc(inv.familyId)
+          .collection('invitations')
+          .doc(inv.id)
+          .update({ status: 'expired' });
+      } catch (_) {}
+      throw new Error('Este convite expirou (validade de 7 dias ultrapassada).');
+    }
+
+    if (inv.status !== 'pending') {
+      throw new Error(`Este convite não pode ser aceito (status: ${inv.status}).`);
+    }
+
+    // Strict Email Verification
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const invitedEmail = (inv.invitedEmail || '').trim().toLowerCase();
+
+    if (!userEmail || userEmail !== invitedEmail) {
+      const error: any = new Error(
+        `Este convite foi enviado para outra conta Google (${inv.invitedEmail}). Você está conectado com a conta "${user.email || 'sem e-mail'}".`
+      );
+      error.code = 'EMAIL_MISMATCH';
+      throw error;
+    }
+
+    const now = new Date().toISOString();
+    const { familyId, patientId } = inv;
+    const uid = user.uid;
+
+    try {
+      const batch = this.db.batch();
+
+      // 1. Membership
+      const membershipRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('memberships')
+        .doc(uid);
+
+      const memSnap = await membershipRef.get();
+      let membership: FamilyMembership;
+
+      if (!memSnap.exists) {
+        membership = {
+          id: uid,
+          userId: uid,
+          familyId: familyId,
+          role: 'member',
+          status: 'active',
+          joinedAt: now,
+          createdAt: now,
+          createdBy: inv.createdBy,
+        };
+        batch.set(membershipRef, membership);
+      } else {
+        membership = memSnap.data() as FamilyMembership;
+        if (membership.status !== 'active') {
+          batch.update(membershipRef, { status: 'active', updatedAt: now });
+          membership.status = 'active';
+        }
+      }
+
+      // 2. Patient Access
+      const accessesRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('accesses');
+
+      const existingAccSnap = await accessesRef.where('userId', '==', uid).limit(1).get();
+      let patientAccess: PatientAccess;
+
+      if (!existingAccSnap.empty) {
+        const existingDoc = existingAccSnap.docs[0];
+        const accDocRef = accessesRef.doc(existingDoc.id);
+        batch.update(accDocRef, { role: inv.role, updatedAt: now });
+        patientAccess = {
+          ...(existingDoc.data() as PatientAccess),
+          role: inv.role,
+        };
+      } else {
+        const newAccRef = accessesRef.doc();
+        patientAccess = {
+          id: newAccRef.id,
+          patientId: patientId,
+          userId: uid,
+          role: inv.role,
+          createdAt: now,
+          createdBy: inv.createdBy,
+        };
+        batch.set(newAccRef, patientAccess);
+      }
+
+      // 3. User Document synchronization
+      const userRef = this.db.collection('users').doc(uid);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) {
+        batch.set(userRef, {
+          id: uid,
+          email: userEmail,
+          displayName: user.displayName || null,
+          familyId: familyId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } else {
+        const currentData = userSnap.data() || {};
+        const updateData: any = {
+          email: userEmail,
+          updatedAt: now,
+        };
+        if (!currentData.familyId) {
+          updateData.familyId = familyId;
+        }
+        batch.set(userRef, updateData, { merge: true });
+      }
+
+      // 4. Update Invitation document to accepted
+      const invRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('invitations')
+        .doc(inv.id);
+
+      const updatedInvitation: FamilyInvitation = {
+        ...inv,
+        status: 'accepted',
+        acceptedAt: now,
+        acceptedBy: uid,
+      };
+
+      batch.update(invRef, {
+        status: 'accepted',
+        acceptedAt: now,
+        acceptedBy: uid,
+      });
+
+      // 5. Update invitations_lookup
+      const lookupRef = this.db.collection('invitations_lookup').doc(inv.tokenHash);
+      batch.set(lookupRef, { status: 'accepted', acceptedAt: now, acceptedBy: uid }, { merge: true });
+
+      await batch.commit();
+      console.log(`[FirestoreFamilyRepository] Convite ${inv.id} aceito com sucesso por ${uid} (${userEmail})`);
+
+      return {
+        invitation: updatedInvitation,
+        membership,
+        patientAccess,
+      };
+    } catch (error: any) {
+      console.error('[FirestoreFamilyRepository] Erro ao gravar aceitação de convite no Firestore:', error?.code || error?.message);
+      throw error;
+    }
   }
 }
 

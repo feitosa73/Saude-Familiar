@@ -3,11 +3,13 @@ import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { authorizationService } from '../services/authorizationService';
 import { AccessRequestsManagerModal } from './AccessRequestsManagerModal';
+import { InviteMemberModal } from './InviteMemberModal';
 import {
   HeartPulse,
   Users,
   ChevronDown,
   UserPlus,
+  Send,
   ShieldCheck,
   LogOut,
   Shield,
@@ -45,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [familyDropdownOpen, setFamilyDropdownOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -175,6 +178,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
 
           {/* Center / Right: Patient Selector and User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Owner Invite Member Button */}
+            {isOwner && (
+              <button
+                type="button"
+                id="btn-open-invite-modal-nav"
+                onClick={() => setIsInviteModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 shadow-xs transition"
+                title="Convidar familiar ou cuidador para acessar um paciente"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Convidar Familiar</span>
+              </button>
+            )}
+
             {/* Owner Access Requests Manager Button */}
             {isOwner && (
               <button
@@ -404,7 +421,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                     </div>
 
                     {isOwner && (
-                      <div className="px-2">
+                      <div className="px-2 space-y-1">
+                        <button
+                          type="button"
+                          id="btn-user-menu-invite-member"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            setIsInviteModalOpen(true);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                        >
+                          <Send className="w-4 h-4 text-blue-600" />
+                          <span>Convidar Familiar ou Cuidador</span>
+                        </button>
+
                         <button
                           type="button"
                           id="btn-user-menu-access-requests"
@@ -448,6 +478,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
           </div>
         </div>
       </div>
+
+      {/* Invite Member Modal for Owners */}
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+      />
 
       {/* Access Requests Manager Modal for Owners */}
       <AccessRequestsManagerModal
