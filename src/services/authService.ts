@@ -10,10 +10,7 @@ import {
 } from '../lib/firebase';
 
 export interface AuthCredentials {
-  email?: string;
-  password?: string;
-  provider?: 'google' | 'password';
-  userId?: string;
+  provider?: 'google';
 }
 
 export interface IAuthService {
@@ -23,78 +20,8 @@ export interface IAuthService {
   logout(): Promise<void>;
   isAuthenticated(): boolean;
   onAuthStateChanged(callback: (user: User | null) => void): () => void;
-  getMockUsers(): User[];
   getUserAccesses(userId: string): Promise<PatientAccess[]>;
 }
-
-// Development Mock Users
-export const MOCK_USERS: User[] = [
-  {
-    id: 'usr-admin',
-    name: 'Paulo Silva',
-    email: 'paulo.admin@saudefamiliar.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face',
-    patientIds: ['pat-1', 'pat-2'],
-  },
-  {
-    id: 'usr-caregiver',
-    name: 'Mariana Silva',
-    email: 'mariana.cuidadora@saudefamiliar.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&h=120&fit=crop&crop=face',
-    patientIds: ['pat-1', 'pat-2'],
-  },
-  {
-    id: 'usr-viewer',
-    name: 'Carlos Silva',
-    email: 'carlos.familiar@saudefamiliar.com',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face',
-    patientIds: ['pat-1'],
-  },
-];
-
-// Initial mock access relations
-export const MOCK_PATIENT_ACCESSES: PatientAccess[] = [
-  {
-    id: 'acc-1',
-    userId: 'usr-admin',
-    patientId: 'pat-1',
-    role: 'ADMIN',
-    createdAt: '2025-01-01T00:00:00Z',
-    createdBy: 'usr-admin',
-  },
-  {
-    id: 'acc-2',
-    userId: 'usr-admin',
-    patientId: 'pat-2',
-    role: 'ADMIN',
-    createdAt: '2025-01-01T00:00:00Z',
-    createdBy: 'usr-admin',
-  },
-  {
-    id: 'acc-3',
-    userId: 'usr-caregiver',
-    patientId: 'pat-1',
-    role: 'CAREGIVER',
-    createdAt: '2025-01-10T10:00:00Z',
-    createdBy: 'usr-admin',
-  },
-  {
-    id: 'acc-4',
-    userId: 'usr-caregiver',
-    patientId: 'pat-2',
-    role: 'VIEWER',
-    createdAt: '2025-02-01T10:00:00Z',
-    createdBy: 'usr-admin',
-  },
-  {
-    id: 'acc-5',
-    userId: 'usr-viewer',
-    patientId: 'pat-1',
-    role: 'VIEWER',
-    createdAt: '2025-02-15T14:00:00Z',
-    createdBy: 'usr-admin',
-  },
-];
 
 const AUTH_STORAGE_KEY = 'saude_familiar_auth_user';
 const ACCESS_STORAGE_KEY = 'saude_familiar_patient_accesses';
@@ -118,7 +45,7 @@ class AuthServiceImplementation implements IAuthService {
             name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário',
             email: fbUser.email || '',
             avatarUrl: fbUser.photoURL || undefined,
-            patientIds: ['pat-1'],
+            patientIds: [],
           };
           this.currentUser = user;
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
@@ -154,13 +81,9 @@ class AuthServiceImplementation implements IAuthService {
     return this.currentFirebaseUser !== null && this.currentUser !== null;
   }
 
-  getMockUsers(): User[] {
-    return MOCK_USERS;
-  }
-
   async login(credentials?: AuthCredentials): Promise<User> {
     // Google Sign-In with Firebase Auth
-    if (credentials?.provider === 'google') {
+    if (credentials?.provider === 'google' || !credentials) {
       if (auth && isFirebaseConfigured) {
         try {
           const result = await signInWithPopup(auth, googleProvider);
@@ -171,7 +94,7 @@ class AuthServiceImplementation implements IAuthService {
             name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário Google',
             email: fbUser.email || '',
             avatarUrl: fbUser.photoURL || undefined,
-            patientIds: ['pat-1'],
+            patientIds: [],
           };
           this.currentUser = user;
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
@@ -211,15 +134,15 @@ class AuthServiceImplementation implements IAuthService {
 
   async getUserAccesses(userId: string): Promise<PatientAccess[]> {
     const saved = localStorage.getItem(ACCESS_STORAGE_KEY);
-    let accesses: PatientAccess[] = MOCK_PATIENT_ACCESSES;
     if (saved) {
       try {
-        accesses = JSON.parse(saved);
+        const accesses: PatientAccess[] = JSON.parse(saved);
+        return accesses.filter((a) => a.userId === userId);
       } catch {
-        accesses = MOCK_PATIENT_ACCESSES;
+        return [];
       }
     }
-    return accesses.filter((a) => a.userId === userId);
+    return [];
   }
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
@@ -238,3 +161,4 @@ class AuthServiceImplementation implements IAuthService {
 }
 
 export const authService: IAuthService = new AuthServiceImplementation();
+

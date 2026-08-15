@@ -79,6 +79,13 @@ export const api = {
   // Authoritative Current User Profile & Family Membership
   getCurrentUser: () => request<UserMeResponse>('/user/me'),
 
+  // Create Family Onboarding
+  createFamily: (data: { name: string }) =>
+    request<{ family: any; membership: FamilyMembership }>('/families', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Family Members Management
   getFamilyMembers: () => request<FamilyMembership[]>('/family/members'),
   updateFamilyMember: (

@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { LoginView } from './components/LoginView';
 import { AccessDeniedView } from './components/AccessDeniedView';
+import { FamilyOnboardingView } from './components/FamilyOnboardingView';
+import { EmptyFamilyPatientsView } from './components/EmptyFamilyPatientsView';
 import { Navbar } from './components/Navbar';
 import { TabNavigation } from './components/TabNavigation';
 import { DashboardView } from './components/DashboardView';
@@ -27,7 +29,7 @@ const MainContent: React.FC = () => {
     logout,
     isLoading: isAuthLoading,
   } = useAuth();
-  const { activeTab, isInitialLoading } = usePatient();
+  const { activeTab, isInitialLoading, patients } = usePatient();
 
   // Modal triggers across views
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -61,9 +63,20 @@ const MainContent: React.FC = () => {
     );
   }
 
-  // If user is authenticated in Firebase Auth, but does not have active membership
+  // If user is authenticated in Firebase Auth, but does not have a family membership yet
+  if (accessStatus === 'no_membership') {
+    return (
+      <FamilyOnboardingView
+        user={user}
+        onFamilyCreated={refreshUserMe}
+        onRefreshMemberships={refreshUserMe}
+        onLogout={logout}
+      />
+    );
+  }
+
+  // If user has non-active membership or other access blocking states
   if (
-    accessStatus === 'no_membership' ||
     accessStatus === 'pending' ||
     accessStatus === 'disabled' ||
     accessStatus === 'firestore_not_initialized' ||
@@ -92,6 +105,8 @@ const MainContent: React.FC = () => {
     );
   }
 
+  const hasNoPatients = patients.length === 0;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
       {/* Top Navbar */}
@@ -102,72 +117,76 @@ const MainContent: React.FC = () => {
 
       {/* Main View Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 md:pb-12">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-          >
-            {activeTab === 'dashboard' && (
-              <DashboardView
-                onOpenMedicationModal={() => setIsMedModalOpen(true)}
-                onOpenAppointmentModal={() => setIsAptModalOpen(true)}
-                onOpenExamModal={() => setIsExamModalOpen(true)}
-                onOpenDocumentModal={() => setIsDocModalOpen(true)}
-              />
-            )}
+        {hasNoPatients ? (
+          <EmptyFamilyPatientsView onOpenNewPatient={() => setIsNewPatientModalOpen(true)} />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              {activeTab === 'dashboard' && (
+                <DashboardView
+                  onOpenMedicationModal={() => setIsMedModalOpen(true)}
+                  onOpenAppointmentModal={() => setIsAptModalOpen(true)}
+                  onOpenExamModal={() => setIsExamModalOpen(true)}
+                  onOpenDocumentModal={() => setIsDocModalOpen(true)}
+                />
+              )}
 
-            {activeTab === 'medicamentos' && (
-              <MedicationsView
-                isModalOpen={isMedModalOpen}
-                onOpenModal={() => setIsMedModalOpen(true)}
-                onCloseModal={() => setIsMedModalOpen(false)}
-              />
-            )}
+              {activeTab === 'medicamentos' && (
+                <MedicationsView
+                  isModalOpen={isMedModalOpen}
+                  onOpenModal={() => setIsMedModalOpen(true)}
+                  onCloseModal={() => setIsMedModalOpen(false)}
+                />
+              )}
 
-            {activeTab === 'consultas' && (
-              <AppointmentsView
-                isModalOpen={isAptModalOpen}
-                onOpenModal={() => setIsAptModalOpen(true)}
-                onCloseModal={() => setIsAptModalOpen(false)}
-              />
-            )}
+              {activeTab === 'consultas' && (
+                <AppointmentsView
+                  isModalOpen={isAptModalOpen}
+                  onOpenModal={() => setIsAptModalOpen(true)}
+                  onCloseModal={() => setIsAptModalOpen(false)}
+                />
+              )}
 
-            {activeTab === 'exames' && (
-              <ExamsView
-                isModalOpen={isExamModalOpen}
-                onOpenModal={() => setIsExamModalOpen(true)}
-                onCloseModal={() => setIsExamModalOpen(false)}
-                onOpenDocumentUploadWithExam={handleOpenDocFromExam}
-              />
-            )}
+              {activeTab === 'exames' && (
+                <ExamsView
+                  isModalOpen={isExamModalOpen}
+                  onOpenModal={() => setIsExamModalOpen(true)}
+                  onCloseModal={() => setIsExamModalOpen(false)}
+                  onOpenDocumentUploadWithExam={handleOpenDocFromExam}
+                />
+              )}
 
-            {activeTab === 'documentos' && (
-              <DocumentsView
-                isModalOpen={isDocModalOpen}
-                onOpenModal={() => {
-                  setExamIdForDoc(null);
-                  setIsDocModalOpen(true);
-                }}
-                onCloseModal={() => {
-                  setIsDocModalOpen(false);
-                  setExamIdForDoc(null);
-                }}
-                preselectedExamId={examIdForDoc}
-              />
-            )}
+              {activeTab === 'documentos' && (
+                <DocumentsView
+                  isModalOpen={isDocModalOpen}
+                  onOpenModal={() => {
+                    setExamIdForDoc(null);
+                    setIsDocModalOpen(true);
+                  }}
+                  onCloseModal={() => {
+                    setIsDocModalOpen(false);
+                    setExamIdForDoc(null);
+                  }}
+                  preselectedExamId={examIdForDoc}
+                />
+              )}
 
-            {activeTab === 'linha_tempo' && (
-              <TimelineView
-                isModalOpen={isTimelineModalOpen}
-                onOpenModal={() => setIsTimelineModalOpen(true)}
-                onCloseModal={() => setIsTimelineModalOpen(false)}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+              {activeTab === 'linha_tempo' && (
+                <TimelineView
+                  isModalOpen={isTimelineModalOpen}
+                  onOpenModal={() => setIsTimelineModalOpen(true)}
+                  onCloseModal={() => setIsTimelineModalOpen(false)}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
 
       {/* Global Modals */}

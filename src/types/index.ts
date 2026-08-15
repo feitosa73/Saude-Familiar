@@ -5,8 +5,9 @@ export interface Family {
   id: string;
   name: string;
   createdBy: string;
+  primaryOwnerUid: string;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }
 
 export interface FamilyMembership {
@@ -15,6 +16,7 @@ export interface FamilyMembership {
   userId: string;
   role: MembershipRole;
   status: MembershipStatus;
+  joinedAt?: string;
   createdAt: string;
   updatedAt?: string;
   createdBy: string;
@@ -151,6 +153,8 @@ export interface TimelineEvent {
   referenceId?: string;
   doctor?: string;
   important?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DashboardData {

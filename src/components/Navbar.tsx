@@ -26,11 +26,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
     setSelectedPatientId,
     setOpenPatientProfile,
   } = usePatient();
-  const { user, logout, getPermissionsForPatient } = useAuth();
+  const { user, logout, getPermissionsForPatient, isOwner } = useAuth();
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
+  const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
 
   // Calculate age helper
   const getAge = (birthDateString?: string) => {
@@ -121,13 +122,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                 aria-haspopup="true"
               >
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs sm:text-sm border border-blue-200">
-                  {selectedPatient ? selectedPatient.name.charAt(0) : 'P'}
+                  {selectedPatient ? selectedPatient.name.charAt(0) : '—'}
                 </div>
                 <div className="hidden sm:block">
                   <div className="text-[10px] text-slate-400 font-medium">Paciente Ativo</div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-900 flex items-center gap-1.5">
                     <span className="truncate max-w-[140px]">
-                      {selectedPatient?.name || 'Selecione...'}
+                      {selectedPatient ? selectedPatient.name : 'Nenhum familiar cadastrado'}
                     </span>
                     {age !== null && (
                       <span className="text-xs font-normal text-slate-500">({age}a)</span>
@@ -157,48 +158,55 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                     </div>
 
                     <div className="max-h-60 overflow-y-auto py-1">
-                      {patients.map((patient) => {
-                        const pAge = getAge(patient.birthDate);
-                        const isSelected = selectedPatient?.id === patient.id;
-                        const patientPerm = getPermissionsForPatient(patient.id);
-                        return (
-                          <button
-                            key={patient.id}
-                            id={`select-patient-${patient.id}`}
-                            onClick={() => {
-                              setSelectedPatientId(patient.id);
-                              setPatientDropdownOpen(false);
-                            }}
-                            className={`w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-slate-50 transition-colors ${
-                              isSelected ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                                  isSelected
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-slate-200 text-slate-600'
-                                }`}
-                              >
-                                {patient.name.charAt(0)}
-                              </div>
-                              <div className="truncate">
-                                <div className="text-sm font-semibold truncate">{patient.name}</div>
-                                <div className="text-xs text-slate-400">
-                                  {pAge ? `${pAge} anos` : 'Idade n/d'} • Permissão: {patientPerm.roleLabel}
+                      {patients.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-xs text-slate-500">
+                          <p className="font-medium text-slate-700">Nenhum familiar cadastrado</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Cadastre o primeiro familiar para iniciar o prontuário.</p>
+                        </div>
+                      ) : (
+                        patients.map((patient) => {
+                          const pAge = getAge(patient.birthDate);
+                          const isSelected = selectedPatient?.id === patient.id;
+                          const patientPerm = getPermissionsForPatient(patient.id);
+                          return (
+                            <button
+                              key={patient.id}
+                              id={`select-patient-${patient.id}`}
+                              onClick={() => {
+                                setSelectedPatientId(patient.id);
+                                setPatientDropdownOpen(false);
+                              }}
+                              className={`w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-slate-50 transition-colors ${
+                                isSelected ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-slate-200 text-slate-600'
+                                  }`}
+                                >
+                                  {patient.name.charAt(0)}
+                                </div>
+                                <div className="truncate">
+                                  <div className="text-sm font-semibold truncate">{patient.name}</div>
+                                  <div className="text-xs text-slate-400">
+                                    {pAge ? `${pAge} anos` : 'Idade n/d'} • Permissão: {patientPerm.roleLabel}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            {isSelected && (
-                              <span className="w-2 h-2 rounded-full bg-blue-600 mr-1 shrink-0" />
-                            )}
-                          </button>
-                        );
-                      })}
+                              {isSelected && (
+                                <span className="w-2 h-2 rounded-full bg-blue-600 mr-1 shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
 
-                    {permissions?.canManageAccess && (
+                    {canAddPatient && (
                       <div className="border-t border-slate-100 pt-1.5 mt-1 px-2">
                         <button
                           id="add-new-patient-dropdown-btn"
@@ -209,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                         >
                           <UserPlus className="w-4 h-4" />
-                          Cadastrar Outro Familiar
+                          {patients.length === 0 ? '+ Cadastrar Primeiro Familiar' : 'Cadastrar Outro Familiar'}
                         </button>
                       </div>
                     )}

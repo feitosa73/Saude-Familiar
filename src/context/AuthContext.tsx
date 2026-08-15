@@ -7,7 +7,7 @@ import {
   FamilyMembership,
   UserMeResponse,
 } from '../types';
-import { authService, AuthCredentials, MOCK_USERS, MOCK_PATIENT_ACCESSES } from '../services/authService';
+import { authService, AuthCredentials } from '../services/authService';
 import { authorizationService, PatientPermissions } from '../services/authorizationService';
 import { api, ApiError } from '../services/api';
 
@@ -31,7 +31,6 @@ interface AuthContextType {
   isLoading: boolean;
   statusMessage: string | null;
   patientAccesses: PatientAccess[];
-  mockUsers: User[];
   login: (credentials?: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
   refreshUserMe: () => Promise<void>;
@@ -49,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>('loading');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [patientAccesses, setPatientAccesses] = useState<PatientAccess[]>(MOCK_PATIENT_ACCESSES);
+  const [patientAccesses, setPatientAccesses] = useState<PatientAccess[]>([]);
 
   const fetchAccesses = useCallback(async (currentUserId?: string) => {
     const targetUserId = currentUserId || user?.id;
@@ -62,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPatientAccesses(accesses);
     } catch (e) {
       console.error('Error fetching user accesses:', e);
-      setPatientAccesses(MOCK_PATIENT_ACCESSES.filter((a) => a.userId === targetUserId));
+      setPatientAccesses([]);
     }
   }, [user?.id]);
 
@@ -249,7 +248,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         statusMessage,
         patientAccesses,
-        mockUsers: MOCK_USERS,
         login,
         logout,
         refreshUserMe,

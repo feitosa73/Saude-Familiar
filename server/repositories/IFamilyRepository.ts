@@ -18,4 +18,10 @@ export interface IFamilyRepository {
   findMembershipByUserId(uid: string): Promise<FamilyMembership | null>;
   saveMembership(membership: FamilyMembership): Promise<void>;
   listMemberships(familyId: string): Promise<FamilyMembership[]>;
+  createFamilyWithOwner(
+    familyName: string,
+    ownerUid: string,
+    ownerEmail?: string | null,
+    ownerDisplayName?: string | null
+  ): Promise<{ family: Family; membership: FamilyMembership }>;
 }

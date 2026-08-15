@@ -82,6 +82,48 @@ export function createApiRouter(
     }
   });
 
+  // 2.1 Create Family (Onboarding for authenticated user without active membership)
+  router.post('/families', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
+      }
+
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ error: 'Nome da família é obrigatório' });
+      }
+
+      // Check if user already has an active membership
+      const existingMembership = await familyRepository.findMembershipByUserId(authUser.uid);
+      if (existingMembership && existingMembership.status === 'active') {
+        return res.status(409).json({
+          error: 'Usuário já possui vínculo ativo com uma família cadastrada',
+          familyId: existingMembership.familyId,
+        });
+      }
+
+      const { family, membership } = await familyRepository.createFamilyWithOwner(
+        name.trim(),
+        authUser.uid,
+        authUser.email,
+        (authUser as any).name || null
+      );
+
+      res.status(201).json({
+        family,
+        membership,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao criar família:', error);
+      res.status(500).json({
+        error: error.message || 'Erro ao criar família',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  });
+
   // Helper for current user ID context in clinical services
   const getCurrentUserId = (req: Request): string => {
     const authUser = (req as AuthenticatedRequest).user;
