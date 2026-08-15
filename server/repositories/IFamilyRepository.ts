@@ -11,7 +11,7 @@ export interface UserDocument {
   email?: string | null;
   displayName?: string | null;
   photoURL?: string | null;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
   familyId?: string;
 }

@@ -1,4 +1,4 @@
-import { getFirebaseFirestore } from '../lib/firebaseAdmin';
+import { getFirebaseFirestore, getFirebaseAuth } from '../lib/firebaseAdmin';
 import {
   Family,
   FamilyMembership,
@@ -8,24 +8,6 @@ import {
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 
-function isPermissionOrUnavailableError(error: any): boolean {
-  if (!error) return false;
-  const msg = error.message || String(error);
-  return (
-    error.code === 7 ||
-    error.code === 'PERMISSION_DENIED' ||
-    msg.includes('PERMISSION_DENIED') ||
-    msg.includes('Missing or insufficient permissions') ||
-    msg.includes('Cloud Firestore API has not been used')
-  );
-}
-
-// In-memory fallback cache for development/preview when IAM credentials are not configured in local environment
-const inMemoryUsers = new Map<string, UserDocument>();
-const inMemoryFamilies = new Map<string, Family>();
-const inMemoryMemberships = new Map<string, FamilyMembership>(); // Key: `${familyId}:${userId}`
-const inMemoryAccessRequests = new Map<string, AccessRequest>(); // Key: `${familyId}:${requestId}`
-
 export class FirestoreFamilyRepository implements IFamilyRepository {
   private get db() {
     return getFirebaseFirestore();
@@ -34,27 +16,21 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   async getUser(uid: string): Promise<UserDocument | null> {
     try {
       const snap = await this.db.collection('users').doc(uid).get();
-      if (!snap.exists) return inMemoryUsers.get(uid) || null;
+      if (!snap.exists) return null;
       return snap.data() as UserDocument;
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        return inMemoryUsers.get(uid) || null;
-      }
-      console.error(`[FirestoreFamilyRepository] Error fetching user ${uid}:`, error);
+      console.warn(`[FirestoreFamilyRepository] Could not fetch user document ${uid}:`, error?.code || error?.message);
       throw error;
     }
   }
 
   async saveUser(user: UserDocument): Promise<void> {
-    inMemoryUsers.set(user.id, user);
     try {
       await this.db.collection('users').doc(user.id).set(user, { merge: true });
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] (Preview Fallback) Usuário ${user.id} salvo em memória.`);
-        return;
+      if (error?.code !== 7 && error?.code !== 'PERMISSION_DENIED') {
+        console.warn(`[FirestoreFamilyRepository] Error saving user ${user.id}:`, error?.code || error?.message);
       }
-      console.error(`[FirestoreFamilyRepository] Error saving user ${user.id}:`, error);
       throw error;
     }
   }
@@ -63,6 +39,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) return null;
 
+    // 1. Direct query in Firestore 'users' collection
     try {
       const snap = await this.db
         .collection('users')
@@ -74,15 +51,30 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         return snap.docs[0].data() as UserDocument;
       }
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] Error finding user by email ${cleanEmail}:`, error);
-      }
+      console.warn(`[FirestoreFamilyRepository] Error finding user by email ${cleanEmail}:`, error?.code || error?.message);
+      throw error;
     }
 
-    // Fallback: in-memory lookup
-    for (const u of inMemoryUsers.values()) {
-      if (u.email && u.email.trim().toLowerCase() === cleanEmail) {
-        return u;
+    // 2. Query Firebase Auth as secondary lookup (in case user document does not exist yet)
+    try {
+      const auth = getFirebaseAuth();
+      const authUser = await auth.getUserByEmail(cleanEmail);
+      if (authUser && authUser.uid) {
+        const userDoc = await this.getUser(authUser.uid);
+        if (userDoc) {
+          return userDoc;
+        }
+        return {
+          id: authUser.uid,
+          email: authUser.email || cleanEmail,
+          displayName: authUser.displayName || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    } catch (authError: any) {
+      if (authError?.code !== 'auth/user-not-found') {
+        console.warn(`[FirestoreFamilyRepository] FirebaseAuth getUserByEmail check failed:`, authError?.code || authError?.message);
       }
     }
 
@@ -92,27 +84,19 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   async getFamily(familyId: string): Promise<Family | null> {
     try {
       const snap = await this.db.collection('families').doc(familyId).get();
-      if (!snap.exists) return inMemoryFamilies.get(familyId) || null;
+      if (!snap.exists) return null;
       return snap.data() as Family;
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        return inMemoryFamilies.get(familyId) || null;
-      }
-      console.error(`[FirestoreFamilyRepository] Error fetching family ${familyId}:`, error);
+      console.warn(`[FirestoreFamilyRepository] Could not fetch family ${familyId}:`, error?.code || error?.message);
       throw error;
     }
   }
 
   async saveFamily(family: Family): Promise<void> {
-    inMemoryFamilies.set(family.id, family);
     try {
       await this.db.collection('families').doc(family.id).set(family, { merge: true });
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] (Preview Fallback) Família ${family.id} salva em memória.`);
-        return;
-      }
-      console.error(`[FirestoreFamilyRepository] Error saving family ${family.id}:`, error);
+      console.warn(`[FirestoreFamilyRepository] Error saving family ${family.id}:`, error?.code || error?.message);
       throw error;
     }
   }
@@ -125,15 +109,12 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         .collection('memberships')
         .doc(uid)
         .get();
-      if (!snap.exists) return inMemoryMemberships.get(`${familyId}:${uid}`) || null;
+      if (!snap.exists) return null;
       return snap.data() as FamilyMembership;
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        return inMemoryMemberships.get(`${familyId}:${uid}`) || null;
-      }
-      console.error(
-        `[FirestoreFamilyRepository] Error fetching membership for family ${familyId} and user ${uid}:`,
-        error
+      console.warn(
+        `[FirestoreFamilyRepository] Could not fetch membership for family ${familyId} and user ${uid}:`,
+        error?.code || error?.message
       );
       throw error;
     }
@@ -142,14 +123,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   async listMembershipsByUserId(uid: string): Promise<FamilyMembership[]> {
     const membershipsMap = new Map<string, FamilyMembership>();
 
-    // 1. Check in-memory memberships first
-    for (const mem of inMemoryMemberships.values()) {
-      if (mem.userId === uid && mem.status === 'active') {
-        membershipsMap.set(mem.familyId, mem);
-      }
-    }
-
-    // 2. Query Firestore collectionGroup
+    // 1. Try Firestore collectionGroup 'memberships'
     try {
       const snapshot = await this.db
         .collectionGroup('memberships')
@@ -165,74 +139,143 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         }
       }
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] CollectionGroup lookup for ${uid} failed:`, error?.message || error);
-      }
+      console.warn(
+        `[FirestoreFamilyRepository] CollectionGroup lookup for ${uid} not available (${error?.code || error?.message}), falling back to direct Firestore lookups.`
+      );
     }
 
-    // 3. Also check if user has a primary familyId in user document
-    const userCached = inMemoryUsers.get(uid);
-    if (userCached?.familyId && !membershipsMap.has(userCached.familyId)) {
-      const mem = inMemoryMemberships.get(`${userCached.familyId}:${uid}`);
-      if (mem && mem.status === 'active') {
-        membershipsMap.set(userCached.familyId, mem);
+    // 2. Direct lookup: check user document in Firestore for familyId
+    try {
+      const userDoc = await this.getUser(uid);
+      if (userDoc?.familyId && !membershipsMap.has(userDoc.familyId)) {
+        const mem = await this.getMembership(userDoc.familyId, uid);
+        if (mem && mem.status === 'active') {
+          membershipsMap.set(userDoc.familyId, mem);
+        } else {
+          // If membership doc is missing but user is bound to this family
+          const fam = await this.getFamily(userDoc.familyId);
+          if (fam) {
+            membershipsMap.set(userDoc.familyId, {
+              id: uid,
+              userId: uid,
+              familyId: userDoc.familyId,
+              role: fam.primaryOwnerUid === uid || fam.createdBy === uid ? 'owner' : 'member',
+              status: 'active',
+              joinedAt: fam.createdAt || new Date().toISOString(),
+              createdAt: fam.createdAt || new Date().toISOString(),
+              createdBy: fam.createdBy || uid,
+            });
+          }
+        }
       }
+    } catch (err: any) {
+      console.warn(`[FirestoreFamilyRepository] User doc check for ${uid}:`, err?.code || err?.message);
+    }
+
+    // 3. Direct lookup: families where user is primaryOwnerUid
+    try {
+      const ownedSnap = await this.db
+        .collection('families')
+        .where('primaryOwnerUid', '==', uid)
+        .get();
+
+      for (const doc of ownedSnap.docs) {
+        if (!membershipsMap.has(doc.id)) {
+          const mem = await this.getMembership(doc.id, uid);
+          if (mem && mem.status === 'active') {
+            membershipsMap.set(doc.id, mem);
+          } else {
+            membershipsMap.set(doc.id, {
+              id: uid,
+              userId: uid,
+              familyId: doc.id,
+              role: 'owner',
+              status: 'active',
+              joinedAt: doc.data().createdAt || new Date().toISOString(),
+              createdAt: doc.data().createdAt || new Date().toISOString(),
+              createdBy: doc.data().createdBy || uid,
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[FirestoreFamilyRepository] Owned families query for ${uid}:`, err?.code || err?.message);
+    }
+
+    // 4. Direct lookup: families where user is createdBy
+    try {
+      const createdSnap = await this.db
+        .collection('families')
+        .where('createdBy', '==', uid)
+        .get();
+
+      for (const doc of createdSnap.docs) {
+        if (!membershipsMap.has(doc.id)) {
+          const mem = await this.getMembership(doc.id, uid);
+          if (mem && mem.status === 'active') {
+            membershipsMap.set(doc.id, mem);
+          } else {
+            membershipsMap.set(doc.id, {
+              id: uid,
+              userId: uid,
+              familyId: doc.id,
+              role: 'owner',
+              status: 'active',
+              joinedAt: doc.data().createdAt || new Date().toISOString(),
+              createdAt: doc.data().createdAt || new Date().toISOString(),
+              createdBy: doc.data().createdBy || uid,
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[FirestoreFamilyRepository] Created families query for ${uid}:`, err?.code || err?.message);
     }
 
     return Array.from(membershipsMap.values());
   }
 
   async findMembershipByUserId(uid: string, targetFamilyId?: string): Promise<FamilyMembership | null> {
-    try {
-      // If targetFamilyId is explicitly requested, check it first
-      if (targetFamilyId) {
+    // 1. If targetFamilyId is explicitly requested, check it directly
+    if (targetFamilyId) {
+      try {
         const mem = await this.getMembership(targetFamilyId, uid);
         if (mem && mem.status === 'active') {
           return mem;
         }
+      } catch (err: any) {
+        console.warn(`[FirestoreFamilyRepository] Direct membership check for family ${targetFamilyId} and user ${uid}:`, err?.code || err?.message);
       }
+    }
 
-      // Otherwise, get all active memberships for this user
-      const allMemberships = await this.listMembershipsByUserId(uid);
-      if (allMemberships.length > 0) {
-        // Prefer owner role if exists, otherwise first active
-        const ownerMem = allMemberships.find((m) => m.role === 'owner');
-        return ownerMem || allMemberships[0];
-      }
-
-      // Fallback: check direct user document in Firestore
-      try {
-        const userDoc = await this.db.collection('users').doc(uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          if (userData?.familyId) {
-            const mem = await this.getMembership(userData.familyId, uid);
-            if (mem) {
-              return mem;
-            }
-          }
-        }
-      } catch (userErr: any) {
-        if (!isPermissionOrUnavailableError(userErr)) {
-          console.warn(`[FirestoreFamilyRepository] Direct user doc check failed for ${uid}:`, userErr?.message || userErr);
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`[FirestoreFamilyRepository] Error finding membership for user ${uid}:`, error);
-      // Fallback to inMemory
-      for (const mem of inMemoryMemberships.values()) {
-        if (mem.userId === uid && mem.status === 'active') {
+    // 2. Check direct user document in Firestore for primary familyId
+    try {
+      const userDoc = await this.getUser(uid);
+      if (userDoc?.familyId && userDoc.familyId !== targetFamilyId) {
+        const mem = await this.getMembership(userDoc.familyId, uid);
+        if (mem && mem.status === 'active') {
           return mem;
         }
       }
-      return null;
+    } catch (err: any) {
+      console.warn(`[FirestoreFamilyRepository] Primary userDoc family check for user ${uid}:`, err?.code || err?.message);
     }
+
+    // 3. Otherwise, get all active memberships for this user
+    try {
+      const allMemberships = await this.listMembershipsByUserId(uid);
+      if (allMemberships.length > 0) {
+        const ownerMem = allMemberships.find((m) => m.role === 'owner');
+        return ownerMem || allMemberships[0];
+      }
+    } catch (err: any) {
+      console.warn(`[FirestoreFamilyRepository] listMembershipsByUserId for user ${uid}:`, err?.code || err?.message);
+    }
+
+    return null;
   }
 
   async saveMembership(membership: FamilyMembership): Promise<void> {
-    inMemoryMemberships.set(`${membership.familyId}:${membership.userId}`, membership);
     try {
       const batch = this.db.batch();
       const membershipRef = this.db
@@ -255,15 +298,9 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
       await batch.commit();
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(
-          `[FirestoreFamilyRepository] (Preview Fallback) Membership ${membership.familyId}:${membership.userId} salva em memória.`
-        );
-        return;
-      }
       console.error(
         `[FirestoreFamilyRepository] Error saving membership for family ${membership.familyId} user ${membership.userId}:`,
-        error
+        error?.code || error?.message
       );
       throw error;
     }
@@ -280,16 +317,11 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       if (!snapshot.empty) {
         return snapshot.docs.map((doc) => doc.data() as FamilyMembership);
       }
+      return [];
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.error(`[FirestoreFamilyRepository] Error listing memberships for family ${familyId}:`, error);
-        throw error;
-      }
+      console.error(`[FirestoreFamilyRepository] Error listing memberships for family ${familyId}:`, error?.code || error?.message);
+      throw error;
     }
-
-    // In-memory fallback
-    const list = Array.from(inMemoryMemberships.values()).filter((m) => m.familyId === familyId);
-    return list;
   }
 
   async createFamilyWithOwner(
@@ -299,13 +331,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     ownerDisplayName?: string | null
   ): Promise<{ family: Family; membership: FamilyMembership }> {
     const now = new Date().toISOString();
-    let familyId = 'fam_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-
-    try {
-      familyId = this.db.collection('families').doc().id;
-    } catch {
-      // Keep generated id
-    }
+    const familyId = this.db.collection('families').doc().id;
 
     const family: Family = {
       id: familyId,
@@ -328,18 +354,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       updatedAt: now,
     };
 
-    // Store in-memory immediately
-    inMemoryFamilies.set(familyId, family);
-    inMemoryMemberships.set(`${familyId}:${ownerUid}`, membership);
-    inMemoryUsers.set(ownerUid, {
-      id: ownerUid,
-      email: ownerEmail || null,
-      displayName: ownerDisplayName || null,
-      familyId: familyId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
     try {
       const familyRef = this.db.collection('families').doc(familyId);
       const membershipRef = familyRef.collection('memberships').doc(ownerUid);
@@ -352,7 +366,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         userRef,
         {
           id: ownerUid,
-          email: ownerEmail || null,
+          email: ownerEmail ? ownerEmail.trim().toLowerCase() : null,
           displayName: ownerDisplayName || null,
           familyId: familyId,
           createdAt: now,
@@ -364,32 +378,23 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       await batch.commit();
       console.log(`[FirestoreFamilyRepository] Família ${familyId} e membership criadas com sucesso no Firestore.`);
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(
-          `[FirestoreFamilyRepository] (Preview Mode) Firestore retornou PERMISSION_DENIED / restrição IAM do ambiente Preview. Mantendo dados em memória para sessão local.`
-        );
-      } else {
-        console.error(`[FirestoreFamilyRepository] Error creating family with owner for uid ${ownerUid}:`, error);
-        throw error;
-      }
+      console.error(`[FirestoreFamilyRepository] Error creating family with owner for uid ${ownerUid}:`, error?.code || error?.message);
+      throw error;
     }
 
     return { family, membership };
   }
 
   // =========================================================================
-  // ACCESS REQUESTS IMPLEMENTATION
+  // ACCESS REQUESTS (PERSISTÊNCIA EXCLUSIVA NO FIRESTORE)
   // =========================================================================
 
   async createAccessRequest(data: Omit<AccessRequest, 'id'>): Promise<AccessRequest> {
-    const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const requestId = this.db.collection('families').doc(data.familyId).collection('accessRequests').doc().id;
     const request: AccessRequest = {
       id: requestId,
       ...data,
     };
-
-    // Cache locally
-    inMemoryAccessRequests.set(`${data.familyId}:${requestId}`, request);
 
     try {
       await this.db
@@ -399,16 +404,11 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         .doc(requestId)
         .set(request);
       console.log(`[FirestoreFamilyRepository] AccessRequest ${requestId} criado na família ${data.familyId}.`);
+      return request;
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] (Preview Fallback) AccessRequest ${requestId} salvo em memória.`);
-      } else {
-        console.error(`[FirestoreFamilyRepository] Erro ao salvar AccessRequest:`, error);
-        throw error;
-      }
+      console.error(`[FirestoreFamilyRepository] Erro ao salvar AccessRequest no Firestore:`, error?.code || error?.message);
+      throw error;
     }
-
-    return request;
   }
 
   async getAccessRequest(familyId: string, requestId: string): Promise<AccessRequest | null> {
@@ -423,20 +423,17 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       if (snap.exists) {
         return snap.data() as AccessRequest;
       }
+      return null;
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.error(`[FirestoreFamilyRepository] Erro ao buscar AccessRequest ${requestId}:`, error);
-      }
+      console.error(`[FirestoreFamilyRepository] Erro ao buscar AccessRequest ${requestId}:`, error?.code || error?.message);
+      throw error;
     }
-
-    return inMemoryAccessRequests.get(`${familyId}:${requestId}`) || null;
   }
 
   async listAccessRequestsByFamily(
     familyId: string,
     status?: AccessRequestStatus
   ): Promise<AccessRequest[]> {
-    const list: AccessRequest[] = [];
     try {
       let query: any = this.db
         .collection('families')
@@ -448,29 +445,18 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       }
 
       const snap = await query.get();
+      const list: AccessRequest[] = [];
       if (!snap.empty) {
         for (const doc of snap.docs) {
           list.push(doc.data() as AccessRequest);
         }
-        return list;
       }
+
+      return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.error(`[FirestoreFamilyRepository] Erro ao listar AccessRequests da família ${familyId}:`, error);
-      }
+      console.error(`[FirestoreFamilyRepository] Erro ao listar AccessRequests da família ${familyId}:`, error?.code || error?.message);
+      throw error;
     }
-
-    // In-memory fallback
-    for (const req of inMemoryAccessRequests.values()) {
-      if (req.familyId === familyId) {
-        if (!status || req.status === status) {
-          list.push(req);
-        }
-      }
-    }
-
-    // Sort newest first
-    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async listAccessRequestsByRequester(requesterUid: string): Promise<AccessRequest[]> {
@@ -485,22 +471,27 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         for (const doc of snap.docs) {
           list.push(doc.data() as AccessRequest);
         }
-        return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
       }
+      return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
     } catch (error: any) {
-      if (!isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] CollectionGroup accessRequests failed:`, error?.message || error);
+      console.warn(
+        `[FirestoreFamilyRepository] CollectionGroup accessRequests lookup not available (${error?.code || error?.message}), trying direct user family check.`
+      );
+      try {
+        const userDoc = await this.getUser(requesterUid);
+        if (userDoc?.familyId) {
+          const reqs = await this.listAccessRequestsByFamily(userDoc.familyId);
+          for (const r of reqs) {
+            if (r.requesterUid === requesterUid) {
+              list.push(r);
+            }
+          }
+        }
+      } catch (directErr: any) {
+        console.warn(`[FirestoreFamilyRepository] Direct access request fallback failed:`, directErr?.code || directErr?.message);
       }
+      return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
     }
-
-    // Fallback: in-memory
-    for (const req of inMemoryAccessRequests.values()) {
-      if (req.requesterUid === requesterUid) {
-        list.push(req);
-      }
-    }
-
-    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async approveAccessRequest(
@@ -547,7 +538,14 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     };
 
     // 3. Create Patient Access
-    const accessId = 'acc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const accessId = this.db
+      .collection('families')
+      .doc(familyId)
+      .collection('patients')
+      .doc(patientId)
+      .collection('accesses')
+      .doc().id;
+
     const patientAccess: PatientAccess = {
       id: accessId,
       patientId: patientId,
@@ -557,11 +555,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       createdBy: ownerUid,
     };
 
-    // Cache locally immediately
-    inMemoryAccessRequests.set(`${familyId}:${requestId}`, updatedRequest);
-    inMemoryMemberships.set(`${familyId}:${req.requesterUid}`, membership);
-
-    // Save to Firestore in batch
+    // Atomic batch commit in Firestore
     try {
       const batch = this.db.batch();
 
@@ -585,19 +579,28 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         .collection('accesses')
         .doc(accessId);
 
+      const userRef = this.db.collection('users').doc(req.requesterUid);
+
       batch.set(requestRef, updatedRequest, { merge: true });
       batch.set(membershipRef, membership, { merge: true });
       batch.set(patientAccessRef, patientAccess, { merge: true });
+      batch.set(
+        userRef,
+        {
+          id: req.requesterUid,
+          email: req.requesterEmail,
+          displayName: req.requesterName,
+          familyId: familyId,
+          updatedAt: now,
+        },
+        { merge: true }
+      );
 
       await batch.commit();
-      console.log(`[FirestoreFamilyRepository] Solicitação ${requestId} aprovada com sucesso.`);
+      console.log(`[FirestoreFamilyRepository] Solicitação ${requestId} aprovada atomicamente com sucesso.`);
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] (Preview Fallback) Aprovação da solicitação ${requestId} salva em memória.`);
-      } else {
-        console.error(`[FirestoreFamilyRepository] Erro ao aprovar solicitação:`, error);
-        throw error;
-      }
+      console.error(`[FirestoreFamilyRepository] Erro ao gravar aprovação atômica no Firestore:`, error?.code || error?.message);
+      throw error;
     }
 
     return {
@@ -626,8 +629,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       resolvedBy: ownerUid,
     };
 
-    inMemoryAccessRequests.set(`${familyId}:${requestId}`, updatedRequest);
-
     try {
       await this.db
         .collection('families')
@@ -635,54 +636,30 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         .collection('accessRequests')
         .doc(requestId)
         .set(updatedRequest, { merge: true });
+      console.log(`[FirestoreFamilyRepository] Solicitação ${requestId} rejeitada no Firestore.`);
+      return updatedRequest;
     } catch (error: any) {
-      if (isPermissionOrUnavailableError(error)) {
-        console.warn(`[FirestoreFamilyRepository] (Preview Fallback) Rejeição da solicitação ${requestId} salva em memória.`);
-      } else {
-        console.error(`[FirestoreFamilyRepository] Erro ao rejeitar solicitação:`, error);
-        throw error;
-      }
+      console.error(`[FirestoreFamilyRepository] Erro ao rejeitar solicitação no Firestore:`, error?.code || error?.message);
+      throw error;
     }
-
-    return updatedRequest;
   }
 
   async countPendingRequestsForOwner(ownerUid: string): Promise<number> {
     let count = 0;
     try {
-      // Find families owned by this user
-      const ownedFamilies: string[] = [];
-      for (const fam of inMemoryFamilies.values()) {
-        if (fam.primaryOwnerUid === ownerUid || fam.createdBy === ownerUid) {
-          ownedFamilies.push(fam.id);
-        }
-      }
+      const snap = await this.db
+        .collection('families')
+        .where('primaryOwnerUid', '==', ownerUid)
+        .get();
 
-      // Query from Firestore if available
-      try {
-        const snap = await this.db
-          .collection('families')
-          .where('primaryOwnerUid', '==', ownerUid)
-          .get();
-
-        for (const doc of snap.docs) {
-          if (!ownedFamilies.includes(doc.id)) {
-            ownedFamilies.push(doc.id);
-          }
-        }
-      } catch (err: any) {
-        if (!isPermissionOrUnavailableError(err)) {
-          console.warn('[FirestoreFamilyRepository] Error finding owned families in Firestore:', err);
-        }
-      }
-
-      // For each family, count pending requests
-      for (const famId of ownedFamilies) {
-        const requests = await this.listAccessRequestsByFamily(famId, 'pending');
+      for (const doc of snap.docs) {
+        const requests = await this.listAccessRequestsByFamily(doc.id, 'pending');
         count += requests.length;
       }
-    } catch (error) {
-      console.warn('[FirestoreFamilyRepository] Error counting pending requests:', error);
+    } catch (error: any) {
+      if (error?.code !== 7 && error?.code !== 'PERMISSION_DENIED') {
+        console.warn('[FirestoreFamilyRepository] Error counting pending requests:', error?.code || error?.message);
+      }
     }
     return count;
   }

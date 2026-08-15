@@ -72,6 +72,23 @@ export function createApiRouter(
         activeFamily = userFamiliesList[0].family;
       }
 
+      // Sync user profile in Firestore 'users' collection (best-effort sync)
+      if (authUser.email) {
+        try {
+          await familyRepository.saveUser({
+            id: authUser.uid,
+            email: authUser.email.trim().toLowerCase(),
+            displayName: (authUser as any).name || null,
+            familyId: activeFamily?.id || undefined,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (err: any) {
+          if (err?.code !== 7 && err?.code !== 'PERMISSION_DENIED') {
+            console.warn('[API] /user/me: Error syncing user doc in Firestore:', err?.code || err?.message);
+          }
+        }
+      }
+
       // Calculate pending requests count if owner
       const pendingRequestsCount = await familyRepository.countPendingRequestsForOwner(authUser.uid);
 
@@ -91,14 +108,15 @@ export function createApiRouter(
       const isFirestoreUnavailable =
         error?.message?.includes('Cloud Firestore API has not been used') ||
         error?.message?.includes('PERMISSION_DENIED') ||
-        error?.code === 7;
+        error?.code === 7 ||
+        error?.code === 'PERMISSION_DENIED';
 
       if (isFirestoreUnavailable) {
-        console.warn('[API] /user/me: Cloud Firestore não provisionado/habilitado no GCP. Retornando 503.');
+        console.error('[API] /user/me: Erro de permissão IAM ou API desabilitada no Firestore:', error?.code || error?.message);
         return res.status(503).json({
           error:
-            'A API Cloud Firestore não está habilitada ou o banco ainda não foi provisionado no projeto GCP.',
-          code: 'FIRESTORE_NOT_INITIALIZED',
+            'Acesso ao Firestore não autorizado ou serviço indisponível. Verifique as permissões IAM da Service Account.',
+          code: 'FIRESTORE_PERMISSION_DENIED',
         });
       }
 
@@ -166,25 +184,21 @@ export function createApiRouter(
 
       // Validação básica de auto-solicitação
       if (requesterEmail && cleanOwnerEmail === requesterEmail) {
-        return res.status(200).json({
-          success: true,
-          message: 'Solicitação registrada com sucesso.',
+        return res.status(400).json({
+          error: 'Você já é o usuário titular desta conta. Para compartilhar pacientes, informe o e-mail de outro responsável familiar.',
+          code: 'SELF_REQUEST_NOT_ALLOWED',
         });
       }
 
       // Localiza o usuário owner pelo e-mail server-side
       const ownerUser = await familyRepository.findUserByEmail(cleanOwnerEmail);
 
-      // Resposta genérica segura para evitar user enumeration
-      const genericSuccessResponse = {
-        success: true,
-        message:
-          'Se o e-mail informado corresponder a um responsável cadastrado, a solicitação de acesso foi enviada para aprovação.',
-      };
-
       if (!ownerUser) {
-        console.log(`[API] AccessRequest: Email ${cleanOwnerEmail} não encontrado (retornando resposta genérica).`);
-        return res.status(200).json(genericSuccessResponse);
+        console.log(`[API] AccessRequest: Email de responsável ${cleanOwnerEmail} não encontrado.`);
+        return res.status(404).json({
+          error: `Nenhum responsável familiar cadastrado com o e-mail "${cleanOwnerEmail}". Verifique se o endereço está correto e se o responsável já acessou o Saúde Familiar.`,
+          code: 'OWNER_NOT_FOUND',
+        });
       }
 
       // Localiza a família em que o usuário é owner
@@ -200,15 +214,18 @@ export function createApiRouter(
 
       if (!targetFamilyId) {
         console.log(`[API] AccessRequest: Owner ${ownerUser.id} não possui família vinculada.`);
-        return res.status(200).json(genericSuccessResponse);
+        return res.status(404).json({
+          error: `O responsável cadastrado (${cleanOwnerEmail}) ainda não possui uma família criada no sistema.`,
+          code: 'FAMILY_NOT_FOUND',
+        });
       }
 
       // Verifica se o solicitante já possui membership nessa família
       const existingMembership = await familyRepository.getMembership(targetFamilyId, authUser.uid);
       if (existingMembership && existingMembership.status === 'active') {
-        return res.status(200).json({
-          success: true,
-          message: 'Você já possui acesso ativo a esta família.',
+        return res.status(400).json({
+          error: 'Você já possui acesso ativo a esta família.',
+          code: 'ALREADY_MEMBER',
         });
       }
 
@@ -217,16 +234,16 @@ export function createApiRouter(
       const alreadyPending = pendingReqs.some((r) => r.requesterUid === authUser.uid);
 
       if (alreadyPending) {
-        return res.status(200).json({
-          success: true,
-          message: 'Sua solicitação de acesso já está pendente de aprovação pelo responsável.',
+        return res.status(400).json({
+          error: 'Sua solicitação de acesso já está pendente de aprovação pelo responsável.',
+          code: 'ALREADY_PENDING',
         });
       }
 
       // Obtém dados da família
       const family = await familyRepository.getFamily(targetFamilyId);
 
-      // Cria a solicitação pendente
+      // Cria a solicitação pendente no Firestore
       const newRequest = await familyRepository.createAccessRequest({
         familyId: targetFamilyId,
         familyName: family?.name || 'Família',
@@ -248,9 +265,10 @@ export function createApiRouter(
         request: newRequest,
       });
     } catch (error: any) {
-      console.error('[API] Erro ao criar solicitação de acesso:', error);
+      console.error('[API] Erro ao criar solicitação de acesso:', error?.code || error?.message);
       res.status(500).json({
-        error: 'Erro interno ao processar solicitação de acesso',
+        error: 'Não foi possível gravar a solicitação no Firestore. Verifique a conectividade e permissões do banco.',
+        code: 'FIRESTORE_WRITE_FAILED',
       });
     }
   });

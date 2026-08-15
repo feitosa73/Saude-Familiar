@@ -101,14 +101,15 @@ export function createRequireActiveMembership(
       const isFirestoreUnavailable =
         error?.message?.includes('Cloud Firestore API has not been used') ||
         error?.message?.includes('PERMISSION_DENIED') ||
-        error?.code === 7;
+        error?.code === 7 ||
+        error?.code === 'PERMISSION_DENIED';
 
       if (isFirestoreUnavailable) {
-        console.warn('[AuthZ] Firestore não provisionado/habilitado no GCP. Retornando 503.');
+        console.warn('[AuthZ] Firestore indisponível ou permissão IAM insuficiente (código 7 / PERMISSION_DENIED). Retornando 503.');
         res.status(503).json({
           error:
-            'A API Cloud Firestore não está habilitada ou o banco ainda não foi provisionado no projeto GCP.',
-          code: 'FIRESTORE_NOT_INITIALIZED',
+            'Acesso ao Firestore não autorizado ou serviço indisponível. Verifique as permissões IAM da Service Account.',
+          code: 'FIRESTORE_PERMISSION_DENIED',
         });
         return;
       }
