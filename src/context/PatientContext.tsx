@@ -37,7 +37,7 @@ interface PatientContextType {
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, accessStatus } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientIdState] = useState<string>('');
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
@@ -62,7 +62,7 @@ export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const refreshPatients = useCallback(async () => {
-    if (!user) {
+    if (!user || accessStatus !== 'authenticated_active') {
       setPatients([]);
       setSelectedPatientIdState('');
       setIsInitialLoading(false);
@@ -86,16 +86,19 @@ export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } catch (err: any) {
       console.error('Erro ao carregar dados:', err);
-      showToast(err.message || 'Erro ao carregar dados do servidor', 'error');
+      // Only show error toast if it's not a standard authz redirect/status
+      if (err.status !== 401 && err.status !== 403) {
+        showToast(err.message || 'Erro ao carregar dados do servidor', 'error');
+      }
     } finally {
       setIsLoading(false);
       setIsInitialLoading(false);
     }
-  }, [user, showToast]);
+  }, [user, accessStatus, showToast]);
 
   useEffect(() => {
     refreshPatients();
-  }, [refreshPatients, user?.id]);
+  }, [refreshPatients, user?.id, accessStatus]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId) || patients[0] || null;
 

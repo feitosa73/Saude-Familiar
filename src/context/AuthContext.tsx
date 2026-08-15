@@ -1,16 +1,40 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User, PatientAccess, PatientRole } from '../types';
+import {
+  User,
+  PatientAccess,
+  PatientRole,
+  Family,
+  FamilyMembership,
+  UserMeResponse,
+} from '../types';
 import { authService, AuthCredentials, MOCK_USERS, MOCK_PATIENT_ACCESSES } from '../services/authService';
 import { authorizationService, PatientPermissions } from '../services/authorizationService';
+import { api, ApiError } from '../services/api';
+
+export type AuthAccessStatus =
+  | 'loading'
+  | 'unauthenticated'
+  | 'authenticated_active'
+  | 'no_membership'
+  | 'pending'
+  | 'disabled'
+  | 'firestore_not_initialized'
+  | 'error';
 
 interface AuthContextType {
   user: User | null;
+  family: Family | null;
+  membership: FamilyMembership | null;
+  accessStatus: AuthAccessStatus;
+  isOwner: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  statusMessage: string | null;
   patientAccesses: PatientAccess[];
   mockUsers: User[];
   login: (credentials?: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUserMe: () => Promise<void>;
   getUserRoleForPatient: (patientId: string) => PatientRole | null;
   getPermissionsForPatient: (patientId: string) => PatientPermissions;
   refreshAccesses: () => Promise<void>;
@@ -20,6 +44,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => authService.getCurrentUser());
+  const [family, setFamily] = useState<Family | null>(null);
+  const [membership, setMembership] = useState<FamilyMembership | null>(null);
+  const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>('loading');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [patientAccesses, setPatientAccesses] = useState<PatientAccess[]>(MOCK_PATIENT_ACCESSES);
 
@@ -38,9 +66,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user?.id]);
 
+  const loadAuthoritativeState = useCallback(async (currentUser: User | null) => {
+    if (!currentUser) {
+      setFamily(null);
+      setMembership(null);
+      setAccessStatus('unauthenticated');
+      setStatusMessage(null);
+      setPatientAccesses([]);
+      return;
+    }
+
+    setAccessStatus('loading');
+    setStatusMessage(null);
+
+    try {
+      const meResponse: UserMeResponse = await api.getCurrentUser();
+      
+      setFamily(meResponse.family);
+      setMembership(meResponse.membership);
+
+      if (!meResponse.membership || !meResponse.family) {
+        setAccessStatus('no_membership');
+        setStatusMessage('Usuário autenticado, mas sem vínculo de família associado.');
+      } else if (meResponse.membership.status === 'active') {
+        setAccessStatus('authenticated_active');
+        setStatusMessage(null);
+      } else if (meResponse.membership.status === 'pending') {
+        setAccessStatus('pending');
+        setStatusMessage('Seu acesso à família está pendente de aprovação.');
+      } else if (meResponse.membership.status === 'disabled') {
+        setAccessStatus('disabled');
+        setStatusMessage('Seu acesso à família foi desativado pelo administrador.');
+      } else {
+        setAccessStatus('no_membership');
+        setStatusMessage('Status de membership inválido ou não autorizado.');
+      }
+    } catch (error: any) {
+      console.error('[AuthContext] Erro ao carregar /user/me:', error);
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          setAccessStatus('unauthenticated');
+          setFamily(null);
+          setMembership(null);
+          setStatusMessage('Sessão expirada. Faça login novamente.');
+          return;
+        }
+        if (error.status === 403) {
+          if (error.code === 'MEMBERSHIP_PENDING') {
+            setAccessStatus('pending');
+            setStatusMessage('Acesso pendente de aprovação.');
+          } else if (error.code === 'MEMBERSHIP_DISABLED') {
+            setAccessStatus('disabled');
+            setStatusMessage('Acesso desativado pelo administrador.');
+          } else {
+            setAccessStatus('no_membership');
+            setStatusMessage(error.message || 'Sem membership ativa cadastrada.');
+          }
+          return;
+        }
+        if (error.status === 503 || error.code === 'FIRESTORE_NOT_INITIALIZED') {
+          setAccessStatus('firestore_not_initialized');
+          setStatusMessage('Banco Firestore ainda não provisionado');
+          return;
+        }
+      }
+      setAccessStatus('error');
+      setStatusMessage(error.message || 'Erro ao validar autorização com o servidor.');
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged((updatedUser) => {
       setUser(updatedUser);
+      loadAuthoritativeState(updatedUser);
       if (updatedUser) {
         fetchAccesses(updatedUser.id);
       } else {
@@ -48,18 +146,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    if (user?.id) {
-      fetchAccesses(user.id);
-    }
-
     return () => unsubscribe();
-  }, [fetchAccesses, user?.id]);
+  }, [fetchAccesses, loadAuthoritativeState]);
+
+  const refreshUserMe = async () => {
+    setIsLoading(true);
+    try {
+      await loadAuthoritativeState(user);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = async (credentials?: AuthCredentials) => {
     setIsLoading(true);
     try {
       const loggedUser = await authService.login(credentials);
       setUser(loggedUser);
+      await loadAuthoritativeState(loggedUser);
       await fetchAccesses(loggedUser.id);
     } finally {
       setIsLoading(false);
@@ -71,6 +175,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logout();
       setUser(null);
+      setFamily(null);
+      setMembership(null);
+      setAccessStatus('unauthenticated');
+      setStatusMessage(null);
       setPatientAccesses([]);
     } finally {
       setIsLoading(false);
@@ -80,17 +188,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getUserRoleForPatient = useCallback(
     (patientId: string): PatientRole | null => {
       if (!user) return null;
+      if (membership?.role === 'owner') return 'ADMIN';
       return authorizationService.getUserRole(user.id, patientId, patientAccesses);
     },
-    [user, patientAccesses]
+    [user, membership, patientAccesses]
   );
 
   const getPermissionsForPatient = useCallback(
     (patientId: string): PatientPermissions => {
-      if (!user) {
+      if (!user || accessStatus !== 'authenticated_active') {
         return {
           role: null,
-          roleLabel: 'Desconectado',
+          roleLabel: 'Desconectado / Sem Acesso',
           canView: false,
           canEditPatient: false,
           canDeletePatient: false,
@@ -100,9 +209,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           canManageAccess: false,
         };
       }
+
+      if (membership?.role === 'owner') {
+        return {
+          role: 'ADMIN',
+          roleLabel: 'Owner / Administrador da Família',
+          canView: true,
+          canEditPatient: true,
+          canDeletePatient: true,
+          canCreateRecord: true,
+          canEditRecord: true,
+          canDeleteRecord: true,
+          canManageAccess: true,
+        };
+      }
+
       return authorizationService.getPermissions(user.id, patientId, patientAccesses);
     },
-    [user, patientAccesses]
+    [user, accessStatus, membership, patientAccesses]
   );
 
   const refreshAccesses = async () => {
@@ -111,16 +235,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isOwner = membership?.role === 'owner' && accessStatus === 'authenticated_active';
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        family,
+        membership,
+        accessStatus,
+        isOwner,
+        isAuthenticated: !!user && accessStatus === 'authenticated_active',
         isLoading,
+        statusMessage,
         patientAccesses,
         mockUsers: MOCK_USERS,
         login,
         logout,
+        refreshUserMe,
         getUserRoleForPatient,
         getPermissionsForPatient,
         refreshAccesses,

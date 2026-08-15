@@ -5,7 +5,7 @@ import { createApiRouter } from './server/routes/api';
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 8080;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // JSON Body parser
   app.use(express.json());

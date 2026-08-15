@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { LoginView } from './components/LoginView';
+import { AccessDeniedView } from './components/AccessDeniedView';
 import { Navbar } from './components/Navbar';
 import { TabNavigation } from './components/TabNavigation';
 import { DashboardView } from './components/DashboardView';
@@ -16,8 +17,17 @@ import { NotificationToast } from './components/NotificationToast';
 import { AnimatePresence, motion } from 'motion/react';
 
 const MainContent: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { activeTab, isInitialLoading, selectedPatient } = usePatient();
+  const {
+    user,
+    family,
+    membership,
+    accessStatus,
+    statusMessage,
+    refreshUserMe,
+    logout,
+    isLoading: isAuthLoading,
+  } = useAuth();
+  const { activeTab, isInitialLoading } = usePatient();
 
   // Modal triggers across views
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -35,17 +45,49 @@ const MainContent: React.FC = () => {
     setIsDocModalOpen(true);
   };
 
-  // If not authenticated, render Login Screen
-  if (!isAuthenticated) {
+  // If unauthenticated (no Firebase Auth user), render Login Screen
+  if (accessStatus === 'unauthenticated' || (!user && accessStatus !== 'loading')) {
     return <LoginView />;
   }
 
-  if (isInitialLoading || isAuthLoading) {
+  // Initial loading state
+  if (accessStatus === 'loading' || (isAuthLoading && !user)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800 p-6">
         <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
         <h2 className="text-lg font-bold text-slate-900">Saúde Familiar</h2>
-        <p className="text-sm text-slate-500 mt-1">Carregando prontuário e permissões de acesso...</p>
+        <p className="text-sm text-slate-500 mt-1">Carregando prontuário e autorização...</p>
+      </div>
+    );
+  }
+
+  // If user is authenticated in Firebase Auth, but does not have active membership
+  if (
+    accessStatus === 'no_membership' ||
+    accessStatus === 'pending' ||
+    accessStatus === 'disabled' ||
+    accessStatus === 'firestore_not_initialized' ||
+    accessStatus === 'error'
+  ) {
+    return (
+      <AccessDeniedView
+        status={accessStatus}
+        user={user}
+        family={family}
+        membership={membership}
+        statusMessage={statusMessage}
+        onRefresh={refreshUserMe}
+        onLogout={logout}
+      />
+    );
+  }
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800 p-6">
+        <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <h2 className="text-lg font-bold text-slate-900">Saúde Familiar</h2>
+        <p className="text-sm text-slate-500 mt-1">Carregando dados dos pacientes...</p>
       </div>
     );
   }

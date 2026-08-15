@@ -1,3 +1,34 @@
+export type MembershipRole = 'owner' | 'member';
+export type MembershipStatus = 'active' | 'pending' | 'disabled';
+
+export interface Family {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface FamilyMembership {
+  id: string;
+  familyId: string;
+  userId: string;
+  role: MembershipRole;
+  status: MembershipStatus;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy: string;
+}
+
+export interface UserMeResponse {
+  uid: string;
+  email: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+  family: Family | null;
+  membership: FamilyMembership | null;
+}
+
 export type PatientRole = 'ADMIN' | 'CAREGIVER' | 'VIEWER';
 
 export interface PatientAccess {

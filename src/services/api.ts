@@ -5,14 +5,29 @@ import {
   Exam,
   MedicalDocument,
   TimelineEvent,
-  User,
   DashboardData,
   PatientAccess,
   PatientRole,
+  UserMeResponse,
+  FamilyMembership,
+  MembershipRole,
+  MembershipStatus,
 } from '../types';
 import { authService } from './authService';
 
 const BASE_URL = '/api';
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const idToken = await authService.getIdToken();
@@ -28,23 +43,52 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     headers,
   });
 
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    let errorData: any = {};
+    if (isJson) {
+      errorData = await response.json().catch(() => ({}));
+    } else {
+      const text = await response.text().catch(() => '');
+      errorData = { error: text || `Erro HTTP ${response.status}: ${response.statusText}` };
+    }
+
     if (response.status === 401) {
       await authService.logout();
     }
-    throw new Error(errorData.error || `Erro na requisição: ${response.statusText}`);
+    throw new ApiError(
+      errorData.error || `Erro na requisição: ${response.statusText}`,
+      response.status,
+      errorData.code
+    );
   }
 
-  return response.json();
+  if (isJson) {
+    return response.json();
+  }
+  const text = await response.text();
+  return text as unknown as T;
 }
 
 export const api = {
   // Firebase Auth Verified Current User
   getMe: () => request<{ uid: string; email: string | null; authenticated: boolean }>('/me'),
 
-  // Current User
-  getCurrentUser: () => request<User & { accesses: PatientAccess[] }>('/user/me'),
+  // Authoritative Current User Profile & Family Membership
+  getCurrentUser: () => request<UserMeResponse>('/user/me'),
+
+  // Family Members Management
+  getFamilyMembers: () => request<FamilyMembership[]>('/family/members'),
+  updateFamilyMember: (
+    memberUid: string,
+    data: { role?: MembershipRole; status?: MembershipStatus }
+  ) =>
+    request<FamilyMembership>(`/family/members/${memberUid}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Patient Access
   getPatientAccesses: (patientId: string) =>
@@ -178,3 +222,4 @@ export const api = {
       method: 'DELETE',
     }),
 };
+

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 /**
  * Firebase Admin SDK Initialization
@@ -28,4 +29,9 @@ export function getFirebaseAdminApp(): App {
 export function getFirebaseAuth(): Auth {
   const app = getFirebaseAdminApp();
   return getAuth(app);
+}
+
+export function getFirebaseFirestore(): Firestore {
+  const app = getFirebaseAdminApp();
+  return getFirestore(app);
 }
