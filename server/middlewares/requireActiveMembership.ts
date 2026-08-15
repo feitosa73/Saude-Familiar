@@ -30,8 +30,18 @@ export function createRequireActiveMembership(
     }
 
     try {
-      // Lookup membership in Firestore strictly by Firebase Auth UID
-      const membership = await familyRepository.findMembershipByUserId(authUser.uid);
+      // Check if a specific target familyId was requested via header, query or params
+      const requestedFamilyId =
+        (req.headers['x-family-id'] as string) ||
+        (req.query.familyId as string) ||
+        req.params.familyId ||
+        undefined;
+
+      // Lookup membership in Firestore strictly by Firebase Auth UID and targetFamilyId
+      const membership = await familyRepository.findMembershipByUserId(
+        authUser.uid,
+        requestedFamilyId
+      );
 
       if (!membership) {
         console.warn(`[AuthZ] Access denied: No membership found for uid=${authUser.uid}`);

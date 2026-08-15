@@ -25,6 +25,8 @@ interface AuthContextType {
   user: User | null;
   family: Family | null;
   membership: FamilyMembership | null;
+  families: Array<{ family: Family; membership: FamilyMembership }>;
+  pendingRequestsCount: number;
   accessStatus: AuthAccessStatus;
   isOwner: boolean;
   isAuthenticated: boolean;
@@ -34,6 +36,7 @@ interface AuthContextType {
   login: (credentials?: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
   refreshUserMe: () => Promise<void>;
+  switchFamily: (familyId: string) => Promise<void>;
   getUserRoleForPatient: (patientId: string) => PatientRole | null;
   getPermissionsForPatient: (patientId: string) => PatientPermissions;
   refreshAccesses: () => Promise<void>;
@@ -45,6 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => authService.getCurrentUser());
   const [family, setFamily] = useState<Family | null>(null);
   const [membership, setMembership] = useState<FamilyMembership | null>(null);
+  const [families, setFamilies] = useState<Array<{ family: Family; membership: FamilyMembership }>>([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
   const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>('loading');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -69,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser) {
       setFamily(null);
       setMembership(null);
+      setFamilies([]);
+      setPendingRequestsCount(0);
       setAccessStatus('unauthenticated');
       setStatusMessage(null);
       setPatientAccesses([]);
@@ -83,10 +90,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setFamily(meResponse.family);
       setMembership(meResponse.membership);
+      setFamilies(meResponse.families || []);
+      setPendingRequestsCount(meResponse.pendingRequestsCount || 0);
+
+      if (meResponse.family?.id) {
+        api.setActiveFamilyId(meResponse.family.id);
+      }
 
       if (!meResponse.membership || !meResponse.family) {
         setAccessStatus('no_membership');
-        setStatusMessage('Usuário autenticado, mas sem vínculo de família associado.');
+        setStatusMessage('Usuário autenticado, mas sem vínculo de família ativo associado.');
       } else if (meResponse.membership.status === 'active') {
         setAccessStatus('authenticated_active');
         setStatusMessage(null);
@@ -107,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAccessStatus('unauthenticated');
           setFamily(null);
           setMembership(null);
+          setFamilies([]);
           setStatusMessage('Sessão expirada. Faça login novamente.');
           return;
         }
@@ -148,10 +162,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, [fetchAccesses, loadAuthoritativeState]);
 
+  const switchFamily = async (familyId: string) => {
+    setIsLoading(true);
+    try {
+      api.setActiveFamilyId(familyId);
+      await loadAuthoritativeState(user);
+      if (user?.id) {
+        await fetchAccesses(user.id);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshUserMe = async () => {
     setIsLoading(true);
     try {
       await loadAuthoritativeState(user);
+      if (user?.id) {
+        await fetchAccesses(user.id);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -172,10 +202,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setIsLoading(true);
     try {
+      api.setActiveFamilyId(null);
       await authService.logout();
       setUser(null);
       setFamily(null);
       setMembership(null);
+      setFamilies([]);
+      setPendingRequestsCount(0);
       setAccessStatus('unauthenticated');
       setStatusMessage(null);
       setPatientAccesses([]);
@@ -242,6 +275,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         family,
         membership,
+        families,
+        pendingRequestsCount,
         accessStatus,
         isOwner,
         isAuthenticated: !!user && accessStatus === 'authenticated_active',
@@ -251,6 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         refreshUserMe,
+        switchFamily,
         getUserRoleForPatient,
         getPermissionsForPatient,
         refreshAccesses,

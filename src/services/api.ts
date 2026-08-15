@@ -12,10 +12,13 @@ import {
   FamilyMembership,
   MembershipRole,
   MembershipStatus,
+  AccessRequest,
 } from '../types';
 import { authService } from './authService';
 
 const BASE_URL = '/api';
+
+let currentActiveFamilyId: string | null = localStorage.getItem('saudefamiliar_active_family_id');
 
 export class ApiError extends Error {
   status: number;
@@ -35,6 +38,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+    ...(currentActiveFamilyId ? { 'x-family-id': currentActiveFamilyId } : {}),
     ...(options?.headers as Record<string, string>),
   };
 
@@ -73,6 +77,17 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Family selection context
+  setActiveFamilyId: (familyId: string | null) => {
+    currentActiveFamilyId = familyId;
+    if (familyId) {
+      localStorage.setItem('saudefamiliar_active_family_id', familyId);
+    } else {
+      localStorage.removeItem('saudefamiliar_active_family_id');
+    }
+  },
+  getActiveFamilyId: () => currentActiveFamilyId,
+
   // Firebase Auth Verified Current User
   getMe: () => request<{ uid: string; email: string | null; authenticated: boolean }>('/me'),
 
@@ -85,6 +100,44 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // =========================================================================
+  // ACCESS REQUESTS
+  // =========================================================================
+  requestAccess: (data: { ownerEmail: string }) =>
+    request<{ success: boolean; message: string; request?: AccessRequest }>('/access-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMyAccessRequests: () => request<AccessRequest[]>('/access-requests/my'),
+
+  getFamilyAccessRequests: (familyId: string) =>
+    request<AccessRequest[]>(`/families/${familyId}/access-requests`),
+
+  approveAccessRequest: (
+    familyId: string,
+    requestId: string,
+    data: { patientId: string; role: 'VIEWER' | 'CAREGIVER' }
+  ) =>
+    request<{
+      success: boolean;
+      message: string;
+      request: AccessRequest;
+      membership: FamilyMembership;
+      patientAccess: PatientAccess;
+    }>(`/families/${familyId}/access-requests/${requestId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  rejectAccessRequest: (familyId: string, requestId: string) =>
+    request<{ success: boolean; message: string; request: AccessRequest }>(
+      `/families/${familyId}/access-requests/${requestId}/reject`,
+      {
+        method: 'POST',
+      }
+    ),
 
   // Family Members Management
   getFamilyMembers: () => request<FamilyMembership[]>('/family/members'),

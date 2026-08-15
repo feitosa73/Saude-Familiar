@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   PlusCircle,
@@ -12,9 +12,14 @@ import {
   Building2,
   RefreshCw,
   AlertCircle,
-  UserCheck,
+  Send,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Mail,
+  ShieldCheck,
 } from 'lucide-react';
-import { User } from '../types';
+import { User, AccessRequest } from '../types';
 import { api, ApiError } from '../services/api';
 
 interface FamilyOnboardingViewProps {
@@ -34,10 +39,33 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
 }) => {
   const [step, setStep] = useState<OnboardingStep>('choice');
   const [familyName, setFamilyName] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [accessLookupMessage, setAccessLookupMessage] = useState<string | null>(null);
+  const [myRequests, setMyRequests] = useState<AccessRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+
+  // Carrega solicitações anteriores do usuário
+  const fetchMyRequests = async () => {
+    try {
+      setIsLoadingRequests(true);
+      const reqs = await api.getMyAccessRequests();
+      setMyRequests(reqs || []);
+    } catch (err) {
+      console.warn('Erro ao carregar solicitações do usuário:', err);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    if (step === 'request_access') {
+      fetchMyRequests();
+    }
+  }, [step]);
 
   const handleCreateFamily = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,12 +77,38 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
+      setSuccessMessage(null);
       setAccessLookupMessage(null);
       await api.createFamily({ name: familyName.trim() });
       await onFamilyCreated();
     } catch (err: any) {
       console.error('Erro ao criar família:', err);
       setErrorMessage(err.message || 'Erro ao criar família. Tente novamente.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = ownerEmail.trim().toLowerCase();
+    if (!cleanEmail) {
+      setErrorMessage('Por favor, informe o e-mail do responsável pela família.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+
+      const res = await api.requestAccess({ ownerEmail: cleanEmail });
+      setSuccessMessage(res.message || 'Solicitação enviada com sucesso!');
+      setOwnerEmail('');
+      await fetchMyRequests();
+    } catch (err: any) {
+      console.error('Erro ao solicitar acesso:', err);
+      setErrorMessage(err.message || 'Não foi possível enviar a solicitação. Tente novamente.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -135,7 +189,7 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
               <div className="text-center sm:text-left">
                 <h2 className="text-xl font-bold text-slate-900">Como deseja começar?</h2>
                 <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-                  Para gerenciar medicamentos, consultas e prontuários com segurança, organize seu espaço familiar ou acesse sua família existente.
+                  Para gerenciar medicamentos, consultas e prontuários com segurança, organize seu espaço familiar ou solicite acesso à família de um familiar.
                 </p>
               </div>
 
@@ -178,6 +232,7 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                   id="btn-create-my-family"
                   onClick={() => {
                     setErrorMessage(null);
+                    setSuccessMessage(null);
                     setAccessLookupMessage(null);
                     setStep('create_family');
                   }}
@@ -205,6 +260,7 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                   id="btn-request-family-access"
                   onClick={() => {
                     setErrorMessage(null);
+                    setSuccessMessage(null);
                     setAccessLookupMessage(null);
                     setStep('request_access');
                   }}
@@ -219,7 +275,7 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                         Solicitar acesso a uma família existente
                       </span>
                       <span className="block text-xs text-slate-500 mt-0.5 leading-relaxed">
-                        Junte-se à família criada por outro responsável ou cuidador principal.
+                        Informe o e-mail do responsável para pedir acesso a um paciente ou familiar.
                       </span>
                     </div>
                   </div>
@@ -237,7 +293,7 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                         Já faço parte de uma família
                       </span>
                       <span className="block text-xs text-slate-600 mt-0.5 leading-relaxed">
-                        Verifique novamente se esta conta já possui vínculo com uma família cadastrada.
+                        Verifique novamente se esta conta já possui vínculo aprovado com uma família.
                       </span>
                     </div>
                   </div>
@@ -348,46 +404,162 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
             </form>
           )}
 
-          {/* Step 3: Request Access placeholder view */}
+          {/* Step 3: Request Access Flow */}
           {step === 'request_access' && (
             <div className="mt-6 space-y-5">
               <button
                 type="button"
                 onClick={() => setStep('choice')}
+                disabled={isSubmitting}
                 className="inline-flex items-center text-xs font-medium text-slate-500 hover:text-slate-800 transition -mt-2"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                 Voltar às opções
               </button>
 
-              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
-                  <Info className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Solicitação de Acesso</h3>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Em breve você poderá solicitar acesso a um familiar já cadastrado.
-                  </p>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Por enquanto, você pode criar uma nova família ou solicitar que o Administrador inclua seu e-mail ({user?.email}) como membro.
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Solicitar acesso a uma família</h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  Informe o e-mail do responsável pela família para solicitar acesso ao paciente.
                 </p>
               </div>
 
-              <div className="space-y-2">
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-emerald-900">{successMessage}</p>
+                    <p className="text-emerald-700">
+                      O responsável receberá seu pedido e poderá liberar o paciente e seu perfil de acesso.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleRequestAccess} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    E-mail do Responsável (Owner) *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      id="owner-email-input"
+                      placeholder="ex: paulo.feitosa@gmail.com"
+                      value={ownerEmail}
+                      onChange={(e) => setOwnerEmail(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 focus:bg-white text-slate-900 transition"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      Por privacidade, não listamos famílias publicamente. O responsável escolherá o paciente e o papel.
+                    </span>
+                  </p>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => {
-                    setErrorMessage(null);
-                    setAccessLookupMessage(null);
-                    setStep('create_family');
-                  }}
-                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition text-sm text-center"
+                  type="submit"
+                  id="btn-submit-request-access"
+                  disabled={isSubmitting || !ownerEmail.trim()}
+                  className="w-full flex items-center justify-center py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs transition disabled:opacity-50 text-sm"
                 >
-                  Criar minha família agora
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enviando solicitação...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Enviar Solicitação de Acesso
+                    </>
+                  )}
                 </button>
-              </div>
+              </form>
+
+              {/* Status das minhas solicitações */}
+              {myRequests.length > 0 && (
+                <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Suas Solicitações
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={fetchMyRequests}
+                      disabled={isLoadingRequests}
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoadingRequests ? 'animate-spin' : ''}`} />
+                      Atualizar
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {myRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-800">
+                            {req.familyName || 'Família'}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Solicitado em {new Date(req.requestedAt).toLocaleDateString('pt-BR')}
+                            {req.patientName ? ` • Paciente: ${req.patientName}` : ''}
+                          </p>
+                        </div>
+                        <div>
+                          {req.status === 'pending' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium text-[11px]">
+                              <Clock className="w-3 h-3" />
+                              Pendente
+                            </span>
+                          )}
+                          {req.status === 'approved' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium text-[11px]">
+                              <CheckCircle className="w-3 h-3" />
+                              Aprovado
+                            </span>
+                          )}
+                          {req.status === 'rejected' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-medium text-[11px]">
+                              <XCircle className="w-3 h-3" />
+                              Recusado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {myRequests.some((r) => r.status === 'approved') && (
+                    <button
+                      type="button"
+                      onClick={handleAccessMyFamily}
+                      className="w-full mt-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition"
+                    >
+                      Acessar Família Aprovada Agora
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -395,4 +567,5 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
     </div>
   );
 };
+
 

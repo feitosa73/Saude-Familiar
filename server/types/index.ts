@@ -22,6 +22,25 @@ export interface FamilyMembership {
   createdBy: string;
 }
 
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AccessRequest {
+  id: string;
+  familyId: string;
+  familyName?: string;
+  requesterUid: string;
+  requesterEmail: string;
+  requesterName: string;
+  ownerUid: string;
+  status: AccessRequestStatus;
+  requestedAt: string;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  patientId?: string | null;
+  patientName?: string | null;
+  grantedRole?: 'VIEWER' | 'CAREGIVER' | null;
+}
+
 export interface UserMeResponse {
   uid: string;
   email: string | null;
@@ -29,6 +48,8 @@ export interface UserMeResponse {
   photoURL?: string | null;
   family: Family | null;
   membership: FamilyMembership | null;
+  families?: Array<{ family: Family; membership: FamilyMembership }>;
+  pendingRequestsCount?: number;
 }
 
 export type PatientRole = 'ADMIN' | 'CAREGIVER' | 'VIEWER';

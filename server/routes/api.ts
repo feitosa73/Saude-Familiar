@@ -41,21 +41,49 @@ export function createApiRouter(
         return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
       }
 
-      // Lookup membership in Firestore by Firebase UID
-      const membership = await familyRepository.findMembershipByUserId(authUser.uid);
-      let family = null;
+      // Check requested family from header or query
+      const requestedFamilyId =
+        (req.headers['x-family-id'] as string) ||
+        (req.query.familyId as string) ||
+        undefined;
 
-      if (membership) {
-        family = await familyRepository.getFamily(membership.familyId);
+      // Lookup all memberships for this user
+      const allMemberships = await familyRepository.listMembershipsByUserId(authUser.uid);
+      const userFamiliesList: Array<{ family: any; membership: any }> = [];
+
+      for (const mem of allMemberships) {
+        const fam = await familyRepository.getFamily(mem.familyId);
+        if (fam) {
+          userFamiliesList.push({ family: fam, membership: mem });
+        }
       }
+
+      // Selected active membership
+      let activeMembership = await familyRepository.findMembershipByUserId(
+        authUser.uid,
+        requestedFamilyId
+      );
+      let activeFamily = null;
+
+      if (activeMembership) {
+        activeFamily = await familyRepository.getFamily(activeMembership.familyId);
+      } else if (userFamiliesList.length > 0) {
+        activeMembership = userFamiliesList[0].membership;
+        activeFamily = userFamiliesList[0].family;
+      }
+
+      // Calculate pending requests count if owner
+      const pendingRequestsCount = await familyRepository.countPendingRequestsForOwner(authUser.uid);
 
       const response: UserMeResponse = {
         uid: authUser.uid,
         email: authUser.email || null,
-        displayName: null,
-        photoURL: null,
-        family,
-        membership,
+        displayName: (authUser as any).name || null,
+        photoURL: (authUser as any).picture || null,
+        family: activeFamily,
+        membership: activeMembership,
+        families: userFamiliesList,
+        pendingRequestsCount,
       };
 
       res.json(response);
@@ -69,7 +97,7 @@ export function createApiRouter(
         console.warn('[API] /user/me: Cloud Firestore não provisionado/habilitado no GCP. Retornando 503.');
         return res.status(503).json({
           error:
-            'A API Cloud Firestore não está habilitada ou o banco ainda não foi provisionado no projeto GCP (prj-saudefamiliar-pessoal-pfl).',
+            'A API Cloud Firestore não está habilitada ou o banco ainda não foi provisionado no projeto GCP.',
           code: 'FIRESTORE_NOT_INITIALIZED',
         });
       }
@@ -82,7 +110,7 @@ export function createApiRouter(
     }
   });
 
-  // 2.1 Create Family (Onboarding for authenticated user without active membership)
+  // 2.1 Create Family (Onboarding or additional family for authenticated user)
   router.post('/families', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
@@ -93,15 +121,6 @@ export function createApiRouter(
       const { name } = req.body;
       if (!name || typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ error: 'Nome da família é obrigatório' });
-      }
-
-      // Check if user already has an active membership
-      const existingMembership = await familyRepository.findMembershipByUserId(authUser.uid);
-      if (existingMembership && existingMembership.status === 'active') {
-        return res.status(409).json({
-          error: 'Usuário já possui vínculo ativo com uma família cadastrada',
-          familyId: existingMembership.familyId,
-        });
       }
 
       const { family, membership } = await familyRepository.createFamilyWithOwner(
@@ -123,6 +142,241 @@ export function createApiRouter(
       });
     }
   });
+
+  // =========================================================================
+  // 2.2 ACCESS REQUESTS ENDPOINTS (Request access, list, approve, reject)
+  // =========================================================================
+
+  // Solicitante envia pedido de acesso informando e-mail do owner da família
+  router.post('/access-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
+      }
+
+      const { ownerEmail } = req.body;
+      if (!ownerEmail || typeof ownerEmail !== 'string' || !ownerEmail.trim()) {
+        return res.status(400).json({ error: 'E-mail do responsável é obrigatório.' });
+      }
+
+      const cleanOwnerEmail = ownerEmail.trim().toLowerCase();
+      const requesterEmail = (authUser.email || '').trim().toLowerCase();
+      const requesterName = (authUser as any).name || authUser.email?.split('@')[0] || 'Usuário';
+
+      // Validação básica de auto-solicitação
+      if (requesterEmail && cleanOwnerEmail === requesterEmail) {
+        return res.status(200).json({
+          success: true,
+          message: 'Solicitação registrada com sucesso.',
+        });
+      }
+
+      // Localiza o usuário owner pelo e-mail server-side
+      const ownerUser = await familyRepository.findUserByEmail(cleanOwnerEmail);
+
+      // Resposta genérica segura para evitar user enumeration
+      const genericSuccessResponse = {
+        success: true,
+        message:
+          'Se o e-mail informado corresponder a um responsável cadastrado, a solicitação de acesso foi enviada para aprovação.',
+      };
+
+      if (!ownerUser) {
+        console.log(`[API] AccessRequest: Email ${cleanOwnerEmail} não encontrado (retornando resposta genérica).`);
+        return res.status(200).json(genericSuccessResponse);
+      }
+
+      // Localiza a família em que o usuário é owner
+      let targetFamilyId = ownerUser.familyId;
+
+      if (!targetFamilyId) {
+        const ownerMemberships = await familyRepository.listMembershipsByUserId(ownerUser.id);
+        const ownerFam = ownerMemberships.find((m) => m.role === 'owner');
+        if (ownerFam) {
+          targetFamilyId = ownerFam.familyId;
+        }
+      }
+
+      if (!targetFamilyId) {
+        console.log(`[API] AccessRequest: Owner ${ownerUser.id} não possui família vinculada.`);
+        return res.status(200).json(genericSuccessResponse);
+      }
+
+      // Verifica se o solicitante já possui membership nessa família
+      const existingMembership = await familyRepository.getMembership(targetFamilyId, authUser.uid);
+      if (existingMembership && existingMembership.status === 'active') {
+        return res.status(200).json({
+          success: true,
+          message: 'Você já possui acesso ativo a esta família.',
+        });
+      }
+
+      // Verifica se já existe solicitação pendente para essa família
+      const pendingReqs = await familyRepository.listAccessRequestsByFamily(targetFamilyId, 'pending');
+      const alreadyPending = pendingReqs.some((r) => r.requesterUid === authUser.uid);
+
+      if (alreadyPending) {
+        return res.status(200).json({
+          success: true,
+          message: 'Sua solicitação de acesso já está pendente de aprovação pelo responsável.',
+        });
+      }
+
+      // Obtém dados da família
+      const family = await familyRepository.getFamily(targetFamilyId);
+
+      // Cria a solicitação pendente
+      const newRequest = await familyRepository.createAccessRequest({
+        familyId: targetFamilyId,
+        familyName: family?.name || 'Família',
+        requesterUid: authUser.uid,
+        requesterEmail: authUser.email || '',
+        requesterName: requesterName,
+        ownerUid: ownerUser.id,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+        resolvedAt: null,
+        resolvedBy: null,
+      });
+
+      console.log(`[API] Solicitação de acesso criada (${newRequest.id}) de ${authUser.uid} para família ${targetFamilyId}`);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Solicitação de acesso enviada com sucesso! Aguardando aprovação do responsável.',
+        request: newRequest,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao criar solicitação de acesso:', error);
+      res.status(500).json({
+        error: 'Erro interno ao processar solicitação de acesso',
+      });
+    }
+  });
+
+  // Lista solicitações feitas pelo usuário autenticado
+  router.get('/access-requests/my', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
+      }
+
+      const requests = await familyRepository.listAccessRequestsByRequester(authUser.uid);
+      res.json(requests);
+    } catch (error: any) {
+      console.error('[API] Erro ao listar solicitações do usuário:', error);
+      res.status(500).json({ error: 'Erro ao buscar solicitações' });
+    }
+  });
+
+  // Lista solicitações de acesso recebidas pela família (somente Owner)
+  router.get(
+    '/families/:familyId/access-requests',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.params.familyId;
+        const requests = await familyRepository.listAccessRequestsByFamily(familyId);
+        res.json(requests);
+      } catch (error: any) {
+        console.error('[API] Erro ao listar solicitações da família:', error);
+        res.status(500).json({ error: 'Erro ao listar solicitações da família' });
+      }
+    }
+  );
+
+  // Aprovar solicitação de acesso (somente Owner)
+  router.post(
+    '/families/:familyId/access-requests/:requestId/approve',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const { familyId, requestId } = req.params;
+        const { patientId, role } = req.body;
+        const ownerUid = req.user!.uid;
+
+        if (!patientId || typeof patientId !== 'string') {
+          return res.status(400).json({ error: 'Selecione o paciente ao qual conceder acesso.' });
+        }
+
+        if (role !== 'VIEWER' && role !== 'CAREGIVER') {
+          return res.status(400).json({
+            error: 'Papel inválido. Apenas Visualizador(a) (VIEWER) ou Cuidador(a) (CAREGIVER) são permitidos.',
+          });
+        }
+
+        // Valida que o paciente existe e pertence a esta família
+        const patient = await repository.getPatientById(patientId, familyId);
+        if (!patient) {
+          return res.status(404).json({ error: 'Paciente não encontrado nesta família.' });
+        }
+
+        const result = await familyRepository.approveAccessRequest(
+          familyId,
+          requestId,
+          ownerUid,
+          patientId,
+          role,
+          patient.name
+        );
+
+        // Também garante registro no repositório clínico se necessário
+        try {
+          await repository.createPatientAccess(
+            {
+              patientId,
+              userId: result.request.requesterUid,
+              role: role,
+              createdBy: ownerUid,
+            },
+            familyId
+          );
+        } catch (e) {
+          // Ignora se já tiver sido criado no batch
+        }
+
+        res.json({
+          success: true,
+          message: `Acesso aprovado com sucesso para ${result.request.requesterName} no paciente ${patient.name} (${role === 'VIEWER' ? 'Visualizador(a)' : 'Cuidador(a)'}).`,
+          ...result,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao aprovar solicitação:', error);
+        res.status(500).json({ error: error.message || 'Erro ao aprovar solicitação' });
+      }
+    }
+  );
+
+  // Rejeitar solicitação de acesso (somente Owner)
+  router.post(
+    '/families/:familyId/access-requests/:requestId/reject',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const { familyId, requestId } = req.params;
+        const ownerUid = req.user!.uid;
+
+        const updated = await familyRepository.rejectAccessRequest(familyId, requestId, ownerUid);
+
+        res.json({
+          success: true,
+          message: 'Solicitação de acesso rejeitada.',
+          request: updated,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao rejeitar solicitação:', error);
+        res.status(500).json({ error: error.message || 'Erro ao rejeitar solicitação' });
+      }
+    }
+  );
 
   // Helper for current user ID context in clinical services
   const getCurrentUserId = (req: Request): string => {

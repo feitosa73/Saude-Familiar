@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { authorizationService } from '../services/authorizationService';
+import { AccessRequestsManagerModal } from './AccessRequestsManagerModal';
 import {
   HeartPulse,
   Users,
@@ -11,8 +12,10 @@ import {
   LogOut,
   Shield,
   Eye,
-  UserCheck,
+  Building2,
+  Bell,
   Check,
+  RotateCcw,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -25,10 +28,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
     selectedPatient,
     setSelectedPatientId,
     setOpenPatientProfile,
+    refreshPatients,
   } = usePatient();
-  const { user, logout, getPermissionsForPatient, isOwner } = useAuth();
+  const {
+    user,
+    family,
+    families,
+    pendingRequestsCount,
+    isOwner,
+    logout,
+    getPermissionsForPatient,
+    switchFamily,
+    refreshUserMe,
+  } = useAuth();
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [familyDropdownOpen, setFamilyDropdownOpen] = useState(false);
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -101,14 +117,87 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                   <ShieldCheck className="w-3 h-3" /> Privado
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-normal hidden sm:block">
-                Centralização e cuidado da saúde do idoso
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-slate-500 font-normal hidden sm:block">
+                  {family?.name || 'Família'}
+                </p>
+                {families && families.length > 1 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      id="btn-switch-family-nav"
+                      onClick={() => setFamilyDropdownOpen(!familyDropdownOpen)}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      <Building2 className="w-3 h-3" />
+                      <span>Trocar família ({families.length})</span>
+                      <ChevronDown className="w-2.5 h-2.5" />
+                    </button>
+
+                    {familyDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setFamilyDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-20">
+                          <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                            Suas Famílias
+                          </div>
+                          {families.map((f) => {
+                            const isCurrent = f.family.id === family?.id;
+                            return (
+                              <button
+                                key={f.family.id}
+                                type="button"
+                                onClick={async () => {
+                                  setFamilyDropdownOpen(false);
+                                  await switchFamily(f.family.id);
+                                  await refreshPatients();
+                                }}
+                                className={`w-full px-3 py-2 flex items-center justify-between text-left text-xs hover:bg-slate-50 ${
+                                  isCurrent ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
+                                }`}
+                              >
+                                <span className="truncate">{f.family.name}</span>
+                                {isCurrent && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Center / Right: Patient Selector and User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Owner Access Requests Manager Button */}
+            {isOwner && (
+              <button
+                type="button"
+                id="btn-open-access-requests"
+                onClick={() => setIsRequestsModalOpen(true)}
+                className={`relative flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold border transition ${
+                  pendingRequestsCount > 0
+                    ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-xs animate-pulse'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+                title="Gerenciar solicitações de acesso de novos familiares e cuidadores"
+              >
+                <UserPlus className="w-4 h-4 text-blue-600" />
+                <span className="hidden md:inline">Solicitações</span>
+                {pendingRequestsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-extrabold">
+                    {pendingRequestsCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Patient Switcher Dropdown */}
             <div className="relative">
               <button
@@ -314,6 +403,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                       </div>
                     </div>
 
+                    {isOwner && (
+                      <div className="px-2">
+                        <button
+                          type="button"
+                          id="btn-user-menu-access-requests"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            setIsRequestsModalOpen(true);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-between transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4 text-blue-600" />
+                            <span>Solicitações de Acesso</span>
+                          </div>
+                          {pendingRequestsCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                              {pendingRequestsCount}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Logout Option */}
                     <div className="pt-1 px-2 border-t border-slate-100">
                       <button
@@ -335,6 +448,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
           </div>
         </div>
       </div>
+
+      {/* Access Requests Manager Modal for Owners */}
+      <AccessRequestsManagerModal
+        isOpen={isRequestsModalOpen}
+        onClose={() => setIsRequestsModalOpen(false)}
+        family={family}
+        onRequestsUpdated={refreshUserMe}
+      />
     </header>
   );
 };
+
