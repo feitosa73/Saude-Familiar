@@ -166,22 +166,29 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<PatientAccess | null> {
-    const updated = localStorageEngine.updatePatientAccess(id, role, familyId, patientId);
-    try {
-      if (this.db && familyId && patientId) {
-        await this.db
+    if (this.db && familyId && patientId) {
+      try {
+        const ref = this.db
           .collection('families')
           .doc(familyId)
           .collection('patients')
           .doc(patientId)
           .collection('accesses')
-          .doc(id)
-          .update({ role, updatedAt: new Date().toISOString() });
+          .doc(id);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          await ref.update({ role, updatedAt: now });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...updatedSnap.data() } as PatientAccess;
+          localStorageEngine.updatePatientAccess(id, role, familyId, patientId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updatePatientAccess warning:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updatePatientAccess warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updatePatientAccess(id, role, familyId, patientId);
   }
 
   async deletePatientAccess(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -214,9 +221,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
         if (!snap.empty) {
           const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
           list.forEach((p) => {
-            if (!localStorageEngine.getPatientById(p.id, familyId)) {
-              localStorageEngine.createPatient(p, (p as any).createdBy, familyId);
-            }
+            localStorageEngine.savePatient(p, familyId, (p as any).createdBy);
           });
           return list;
         }
@@ -237,7 +242,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .doc(id)
           .get();
         if (snap.exists) {
-          return { id: snap.id, ...snap.data() } as Patient;
+          const patient = { id: snap.id, ...snap.data() } as Patient;
+          localStorageEngine.savePatient(patient, familyId, (patient as any).createdBy);
+          return patient;
         }
       }
     } catch (error: any) {
@@ -268,16 +275,29 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async updatePatient(id: string, data: Partial<Patient>, familyId?: string): Promise<Patient | null> {
-    const updated = localStorageEngine.updatePatient(id, data, familyId);
-    try {
-      if (this.db && familyId) {
+    if (this.db && familyId) {
+      try {
         const ref = this.db.collection('families').doc(familyId).collection('patients').doc(id);
-        await ref.set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          const cleanData = { ...data };
+          delete (cleanData as any).id;
+          const updatedPayload = {
+            ...cleanData,
+            updatedAt: now,
+          };
+          await ref.set(updatedPayload, { merge: true });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...(updatedSnap.data() || {}), updatedAt: now } as unknown as Patient;
+          localStorageEngine.savePatient(updated, familyId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updatePatient Firestore error:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updatePatient warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updatePatient(id, data, familyId);
   }
 
   async deletePatient(id: string, familyId?: string): Promise<boolean> {
@@ -362,22 +382,31 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Medication | null> {
-    const updated = localStorageEngine.updateMedication(id, data, familyId, patientId);
-    try {
-      if (this.db && familyId && patientId) {
-        await this.db
+    if (this.db && familyId && patientId) {
+      try {
+        const ref = this.db
           .collection('families')
           .doc(familyId)
           .collection('patients')
           .doc(patientId)
           .collection('medications')
-          .doc(id)
-          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
+          .doc(id);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          const clean = { ...data };
+          delete (clean as any).id;
+          await ref.set({ ...clean, updatedAt: now }, { merge: true });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...updatedSnap.data() } as Medication;
+          localStorageEngine.updateMedication(id, data, familyId, patientId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updateMedication warning:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updateMedication warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updateMedication(id, data, familyId, patientId);
   }
 
   async deleteMedication(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -469,22 +498,31 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Appointment | null> {
-    const updated = localStorageEngine.updateAppointment(id, data, familyId, patientId);
-    try {
-      if (this.db && familyId && patientId) {
-        await this.db
+    if (this.db && familyId && patientId) {
+      try {
+        const ref = this.db
           .collection('families')
           .doc(familyId)
           .collection('patients')
           .doc(patientId)
           .collection('appointments')
-          .doc(id)
-          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
+          .doc(id);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          const clean = { ...data };
+          delete (clean as any).id;
+          await ref.set({ ...clean, updatedAt: now }, { merge: true });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...updatedSnap.data() } as Appointment;
+          localStorageEngine.updateAppointment(id, data, familyId, patientId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updateAppointment warning:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updateAppointment warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updateAppointment(id, data, familyId, patientId);
   }
 
   async deleteAppointment(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -576,22 +614,31 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Exam | null> {
-    const updated = localStorageEngine.updateExam(id, data, familyId, patientId);
-    try {
-      if (this.db && familyId && patientId) {
-        await this.db
+    if (this.db && familyId && patientId) {
+      try {
+        const ref = this.db
           .collection('families')
           .doc(familyId)
           .collection('patients')
           .doc(patientId)
           .collection('exams')
-          .doc(id)
-          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
+          .doc(id);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          const clean = { ...data };
+          delete (clean as any).id;
+          await ref.set({ ...clean, updatedAt: now }, { merge: true });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...updatedSnap.data() } as Exam;
+          localStorageEngine.updateExam(id, data, familyId, patientId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updateExam warning:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updateExam warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updateExam(id, data, familyId, patientId);
   }
 
   async deleteExam(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -683,22 +730,31 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<MedicalDocument | null> {
-    const updated = localStorageEngine.updateDocument(id, data, familyId, patientId);
-    try {
-      if (this.db && familyId && patientId) {
-        await this.db
+    if (this.db && familyId && patientId) {
+      try {
+        const ref = this.db
           .collection('families')
           .doc(familyId)
           .collection('patients')
           .doc(patientId)
           .collection('documents')
-          .doc(id)
-          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
+          .doc(id);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const now = new Date().toISOString();
+          const clean = { ...data };
+          delete (clean as any).id;
+          await ref.set({ ...clean, updatedAt: now }, { merge: true });
+          const updatedSnap = await ref.get();
+          const updated = { id: updatedSnap.id, ...updatedSnap.data() } as MedicalDocument;
+          localStorageEngine.updateDocument(id, data, familyId, patientId);
+          return updated;
+        }
+      } catch (error: any) {
+        console.warn('[FirestoreHealthRepository] updateDocument warning:', error?.code || error?.message);
       }
-    } catch (error: any) {
-      console.warn('[FirestoreHealthRepository] updateDocument warning:', error?.code || error?.message);
     }
-    return updated;
+    return localStorageEngine.updateDocument(id, data, familyId, patientId);
   }
 
   async deleteDocument(id: string, familyId?: string, patientId?: string): Promise<boolean> {

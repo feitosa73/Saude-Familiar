@@ -633,6 +633,22 @@ class LocalStorageEngine {
     return p;
   }
 
+  savePatient(patient: Patient, familyId?: string, createdBy?: string): Patient {
+    const existing = this.data.patients[patient.id];
+    const targetFamilyId = familyId || (patient as any).familyId || existing?.familyId || 'default';
+    const targetCreatedBy = createdBy || (patient as any).createdBy || existing?.createdBy;
+    const now = new Date().toISOString();
+    this.data.patients[patient.id] = {
+      ...existing,
+      ...patient,
+      familyId: targetFamilyId,
+      createdBy: targetCreatedBy,
+      updatedAt: (patient as any).updatedAt || now,
+    };
+    this.save();
+    return this.data.patients[patient.id];
+  }
+
   createPatient(data: Omit<Patient, 'id'>, createdByUserId?: string, familyId?: string): Patient {
     const id = `pat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const patient: Patient & { familyId: string; createdBy?: string } = {

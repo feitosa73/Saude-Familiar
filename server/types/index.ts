@@ -115,6 +115,8 @@ export interface Patient {
   primaryDoctor?: string;
   healthInsurance?: string;
   healthInsuranceNumber?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Medication {

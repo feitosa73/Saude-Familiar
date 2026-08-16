@@ -933,18 +933,23 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
+        const patientId = req.params.id;
         const userId = getCurrentUserId(req);
-        const canEdit = await authzService.canEditPatient(userId, req.params.id, familyId);
+        console.log(`[API] PUT /patients/${patientId} initiated - family: ${familyId}, user: ${userId}, role: ${req.membership?.role}`);
+
+        const canEdit = await authzService.canEditPatient(userId, patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
           return res.status(403).json({
             error: 'Apenas Administradores podem alterar os dados cadastrais do paciente',
           });
         }
 
-        const updated = await repository.updatePatient(req.params.id, req.body, familyId);
+        const updated = await repository.updatePatient(patientId, req.body, familyId);
         if (!updated) {
+          console.warn(`[API] Patient ${patientId} not found in family ${familyId}`);
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
+        console.log(`[API] Patient ${patientId} successfully updated in family ${familyId}`);
         res.json(updated);
       } catch (error) {
         console.error('Error updating patient:', error);
