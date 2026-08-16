@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { LoginView } from './components/LoginView';
+import { PublicLandingView } from './components/PublicLandingView';
 import { AccessDeniedView } from './components/AccessDeniedView';
 import { FamilyOnboardingView } from './components/FamilyOnboardingView';
 import { EmptyFamilyPatientsView } from './components/EmptyFamilyPatientsView';
@@ -76,9 +77,9 @@ const MainContent: React.FC = () => {
     );
   }
 
-  // If unauthenticated (no Firebase Auth user), render Login Screen
+  // If unauthenticated (no Firebase Auth user), render Public Landing Page
   if (accessStatus === 'unauthenticated' || (!user && accessStatus !== 'loading')) {
-    return <LoginView />;
+    return <PublicLandingView />;
   }
 
   // Initial loading state
@@ -137,9 +138,18 @@ const MainContent: React.FC = () => {
   const hasNoPatients = patients.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
       {/* Top Navbar */}
       <Navbar onOpenNewPatient={() => setIsNewPatientModalOpen(true)} />
+
+      {/* Authenticated Beta Notice Strip */}
+      <div
+        id="authenticated-beta-strip"
+        className="bg-amber-50/90 border-b border-amber-200/80 px-3 py-1.5 text-center text-xs font-medium text-amber-900 flex items-center justify-center gap-1.5 shadow-2xs"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+        <span>Ambiente Beta • Utilize somente dados fictícios</span>
+      </div>
 
       {/* Navigation Tabs (Desktop Top & Mobile Bottom) */}
       <TabNavigation />
