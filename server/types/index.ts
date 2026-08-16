@@ -88,6 +88,31 @@ export interface PatientAccess {
   role: PatientRole;
   createdAt: string;
   createdBy: string;
+  familyId?: string;
+  updatedAt?: string;
+}
+
+export interface MemberPatientAccessItem {
+  patientId: string;
+  patientName: string;
+  role: PatientRole;
+  accessId?: string;
+  grantedAt?: string;
+}
+
+export interface FamilyMemberWithAccess {
+  userId: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  familyRole: MembershipRole;
+  status: MembershipStatus;
+  joinedAt?: string;
+  createdAt: string;
+  origin?: 'owner_creator' | 'invitation' | 'access_request' | 'direct';
+  originDetails?: string;
+  patientAccesses: MemberPatientAccessItem[];
+  isPrimaryOwner?: boolean;
 }
 
 export interface User {

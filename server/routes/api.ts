@@ -702,6 +702,233 @@ export function createApiRouter(
     }
   );
 
+  // 3.1 Consolidated Family Members with Accesses (Authoritative Administrative Endpoint)
+  router.get(
+    '/families/:familyId/members-with-access',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const members = await familyRepository.listFamilyMembersWithAccess(familyId);
+        res.json(members);
+      } catch (error) {
+        console.error('[API] Erro ao listar membros e acessos da família:', error);
+        res.status(500).json({ error: 'Erro ao listar membros e acessos da família' });
+      }
+    }
+  );
+
+  // 3.2 Grant / Create Patient Access for a Family Member
+  router.post(
+    '/families/:familyId/members/:userId/patient-access',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const currentUserId = getCurrentUserId(req);
+        const { userId } = req.params;
+        const { patientId, role } = req.body;
+
+        if (!patientId || !role || (role !== 'VIEWER' && role !== 'CAREGIVER')) {
+          return res.status(400).json({
+            error: 'patientId e role (VIEWER ou CAREGIVER) são obrigatórios.',
+            code: 'INVALID_PARAMETERS',
+          });
+        }
+
+        // Validate patient belongs to this family
+        const patient = await repository.getPatientById(patientId, familyId);
+        if (!patient) {
+          return res.status(404).json({
+            error: 'Paciente não encontrado na família.',
+            code: 'PATIENT_NOT_FOUND',
+          });
+        }
+
+        // Validate target member exists in this family
+        const targetMembership = await familyRepository.getMembership(familyId, userId);
+        if (!targetMembership) {
+          return res.status(404).json({
+            error: 'Membro não encontrado na família.',
+            code: 'MEMBER_NOT_FOUND',
+          });
+        }
+
+        const patientAccess = await familyRepository.grantMemberPatientAccess(
+          familyId,
+          userId,
+          patientId,
+          role,
+          currentUserId
+        );
+
+        res.status(201).json({
+          success: true,
+          message: 'Acesso ao paciente concedido com sucesso.',
+          patientAccess,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao conceder acesso ao paciente:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao conceder acesso ao paciente.',
+          code: 'GRANT_ACCESS_FAILED',
+        });
+      }
+    }
+  );
+
+  // 3.3 Update Patient Access Role (VIEWER <-> CAREGIVER)
+  router.patch(
+    '/families/:familyId/members/:userId/patient-access/:patientId',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { userId, patientId } = req.params;
+        const { role } = req.body;
+
+        if (!role || (role !== 'VIEWER' && role !== 'CAREGIVER')) {
+          return res.status(400).json({
+            error: 'Role deve ser VIEWER ou CAREGIVER.',
+            code: 'INVALID_ROLE',
+          });
+        }
+
+        // Validate patient belongs to this family
+        const patient = await repository.getPatientById(patientId, familyId);
+        if (!patient) {
+          return res.status(404).json({
+            error: 'Paciente não encontrado na família.',
+            code: 'PATIENT_NOT_FOUND',
+          });
+        }
+
+        const patientAccess = await familyRepository.updateMemberPatientAccess(
+          familyId,
+          userId,
+          patientId,
+          role
+        );
+
+        res.json({
+          success: true,
+          message: `Papel atualizado para ${role} com sucesso.`,
+          patientAccess,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao atualizar papel de acesso ao paciente:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao atualizar papel de acesso.',
+          code: 'UPDATE_ACCESS_FAILED',
+        });
+      }
+    }
+  );
+
+  // 3.4 Revoke Patient Access for a Member
+  router.delete(
+    '/families/:familyId/members/:userId/patient-access/:patientId',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { userId, patientId } = req.params;
+
+        await familyRepository.revokeMemberPatientAccess(familyId, userId, patientId);
+
+        res.json({
+          success: true,
+          message: 'Acesso ao paciente revogado com sucesso.',
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao revogar acesso ao paciente:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao revogar acesso ao paciente.',
+          code: 'REVOKE_ACCESS_FAILED',
+        });
+      }
+    }
+  );
+
+  // 3.5 Revoke All Patient Accesses for a Member
+  router.post(
+    '/families/:familyId/members/:userId/revoke-all',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { userId } = req.params;
+
+        await familyRepository.revokeAllMemberAccesses(familyId, userId);
+
+        res.json({
+          success: true,
+          message: 'Todos os acessos a pacientes deste membro foram revogados com sucesso.',
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao revogar todos os acessos do membro:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao revogar todos os acessos do membro.',
+          code: 'REVOKE_ALL_FAILED',
+        });
+      }
+    }
+  );
+
+  // 3.6 Remove Member from Family (Deletes membership + all patientAccesses via batch)
+  router.delete(
+    '/families/:familyId/members/:userId',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const currentUserId = getCurrentUserId(req);
+        const { userId } = req.params;
+
+        // Check if user is trying to remove themselves or primary owner
+        const family = await familyRepository.getFamily(familyId);
+        if (family?.primaryOwnerUid === userId) {
+          return res.status(400).json({
+            error: 'Não é permitido remover o Responsável principal (Owner) da família.',
+            code: 'CANNOT_REMOVE_PRIMARY_OWNER',
+          });
+        }
+
+        if (userId === currentUserId) {
+          return res.status(400).json({
+            error: 'Você não pode remover a si mesmo como administrador através deste fluxo.',
+            code: 'CANNOT_REMOVE_SELF',
+          });
+        }
+
+        await familyRepository.removeFamilyMember(familyId, userId, currentUserId);
+
+        res.json({
+          success: true,
+          message: 'Membro e todos os seus acessos foram removidos da família com sucesso.',
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao remover membro da família:', error);
+        res.status(400).json({
+          error: error.message || 'Erro ao remover membro da família.',
+          code: 'REMOVE_MEMBER_FAILED',
+        });
+      }
+    }
+  );
+
   router.put(
     '/family/members/:memberUid',
     requireAuth,

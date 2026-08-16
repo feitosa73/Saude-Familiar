@@ -6,6 +6,7 @@ import {
   PatientAccess,
   FamilyInvitation,
   InvitationStatus,
+  FamilyMemberWithAccess,
 } from '../types';
 
 export interface UserDocument {
@@ -88,4 +89,34 @@ export interface IFamilyRepository {
     membership: FamilyMembership;
     patientAccess: PatientAccess;
   }>;
+
+  // Family Members & Accesses Management (Authoritative)
+  listFamilyMembersWithAccess(familyId: string): Promise<FamilyMemberWithAccess[]>;
+  grantMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER',
+    grantedBy: string
+  ): Promise<PatientAccess>;
+  updateMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER'
+  ): Promise<PatientAccess>;
+  revokeMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string
+  ): Promise<boolean>;
+  revokeAllMemberAccesses(
+    familyId: string,
+    userId: string
+  ): Promise<boolean>;
+  removeFamilyMember(
+    familyId: string,
+    userId: string,
+    removedBy: string
+  ): Promise<boolean>;
 }

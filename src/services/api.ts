@@ -15,6 +15,8 @@ import {
   AccessRequest,
   FamilyInvitation,
   CreateInvitationResponse,
+  FamilyMemberWithAccess,
+  MemberPatientAccessItem,
 } from '../types';
 import { authService } from './authService';
 
@@ -141,7 +143,61 @@ export const api = {
       }
     ),
 
-  // Family Members Management
+  // Family Members Management & Accesses (Authoritative)
+  getFamilyMembersWithAccess: (familyId: string) =>
+    request<FamilyMemberWithAccess[]>(`/families/${familyId}/members-with-access`),
+
+  grantMemberPatientAccess: (
+    familyId: string,
+    userId: string,
+    data: { patientId: string; role: 'VIEWER' | 'CAREGIVER' }
+  ) =>
+    request<{ success: boolean; message: string; patientAccess: PatientAccess }>(
+      `/families/${familyId}/members/${userId}/patient-access`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  updateMemberPatientAccess: (
+    familyId: string,
+    userId: string,
+    patientId: string,
+    data: { role: 'VIEWER' | 'CAREGIVER' }
+  ) =>
+    request<{ success: boolean; message: string; patientAccess: PatientAccess }>(
+      `/families/${familyId}/members/${userId}/patient-access/${patientId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  revokeMemberPatientAccess: (familyId: string, userId: string, patientId: string) =>
+    request<{ success: boolean; message: string }>(
+      `/families/${familyId}/members/${userId}/patient-access/${patientId}`,
+      {
+        method: 'DELETE',
+      }
+    ),
+
+  revokeAllMemberAccesses: (familyId: string, userId: string) =>
+    request<{ success: boolean; message: string }>(
+      `/families/${familyId}/members/${userId}/revoke-all`,
+      {
+        method: 'POST',
+      }
+    ),
+
+  removeFamilyMember: (familyId: string, userId: string) =>
+    request<{ success: boolean; message: string }>(
+      `/families/${familyId}/members/${userId}`,
+      {
+        method: 'DELETE',
+      }
+    ),
+
   getFamilyMembers: () => request<FamilyMembership[]>('/family/members'),
   updateFamilyMember: (
     memberUid: string,

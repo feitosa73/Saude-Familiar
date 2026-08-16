@@ -15,6 +15,8 @@ import {
   TimelineEvent,
   User,
   PatientRole,
+  FamilyMemberWithAccess,
+  MemberPatientAccessItem,
 } from '../types';
 import { UserDocument } from '../repositories/IFamilyRepository';
 
@@ -223,6 +225,165 @@ class LocalStorageEngine {
       return ownerMem || all[0];
     }
     return null;
+  }
+
+  listFamilyMembersWithAccess(familyId: string): FamilyMemberWithAccess[] {
+    const family = this.getFamily(familyId);
+    if (!family) return [];
+
+    const memberships = this.listMemberships(familyId).filter(
+      (m) => m.status === 'active'
+    );
+
+    // Make sure primary owner is included if not in memberships map
+    if (family.primaryOwnerUid && !memberships.some((m) => m.userId === family.primaryOwnerUid)) {
+      memberships.unshift({
+        id: family.primaryOwnerUid,
+        userId: family.primaryOwnerUid,
+        familyId: family.id,
+        role: 'owner',
+        status: 'active',
+        joinedAt: family.createdAt,
+        createdAt: family.createdAt,
+        createdBy: family.createdBy || family.primaryOwnerUid,
+      });
+    }
+
+    const familyPatients = this.getPatients(undefined, familyId);
+    const familyInvitations = this.listInvitations(familyId);
+    const familyRequests = this.listAccessRequestsByFamily(familyId);
+
+    return memberships.map((membership) => {
+      const user = this.getUser(membership.userId);
+      const isPrimaryOwner = membership.userId === family.primaryOwnerUid;
+      const isOwner = membership.role === 'owner' || isPrimaryOwner;
+
+      // Determine discreet origin
+      let origin: 'owner_creator' | 'invitation' | 'access_request' | 'direct' = 'direct';
+      let originDetails = 'Adicionado diretamente';
+
+      if (isPrimaryOwner) {
+        origin = 'owner_creator';
+        originDetails = 'Criador da família';
+      } else {
+        const acceptedInv = familyInvitations.find(
+          (inv) =>
+            inv.acceptedBy === membership.userId ||
+            (user?.email && inv.invitedEmail.toLowerCase() === user.email.toLowerCase() && inv.status === 'accepted')
+        );
+        if (acceptedInv) {
+          origin = 'invitation';
+          originDetails = 'Convite aceito';
+        } else {
+          const approvedReq = familyRequests.find(
+            (req) => req.requesterUid === membership.userId && req.status === 'approved'
+          );
+          if (approvedReq) {
+            origin = 'access_request';
+            originDetails = 'Solicitação aprovada';
+          }
+        }
+      }
+
+      // Build patientAccesses list
+      let patientAccesses: MemberPatientAccessItem[] = [];
+
+      if (isOwner) {
+        // Owner has full access to all patients
+        patientAccesses = familyPatients.map((p) => ({
+          patientId: p.id,
+          patientName: p.name,
+          role: 'ADMIN',
+          grantedAt: p.createdAt || family.createdAt,
+        }));
+      } else {
+        // Member has only explicitly granted patientAccesses
+        const userAccesses = Object.values(this.data.patientAccesses).filter(
+          (a) => a.familyId === familyId && a.userId === membership.userId
+        );
+
+        patientAccesses = userAccesses
+          .map((a) => {
+            const p = familyPatients.find((pt) => pt.id === a.patientId);
+            return {
+              patientId: a.patientId,
+              patientName: p?.name || 'Paciente',
+              role: a.role,
+              accessId: a.id,
+              grantedAt: a.createdAt,
+            };
+          })
+          .filter((a) => familyPatients.some((p) => p.id === a.patientId));
+      }
+
+      return {
+        userId: membership.userId,
+        name: user?.displayName || (isPrimaryOwner ? 'Responsável' : 'Membro'),
+        email: user?.email || '',
+        avatarUrl: user?.photoURL || undefined,
+        familyRole: isOwner ? 'owner' : 'member',
+        status: membership.status,
+        joinedAt: membership.joinedAt || membership.createdAt,
+        createdAt: membership.createdAt,
+        origin,
+        originDetails,
+        patientAccesses,
+        isPrimaryOwner,
+      };
+    });
+  }
+
+  revokeMemberPatientAccess(familyId: string, userId: string, patientId: string): boolean {
+    let deleted = false;
+    for (const [key, access] of Object.entries(this.data.patientAccesses)) {
+      if (access.familyId === familyId && access.userId === userId && access.patientId === patientId) {
+        delete this.data.patientAccesses[key];
+        deleted = true;
+      }
+    }
+    if (deleted) {
+      this.save();
+    }
+    return deleted;
+  }
+
+  revokeAllMemberAccesses(familyId: string, userId: string): boolean {
+    let deleted = false;
+    for (const [key, access] of Object.entries(this.data.patientAccesses)) {
+      if (access.familyId === familyId && access.userId === userId) {
+        delete this.data.patientAccesses[key];
+        deleted = true;
+      }
+    }
+    if (deleted) {
+      this.save();
+    }
+    return deleted;
+  }
+
+  removeFamilyMember(familyId: string, userId: string): boolean {
+    const memKey = `${familyId}_${userId}`;
+    const mem = this.data.memberships[memKey];
+    if (!mem) return false;
+
+    // Do not allow removing primary owner
+    const family = this.getFamily(familyId);
+    if (family?.primaryOwnerUid === userId || mem.role === 'owner') {
+      throw new Error('Não é possível remover o Responsável principal (Owner) da família.');
+    }
+
+    // Delete membership or disable it
+    delete this.data.memberships[memKey];
+
+    // Delete all patientAccesses for this user in this family
+    for (const [key, access] of Object.entries(this.data.patientAccesses)) {
+      if (access.familyId === familyId && access.userId === userId) {
+        delete this.data.patientAccesses[key];
+      }
+    }
+
+    this.save();
+    return true;
   }
 
   createFamilyWithOwner(

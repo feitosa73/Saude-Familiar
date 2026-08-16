@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { authorizationService } from '../services/authorizationService';
 import { AccessRequestsManagerModal } from './AccessRequestsManagerModal';
 import { InviteMemberModal } from './InviteMemberModal';
+import { FamilyMembersManagerModal } from './FamilyMembersManagerModal';
 import {
   HeartPulse,
   Users,
@@ -18,6 +19,7 @@ import {
   Bell,
   Check,
   RotateCcw,
+  UserCheck,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -48,6 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [familyDropdownOpen, setFamilyDropdownOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -178,6 +181,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
 
           {/* Center / Right: Patient Selector and User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Owner Familiares e Acessos Button */}
+            {isOwner && (
+              <button
+                type="button"
+                id="btn-open-family-members-nav"
+                onClick={() => setIsMembersModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-xs transition"
+                title="Gestão de familiares ativos e permissões por paciente"
+              >
+                <Users className="w-4 h-4 text-blue-600" />
+                <span className="hidden lg:inline">Familiares e Acessos</span>
+              </button>
+            )}
+
             {/* Owner Invite Member Button */}
             {isOwner && (
               <button
@@ -188,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                 title="Convidar familiar ou cuidador para acessar um paciente"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Convidar Familiar</span>
+                <span className="hidden sm:inline">Convidar</span>
               </button>
             )}
 
@@ -424,6 +441,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                       <div className="px-2 space-y-1">
                         <button
                           type="button"
+                          id="btn-user-menu-family-members"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            setIsMembersModalOpen(true);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                        >
+                          <Users className="w-4 h-4 text-blue-600" />
+                          <span>Familiares e Acessos</span>
+                        </button>
+
+                        <button
+                          type="button"
                           id="btn-user-menu-invite-member"
                           onClick={() => {
                             setUserMenuOpen(false);
@@ -478,6 +508,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
           </div>
         </div>
       </div>
+
+      {/* Family Members and Accesses Manager Modal for Owners */}
+      <FamilyMembersManagerModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        family={family}
+        currentUserId={user?.id}
+        onOpenInviteModal={() => setIsInviteModalOpen(true)}
+        onOpenRequestsModal={() => setIsRequestsModalOpen(true)}
+        pendingRequestsCount={pendingRequestsCount}
+        onMembersUpdated={async () => {
+          await refreshUserMe();
+          await refreshPatients();
+        }}
+      />
 
       {/* Invite Member Modal for Owners */}
       <InviteMemberModal

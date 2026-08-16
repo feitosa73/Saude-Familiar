@@ -219,10 +219,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
       if (this.db && familyId) {
         const snap = await this.db.collection('families').doc(familyId).collection('patients').get();
         if (!snap.empty) {
-          const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
+          let list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
           list.forEach((p) => {
             localStorageEngine.savePatient(p, familyId, (p as any).createdBy);
           });
+
+          if (userId) {
+            // Check if user is owner of the family
+            const memDoc = await this.db
+              .collection('families')
+              .doc(familyId)
+              .collection('memberships')
+              .doc(userId)
+              .get();
+
+            const isOwner = memDoc.exists && memDoc.data()?.role === 'owner';
+            if (!isOwner) {
+              const accessChecks = await Promise.all(
+                list.map(async (p) => {
+                  if ((p as any).createdBy === userId) return { patient: p, allowed: true };
+                  const accSnap = await this.db!
+                    .collection('families')
+                    .doc(familyId)
+                    .collection('patients')
+                    .doc(p.id)
+                    .collection('accesses')
+                    .where('userId', '==', userId)
+                    .limit(1)
+                    .get();
+                  return { patient: p, allowed: !accSnap.empty };
+                })
+              );
+              list = accessChecks.filter((item) => item.allowed).map((item) => item.patient);
+            }
+          }
+
           return list;
         }
       }

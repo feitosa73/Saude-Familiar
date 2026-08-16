@@ -7,6 +7,10 @@ import {
   PatientAccess,
   FamilyInvitation,
   InvitationStatus,
+  FamilyMemberWithAccess,
+  MemberPatientAccessItem,
+  Patient,
+  PatientRole,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 import { localStorageEngine } from '../lib/storageEngine';
@@ -725,5 +729,390 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     }
 
     return result;
+  }
+
+  // =========================================================================
+  // FAMILY MEMBERS & ACCESS MANAGEMENT (AUTHORITATIVE)
+  // =========================================================================
+
+  async listFamilyMembersWithAccess(familyId: string): Promise<FamilyMemberWithAccess[]> {
+    try {
+      if (this.db) {
+        const familyDoc = await this.db.collection('families').doc(familyId).get();
+        if (!familyDoc.exists) {
+          return localStorageEngine.listFamilyMembersWithAccess(familyId);
+        }
+        const family = { id: familyDoc.id, ...familyDoc.data() } as Family;
+
+        // Get memberships
+        const memsSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('memberships')
+          .where('status', '==', 'active')
+          .get();
+
+        const memberships: FamilyMembership[] = memsSnap.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as FamilyMembership)
+        );
+
+        // Ensure primary owner is in list
+        if (family.primaryOwnerUid && !memberships.some((m) => m.userId === family.primaryOwnerUid)) {
+          memberships.unshift({
+            id: family.primaryOwnerUid,
+            userId: family.primaryOwnerUid,
+            familyId: family.id,
+            role: 'owner',
+            status: 'active',
+            joinedAt: family.createdAt,
+            createdAt: family.createdAt,
+            createdBy: family.createdBy || family.primaryOwnerUid,
+          });
+        }
+
+        // Get family patients
+        const patientsSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .get();
+
+        const patients: Patient[] = patientsSnap.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Patient)
+        );
+
+        // Get invitations to detect origin
+        const invSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('invitations')
+          .get();
+        const invitations = invSnap.docs.map((d) => ({ id: d.id, ...d.data() } as FamilyInvitation));
+
+        // Get access requests to detect origin
+        const reqSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('accessRequests')
+          .get();
+        const accessRequests = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AccessRequest));
+
+        // Map member details and patient accesses
+        const result: FamilyMemberWithAccess[] = await Promise.all(
+          memberships.map(async (membership) => {
+            const userDoc = await this.getUser(membership.userId);
+            const isPrimaryOwner = membership.userId === family.primaryOwnerUid;
+            const isOwner = membership.role === 'owner' || isPrimaryOwner;
+
+            // Discreet origin resolution
+            let origin: 'owner_creator' | 'invitation' | 'access_request' | 'direct' = 'direct';
+            let originDetails = 'Adicionado diretamente';
+
+            if (isPrimaryOwner) {
+              origin = 'owner_creator';
+              originDetails = 'Criador da família';
+            } else {
+              const acceptedInv = invitations.find(
+                (inv) =>
+                  inv.acceptedBy === membership.userId ||
+                  (userDoc?.email && inv.invitedEmail.toLowerCase() === userDoc.email.toLowerCase() && inv.status === 'accepted')
+              );
+              if (acceptedInv) {
+                origin = 'invitation';
+                originDetails = 'Convite aceito';
+              } else {
+                const approvedReq = accessRequests.find(
+                  (req) => req.requesterUid === membership.userId && req.status === 'approved'
+                );
+                if (approvedReq) {
+                  origin = 'access_request';
+                  originDetails = 'Solicitação aprovada';
+                }
+              }
+            }
+
+            // Build patient accesses
+            let patientAccesses: MemberPatientAccessItem[] = [];
+
+            if (isOwner) {
+              patientAccesses = patients.map((p) => ({
+                patientId: p.id,
+                patientName: p.name,
+                role: 'ADMIN',
+                grantedAt: p.createdAt || family.createdAt,
+              }));
+            } else {
+              // Fetch individual patient access documents from subcollections
+              const accessesList = await Promise.all(
+                patients.map(async (p) => {
+                  try {
+                    const accSnap = await this.db!
+                      .collection('families')
+                      .doc(familyId)
+                      .collection('patients')
+                      .doc(p.id)
+                      .collection('accesses')
+                      .where('userId', '==', membership.userId)
+                      .limit(1)
+                      .get();
+
+                    if (!accSnap.empty) {
+                      const accDoc = accSnap.docs[0];
+                      const accData = accDoc.data();
+                      return {
+                        patientId: p.id,
+                        patientName: p.name,
+                        role: accData.role as PatientRole,
+                        accessId: accDoc.id,
+                        grantedAt: accData.createdAt || membership.joinedAt,
+                      };
+                    }
+                  } catch (e) {
+                    console.warn(`[FirestoreFamilyRepository] Error fetching access for patient ${p.id}:`, e);
+                  }
+                  return null;
+                })
+              );
+
+              patientAccesses = accessesList.filter((a): a is NonNullable<typeof a> => a !== null);
+            }
+
+            return {
+              userId: membership.userId,
+              name: userDoc?.displayName || (isPrimaryOwner ? 'Responsável' : 'Membro'),
+              email: userDoc?.email || '',
+              avatarUrl: userDoc?.photoURL || undefined,
+              familyRole: isOwner ? 'owner' : 'member',
+              status: membership.status,
+              joinedAt: membership.joinedAt || membership.createdAt,
+              createdAt: membership.createdAt,
+              origin,
+              originDetails,
+              patientAccesses,
+              isPrimaryOwner,
+            };
+          })
+        );
+
+        return result;
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore listFamilyMembersWithAccess fallback to local storage:', error?.message);
+    }
+
+    return localStorageEngine.listFamilyMembersWithAccess(familyId);
+  }
+
+  async grantMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER',
+    grantedBy: string
+  ): Promise<PatientAccess> {
+    const now = new Date().toISOString();
+    const accessId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    const newAccess: PatientAccess = {
+      id: accessId,
+      patientId,
+      userId,
+      role,
+      createdBy: grantedBy,
+      createdAt: now,
+      familyId,
+      updatedAt: now,
+    };
+
+    try {
+      if (this.db) {
+        const accRef = this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .doc(accessId);
+
+        await accRef.set(newAccess);
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore grantMemberPatientAccess warning:', error?.message);
+    }
+
+    localStorageEngine.createPatientAccess(
+      {
+        patientId,
+        userId,
+        role,
+        createdBy: grantedBy,
+      },
+      familyId
+    );
+
+    return newAccess;
+  }
+
+  async updateMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER'
+  ): Promise<PatientAccess> {
+    const now = new Date().toISOString();
+
+    try {
+      if (this.db) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .where('userId', '==', userId)
+          .get();
+
+        if (!snap.empty) {
+          const docRef = snap.docs[0].ref;
+          await docRef.update({
+            role,
+            updatedAt: now,
+          });
+          const updated = { id: snap.docs[0].id, ...snap.docs[0].data(), role, updatedAt: now } as PatientAccess;
+          
+          // Also sync with localStorageEngine
+          const existing = localStorageEngine.getPatientAccess(userId, patientId, familyId);
+          if (existing) {
+            localStorageEngine.updatePatientAccess(existing.id, role, familyId, patientId);
+          }
+          return updated;
+        }
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore updateMemberPatientAccess warning:', error?.message);
+    }
+
+    // Local fallback
+    const existing = localStorageEngine.getPatientAccess(userId, patientId, familyId);
+    if (existing) {
+      const updated = localStorageEngine.updatePatientAccess(existing.id, role, familyId, patientId);
+      if (updated) return updated;
+    }
+
+    // If not found in local, create it
+    return this.grantMemberPatientAccess(familyId, userId, patientId, role, 'system');
+  }
+
+  async revokeMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string
+  ): Promise<boolean> {
+    try {
+      if (this.db) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .where('userId', '==', userId)
+          .get();
+
+        if (!snap.empty) {
+          const batch = this.db.batch();
+          snap.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore revokeMemberPatientAccess warning:', error?.message);
+    }
+
+    localStorageEngine.revokeMemberPatientAccess(familyId, userId, patientId);
+    return true;
+  }
+
+  async revokeAllMemberAccesses(familyId: string, userId: string): Promise<boolean> {
+    try {
+      if (this.db) {
+        const patientsSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .get();
+
+        const batch = this.db.batch();
+        for (const pDoc of patientsSnap.docs) {
+          const accSnap = await this.db
+            .collection('families')
+            .doc(familyId)
+            .collection('patients')
+            .doc(pDoc.id)
+            .collection('accesses')
+            .where('userId', '==', userId)
+            .get();
+
+          accSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        }
+        await batch.commit();
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore revokeAllMemberAccesses warning:', error?.message);
+    }
+
+    localStorageEngine.revokeAllMemberAccesses(familyId, userId);
+    return true;
+  }
+
+  async removeFamilyMember(familyId: string, userId: string, removedBy: string): Promise<boolean> {
+    try {
+      if (this.db) {
+        const familyDoc = await this.db.collection('families').doc(familyId).get();
+        if (familyDoc.exists && familyDoc.data()?.primaryOwnerUid === userId) {
+          throw new Error('Não é possível remover o Responsável principal da família.');
+        }
+
+        const batch = this.db.batch();
+
+        // Remove membership doc
+        const memRef = this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('memberships')
+          .doc(userId);
+        batch.delete(memRef);
+
+        // Remove all patient accesses across patients of this family
+        const patientsSnap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .get();
+
+        for (const pDoc of patientsSnap.docs) {
+          const accSnap = await this.db
+            .collection('families')
+            .doc(familyId)
+            .collection('patients')
+            .doc(pDoc.id)
+            .collection('accesses')
+            .where('userId', '==', userId)
+            .get();
+
+          accSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        }
+
+        await batch.commit();
+      }
+    } catch (error: any) {
+      console.warn('[FirestoreFamilyRepository] Firestore removeFamilyMember warning:', error?.message);
+      if (error?.message?.includes('Responsável principal')) {
+        throw error;
+      }
+    }
+
+    localStorageEngine.removeFamilyMember(familyId, userId);
+    return true;
   }
 }
