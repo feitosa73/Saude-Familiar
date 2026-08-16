@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { createApiRouter } from './server/routes/api';
+import { requestLogger } from './server/middlewares/requestLogger';
 
 async function startServer() {
   const app = express();
@@ -10,6 +11,9 @@ async function startServer() {
 
   // JSON Body parser
   app.use(express.json());
+
+  // Request logger middleware with requestId and sanitized operational metrics
+  app.use(requestLogger);
 
   // API Healthcheck
   app.get('/api/health', (req, res) => {

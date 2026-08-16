@@ -195,7 +195,6 @@ export function createApiRouter(
       const ownerUser = await familyRepository.findUserByEmail(cleanOwnerEmail);
 
       if (!ownerUser) {
-        console.log(`[API] AccessRequest: Email de responsável ${cleanOwnerEmail} não encontrado.`);
         return res.status(404).json({
           error: `Nenhum responsável familiar cadastrado com o e-mail "${cleanOwnerEmail}". Verifique se o endereço está correto e se o responsável já acessou o Saúde Familiar.`,
           code: 'OWNER_NOT_FOUND',
@@ -214,7 +213,6 @@ export function createApiRouter(
       }
 
       if (!targetFamilyId) {
-        console.log(`[API] AccessRequest: Owner ${ownerUser.id} não possui família vinculada.`);
         return res.status(404).json({
           error: `O responsável cadastrado (${cleanOwnerEmail}) ainda não possui uma família criada no sistema.`,
           code: 'FAMILY_NOT_FOUND',
@@ -257,8 +255,6 @@ export function createApiRouter(
         resolvedAt: null,
         resolvedBy: null,
       });
-
-      console.log(`[API] Solicitação de acesso criada (${newRequest.id}) de ${authUser.uid} para família ${targetFamilyId}`);
 
       return res.status(201).json({
         success: true,
@@ -1162,7 +1158,6 @@ export function createApiRouter(
         const familyId = req.membership!.familyId;
         const patientId = req.params.id;
         const userId = getCurrentUserId(req);
-        console.log(`[API] PUT /patients/${patientId} initiated - family: ${familyId}, user: ${userId}, role: ${req.membership?.role}`);
 
         const canEdit = await authzService.canEditPatient(userId, patientId, familyId);
         if (!canEdit && req.membership?.role !== 'owner') {
@@ -1173,10 +1168,8 @@ export function createApiRouter(
 
         const updated = await repository.updatePatient(patientId, req.body, familyId);
         if (!updated) {
-          console.warn(`[API] Patient ${patientId} not found in family ${familyId}`);
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
-        console.log(`[API] Patient ${patientId} successfully updated in family ${familyId}`);
         res.json(updated);
       } catch (error) {
         console.error('Error updating patient:', error);

@@ -44,7 +44,7 @@ export function createRequireActiveMembership(
       );
 
       if (!membership) {
-        console.warn(`[AuthZ] Access denied: No membership found for uid=${authUser.uid}`);
+        console.warn('[AuthZ] Access denied: No membership found');
         res.status(403).json({
           error: 'Acesso negado: usuário não possui vínculo com nenhuma família',
           code: 'NO_MEMBERSHIP',
@@ -53,7 +53,7 @@ export function createRequireActiveMembership(
       }
 
       if (membership.status === 'pending') {
-        console.warn(`[AuthZ] Access denied: Pending membership for uid=${authUser.uid}`);
+        console.warn('[AuthZ] Access denied: Pending membership');
         res.status(403).json({
           error: 'Acesso pendente de aprovação pelo administrador',
           code: 'MEMBERSHIP_PENDING',
@@ -62,7 +62,7 @@ export function createRequireActiveMembership(
       }
 
       if (membership.status === 'disabled') {
-        console.warn(`[AuthZ] Access denied: Disabled membership for uid=${authUser.uid}`);
+        console.warn('[AuthZ] Access denied: Disabled membership');
         res.status(403).json({
           error: 'Acesso desativado nesta família',
           code: 'MEMBERSHIP_DISABLED',
@@ -71,9 +71,7 @@ export function createRequireActiveMembership(
       }
 
       if (membership.status !== 'active') {
-        console.warn(
-          `[AuthZ] Access denied: Inactive membership (${membership.status}) for uid=${authUser.uid}`
-        );
+        console.warn(`[AuthZ] Access denied: Inactive membership (${membership.status})`);
         res.status(403).json({
           error: 'Acesso não ativo',
           code: 'MEMBERSHIP_INACTIVE',
@@ -84,9 +82,7 @@ export function createRequireActiveMembership(
       // Fetch family entity
       const family = await familyRepository.getFamily(membership.familyId);
       if (!family) {
-        console.warn(
-          `[AuthZ] Access denied: Family ${membership.familyId} not found for uid=${authUser.uid}`
-        );
+        console.warn('[AuthZ] Access denied: Family not found');
         res.status(403).json({
           error: 'Família associada não encontrada',
           code: 'FAMILY_NOT_FOUND',

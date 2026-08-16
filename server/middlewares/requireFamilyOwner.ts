@@ -10,7 +10,7 @@ export async function requireFamilyOwner(
 
   if (!membership || membership.role !== 'owner') {
     console.warn(
-      `[AuthZ] Owner access denied: User ${req.user?.uid} has role '${membership?.role || 'none'}'`
+      `[AuthZ] Owner access denied: Role is '${membership?.role || 'none'}'`
     );
     res.status(403).json({
       error: 'Acesso restrito ao Administrador (Owner) da família',
