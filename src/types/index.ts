@@ -156,6 +156,8 @@ export interface Medication {
   prescribingDoctor?: string;
   notes?: string;
   active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type AppointmentStatus = 'agendada' | 'realizada' | 'cancelada';
@@ -172,6 +174,8 @@ export interface Appointment {
   status: AppointmentStatus;
   postConsultationNotes?: string;
   postConsultationGuidance?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type ExamStatus = 'solicitado' | 'agendado' | 'realizado' | 'resultado_disponivel';
@@ -186,6 +190,8 @@ export interface Exam {
   status: ExamStatus;
   notes?: string;
   documentId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type DocumentCategory =
@@ -208,6 +214,8 @@ export interface MedicalDocument {
   doctor?: string;
   notes?: string;
   relatedExamId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type TimelineEventType =

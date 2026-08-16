@@ -179,4 +179,3 @@ class AuthServiceImplementation implements IAuthService {
 }
 
 export const authService: IAuthService = new AuthServiceImplementation();
-
