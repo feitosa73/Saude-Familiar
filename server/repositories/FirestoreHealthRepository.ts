@@ -12,10 +12,15 @@ import {
   PatientRole,
 } from '../types';
 import { IHealthRepository } from './IRepository';
+import { localStorageEngine } from '../lib/storageEngine';
 
 export class FirestoreHealthRepository implements IHealthRepository {
   private get db() {
-    return getFirebaseFirestore();
+    try {
+      return getFirebaseFirestore();
+    } catch {
+      return null;
+    }
   }
 
   // ==========================================
@@ -24,82 +29,69 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
   async getUsers(familyId?: string): Promise<User[]> {
     try {
-      if (familyId) {
-        const membershipsSnap = await this.db
-          .collection('families')
-          .doc(familyId)
-          .collection('memberships')
-          .get();
-
-        const userIds = membershipsSnap.docs.map((doc) => doc.data().userId).filter(Boolean);
-        if (userIds.length === 0) return [];
-
-        const users: User[] = [];
-        for (const uid of userIds) {
-          const userDoc = await this.db.collection('users').doc(uid).get();
-          if (userDoc.exists) {
-            const data = userDoc.data() || {};
-            users.push({
-              id: uid,
-              name: data.displayName || data.name || 'Membro da Família',
-              email: data.email || '',
-              avatarUrl: data.avatarUrl || data.photoURL,
-              patientIds: data.patientIds || [],
-            });
-          } else {
-            users.push({
-              id: uid,
-              name: 'Membro da Família',
-              email: '',
-              patientIds: [],
-            });
+      if (this.db && familyId) {
+        const memSnap = await this.db.collection('families').doc(familyId).collection('memberships').get();
+        if (!memSnap.empty) {
+          const userIds = memSnap.docs.map((d) => d.id);
+          const users: User[] = [];
+          for (const uid of userIds) {
+            const uDoc = await this.db.collection('users').doc(uid).get();
+            if (uDoc.exists) {
+              const uData = uDoc.data() || {};
+              users.push({
+                id: uid,
+                name: uData.displayName || 'Membro da Família',
+                email: uData.email || '',
+                avatarUrl: uData.photoURL || undefined,
+                patientIds: [],
+              });
+            }
           }
+          if (users.length > 0) return users;
         }
-        return users;
       }
-
-      const snap = await this.db.collection('users').get();
-      return snap.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.displayName || data.name || 'Usuário',
-          email: data.email || '',
-          avatarUrl: data.avatarUrl || data.photoURL,
-          patientIds: data.patientIds || [],
-        };
-      });
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao buscar usuários:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getUsers fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getUsers(familyId);
   }
 
   async getUserById(id: string): Promise<User | null> {
     try {
-      const snap = await this.db.collection('users').doc(id).get();
-      if (!snap.exists) return null;
-      const data = snap.data() || {};
-      return {
-        id: snap.id,
-        name: data.displayName || data.name || 'Usuário',
-        email: data.email || '',
-        avatarUrl: data.avatarUrl || data.photoURL,
-        patientIds: data.patientIds || [],
-      };
+      if (this.db) {
+        const doc = await this.db.collection('users').doc(id).get();
+        if (doc.exists) {
+          const data = doc.data() || {};
+          return {
+            id,
+            name: data.displayName || 'Usuário',
+            email: data.email || '',
+            avatarUrl: data.photoURL || undefined,
+            patientIds: [],
+          };
+        }
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar usuário ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getUserById fallback:', error?.code || error?.message);
     }
+    const u = localStorageEngine.getUser(id);
+    if (!u) return null;
+    return {
+      id: u.id,
+      name: u.displayName || 'Usuário',
+      email: u.email || '',
+      avatarUrl: u.photoURL || undefined,
+      patientIds: [],
+    };
   }
 
-  async getPatientAccesses(patientId?: string, userId?: string, familyId?: string): Promise<PatientAccess[]> {
-    if (!familyId) {
-      return [];
-    }
-
+  async getPatientAccesses(
+    patientId?: string,
+    userId?: string,
+    familyId?: string
+  ): Promise<PatientAccess[]> {
     try {
-      if (patientId) {
+      if (this.db && familyId && patientId) {
         const snap = await this.db
           .collection('families')
           .doc(familyId)
@@ -108,88 +100,64 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .collection('accesses')
           .get();
 
-        let accesses = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PatientAccess));
-        if (userId) {
-          accesses = accesses.filter((a) => a.userId === userId);
+        if (!snap.empty) {
+          let accesses = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PatientAccess));
+          if (userId) {
+            accesses = accesses.filter((a) => a.userId === userId);
+          }
+          return accesses;
         }
-        return accesses;
       }
-
-      const patients = await this.getPatients(undefined, familyId);
-      const results: PatientAccess[] = [];
-      for (const p of patients) {
-        const accs = await this.getPatientAccesses(p.id, userId, familyId);
-        results.push(...accs);
-      }
-      return results;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao buscar acessos:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getPatientAccesses fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getPatientAccesses(patientId, userId, familyId);
   }
 
   async getPatientAccess(userId: string, patientId: string, familyId?: string): Promise<PatientAccess | null> {
-    if (!familyId) {
-      return null;
-    }
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('accesses')
-        .where('userId', '==', userId)
-        .limit(1)
-        .get();
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .where('userId', '==', userId)
+          .limit(1)
+          .get();
 
-      if (!snap.empty) {
-        const doc = snap.docs[0];
-        return { id: doc.id, ...doc.data() } as PatientAccess;
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          return { id: doc.id, ...doc.data() } as PatientAccess;
+        }
       }
-      return null;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao obter acesso do paciente:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getPatientAccess fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getPatientAccess(userId, patientId, familyId);
   }
 
   async createPatientAccess(
     data: Omit<PatientAccess, 'id' | 'createdAt'>,
     familyId?: string
   ): Promise<PatientAccess> {
-    if (!familyId) {
-      throw new Error('familyId é obrigatório para registrar acesso a paciente');
-    }
-
-    const accessRef = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId)
-      .collection('accesses')
-      .doc();
-
-    const accessId = accessRef.id;
-    const now = new Date().toISOString();
-
-    const newAccess: PatientAccess = {
-      id: accessId,
-      patientId: data.patientId,
-      userId: data.userId,
-      role: data.role,
-      createdAt: now,
-      createdBy: data.createdBy,
-    };
-
+    const access = localStorageEngine.createPatientAccess(data, familyId);
     try {
-      await accessRef.set(newAccess);
-      return newAccess;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('accesses')
+          .doc(access.id)
+          .set(access);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao criar acesso:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createPatientAccess warning:', error?.code || error?.message);
     }
+    return access;
   }
 
   async updatePatientAccess(
@@ -198,57 +166,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<PatientAccess | null> {
-    if (!familyId || !patientId) {
-      throw new Error('familyId e patientId são necessários para atualizar acesso');
-    }
-
+    const updated = localStorageEngine.updatePatientAccess(id, role, familyId, patientId);
     try {
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('accesses')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) {
-        return null;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .doc(id)
+          .update({ role, updatedAt: new Date().toISOString() });
       }
-
-      await ref.update({ role, updatedAt: new Date().toISOString() });
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as PatientAccess;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao atualizar acesso:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updatePatientAccess warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deletePatientAccess(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) {
-      return false;
-    }
-
+    const res = localStorageEngine.deletePatientAccess(id, familyId, patientId);
     try {
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('accesses')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) {
-        return false;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('accesses')
+          .doc(id)
+          .delete();
       }
-      await ref.delete();
-      return true;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao deletar acesso:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deletePatientAccess warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -256,55 +208,42 @@ export class FirestoreHealthRepository implements IHealthRepository {
   // ==========================================
 
   async getPatients(userId?: string, familyId?: string): Promise<Patient[]> {
-    if (!familyId) return [];
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .orderBy('name', 'asc')
-        .get();
-
-      const patients = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
-
-      if (userId) {
-        const filtered: Patient[] = [];
-        for (const p of patients) {
-          const access = await this.getPatientAccess(userId, p.id, familyId);
-          if (access) {
-            filtered.push(p);
-          }
+      if (this.db && familyId) {
+        const snap = await this.db.collection('families').doc(familyId).collection('patients').get();
+        if (!snap.empty) {
+          const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
+          list.forEach((p) => {
+            if (!localStorageEngine.getPatientById(p.id, familyId)) {
+              localStorageEngine.createPatient(p, (p as any).createdBy, familyId);
+            }
+          });
+          return list;
         }
-        return filtered;
       }
-
-      return patients;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao listar pacientes:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getPatients fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getPatients(userId, familyId);
   }
 
   async getPatientById(id: string, familyId?: string): Promise<Patient | null> {
-    if (!familyId) return null;
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(id)
-        .get();
-
-      if (snap.exists) {
-        return { id: snap.id, ...snap.data() } as Patient;
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(id)
+          .get();
+        if (snap.exists) {
+          return { id: snap.id, ...snap.data() } as Patient;
+        }
       }
-      return null;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar paciente ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getPatientById fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getPatientById(id, familyId);
   }
 
   async createPatient(
@@ -312,122 +251,45 @@ export class FirestoreHealthRepository implements IHealthRepository {
     createdByUserId?: string,
     familyId?: string
   ): Promise<Patient> {
-    if (!familyId) {
-      throw new Error('familyId é obrigatório para criar paciente');
-    }
-
-    const patientRef = this.db.collection('families').doc(familyId).collection('patients').doc();
-    const patientId = patientRef.id;
-    const now = new Date().toISOString();
-
-    const newPatient: Patient = {
-      ...data,
-      id: patientId,
-    };
-
+    const patient = localStorageEngine.createPatient(data, createdByUserId, familyId);
     try {
-      const batch = this.db.batch();
-      batch.set(patientRef, {
-        ...newPatient,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      if (createdByUserId) {
-        const accessId = 'acc_' + Date.now() + '_admin';
-        const accessRef = patientRef.collection('accesses').doc(accessId);
-        batch.set(accessRef, {
-          id: accessId,
-          patientId,
-          userId: createdByUserId,
-          role: 'ADMIN',
-          createdAt: now,
-          createdBy: createdByUserId,
-        });
+      if (this.db && familyId) {
+        const patientRef = this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patient.id);
+        await patientRef.set({ ...patient, createdBy: createdByUserId });
       }
-
-      const eventId = 'evt_' + Date.now() + '_init';
-      const eventRef = patientRef.collection('timeline').doc(eventId);
-      batch.set(eventRef, {
-        id: eventId,
-        patientId,
-        type: 'evento_manual',
-        title: 'Cadastro no Saúde Familiar',
-        description: `Perfil clínico de ${data.name} criado no sistema.`,
-        date: now.split('T')[0],
-        category: 'Geral',
-        important: true,
-        createdAt: now,
-      });
-
-      await batch.commit();
-      return newPatient;
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao criar paciente no Firestore:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createPatient warning (persisted locally):', error?.code || error?.message);
     }
+    return patient;
   }
 
   async updatePatient(id: string, data: Partial<Patient>, familyId?: string): Promise<Patient | null> {
-    if (!familyId) return null;
-
+    const updated = localStorageEngine.updatePatient(id, data, familyId);
     try {
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) {
-        return null;
+      if (this.db && familyId) {
+        const ref = this.db.collection('families').doc(familyId).collection('patients').doc(id);
+        await ref.set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
       }
-
-      const updateData = {
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await ref.set(updateData, { merge: true });
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as Patient;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao atualizar paciente ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updatePatient warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deletePatient(id: string, familyId?: string): Promise<boolean> {
-    if (!familyId) return false;
-
+    const res = localStorageEngine.deletePatient(id, familyId);
     try {
-      const patientRef = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(id);
-
-      const snap = await patientRef.get();
-      if (!snap.exists) {
-        return false;
+      if (this.db && familyId) {
+        await this.db.collection('families').doc(familyId).collection('patients').doc(id).delete();
       }
-
-      const subcollections = ['medications', 'appointments', 'exams', 'documents', 'timeline', 'accesses'];
-      for (const sub of subcollections) {
-        const subSnap = await patientRef.collection(sub).get();
-        if (!subSnap.empty) {
-          const batch = this.db.batch();
-          subSnap.docs.forEach((doc) => batch.delete(doc.ref));
-          await batch.commit();
-        }
-      }
-
-      await patientRef.delete();
-      return true;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir paciente ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deletePatient warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -435,30 +297,28 @@ export class FirestoreHealthRepository implements IHealthRepository {
   // ==========================================
 
   async getMedications(patientId: string, familyId?: string): Promise<Medication[]> {
-    if (!familyId) return [];
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('medications')
-        .orderBy('name', 'asc')
-        .get();
-
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Medication));
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('medications')
+          .get();
+        if (!snap.empty) {
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Medication));
+        }
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao listar medicamentos do paciente ${patientId}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getMedications fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getMedications(patientId, familyId);
   }
 
   async getMedicationById(id: string, familyId?: string, patientId?: string): Promise<Medication | null> {
-    if (!familyId) return null;
-
     try {
-      if (patientId) {
+      if (this.db && familyId && patientId) {
         const snap = await this.db
           .collection('families')
           .doc(familyId)
@@ -467,81 +327,33 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .collection('medications')
           .doc(id)
           .get();
-
-        if (snap.exists) return { id: snap.id, ...snap.data() } as Medication;
-        return null;
-      }
-
-      const patients = await this.getPatients(undefined, familyId);
-      for (const p of patients) {
-        const snap = await this.db
-          .collection('families')
-          .doc(familyId)
-          .collection('patients')
-          .doc(p.id)
-          .collection('medications')
-          .doc(id)
-          .get();
         if (snap.exists) {
           return { id: snap.id, ...snap.data() } as Medication;
         }
       }
-      return null;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar medicamento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getMedicationById fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getMedicationById(id, familyId, patientId);
   }
 
   async createMedication(data: Omit<Medication, 'id'>, familyId?: string): Promise<Medication> {
-    if (!familyId) throw new Error('familyId é obrigatório para cadastrar medicamento');
-
-    const patientRef = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId);
-
-    const medRef = patientRef.collection('medications').doc();
-    const medId = medRef.id;
-    const now = new Date().toISOString();
-
-    const newMed: Medication = {
-      ...data,
-      id: medId,
-    };
-
-    const eventId = 'evt_' + Date.now() + '_med';
-    const eventRef = patientRef.collection('timeline').doc(eventId);
-
+    const med = localStorageEngine.createMedication(data, familyId);
     try {
-      const batch = this.db.batch();
-      batch.set(medRef, {
-        ...newMed,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      batch.set(eventRef, {
-        id: eventId,
-        patientId: data.patientId,
-        type: 'medicamento',
-        title: `Início de medicação: ${data.name}`,
-        description: `${data.dosage} - ${data.frequency} (${data.times.join(', ')})`,
-        date: data.startDate || now.split('T')[0],
-        category: 'Medicamento',
-        referenceId: medId,
-        doctor: data.prescribingDoctor,
-        important: false,
-        createdAt: now,
-      });
-
-      await batch.commit();
-      return newMed;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('medications')
+          .doc(med.id)
+          .set(med);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao criar medicamento:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createMedication warning:', error?.code || error?.message);
     }
+    return med;
   }
 
   async updateMedication(
@@ -550,71 +362,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Medication | null> {
-    if (!familyId) return null;
-
+    const updated = localStorageEngine.updateMedication(id, data, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getMedicationById(id, familyId);
-        if (!existing) return null;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('medications')
+          .doc(id)
+          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('medications')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return null;
-
-      await ref.set(
-        {
-          ...data,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as Medication;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao atualizar medicamento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updateMedication warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deleteMedication(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId) return false;
-
+    const res = localStorageEngine.deleteMedication(id, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getMedicationById(id, familyId);
-        if (!existing) return false;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('medications')
+          .doc(id)
+          .delete();
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('medications')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return false;
-
-      await ref.delete();
-      return true;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir medicamento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deleteMedication warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -622,30 +404,28 @@ export class FirestoreHealthRepository implements IHealthRepository {
   // ==========================================
 
   async getAppointments(patientId: string, familyId?: string): Promise<Appointment[]> {
-    if (!familyId) return [];
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('appointments')
-        .orderBy('dateTime', 'asc')
-        .get();
-
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Appointment));
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('appointments')
+          .get();
+        if (!snap.empty) {
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Appointment));
+        }
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao listar consultas do paciente ${patientId}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getAppointments fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getAppointments(patientId, familyId);
   }
 
   async getAppointmentById(id: string, familyId?: string, patientId?: string): Promise<Appointment | null> {
-    if (!familyId) return null;
-
     try {
-      if (patientId) {
+      if (this.db && familyId && patientId) {
         const snap = await this.db
           .collection('families')
           .doc(familyId)
@@ -654,81 +434,33 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .collection('appointments')
           .doc(id)
           .get();
-
-        if (snap.exists) return { id: snap.id, ...snap.data() } as Appointment;
-        return null;
-      }
-
-      const patients = await this.getPatients(undefined, familyId);
-      for (const p of patients) {
-        const snap = await this.db
-          .collection('families')
-          .doc(familyId)
-          .collection('patients')
-          .doc(p.id)
-          .collection('appointments')
-          .doc(id)
-          .get();
         if (snap.exists) {
           return { id: snap.id, ...snap.data() } as Appointment;
         }
       }
-      return null;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar consulta ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getAppointmentById fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getAppointmentById(id, familyId, patientId);
   }
 
   async createAppointment(data: Omit<Appointment, 'id'>, familyId?: string): Promise<Appointment> {
-    if (!familyId) throw new Error('familyId é obrigatório para agendar consulta');
-
-    const patientRef = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId);
-
-    const apptRef = patientRef.collection('appointments').doc();
-    const apptId = apptRef.id;
-    const now = new Date().toISOString();
-
-    const newAppt: Appointment = {
-      ...data,
-      id: apptId,
-    };
-
-    const eventId = 'evt_' + Date.now() + '_apt';
-    const eventRef = patientRef.collection('timeline').doc(eventId);
-
+    const apt = localStorageEngine.createAppointment(data, familyId);
     try {
-      const batch = this.db.batch();
-      batch.set(apptRef, {
-        ...newAppt,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      batch.set(eventRef, {
-        id: eventId,
-        patientId: data.patientId,
-        type: 'consulta',
-        title: `Consulta: ${data.specialty}`,
-        description: `${data.professional} - ${data.location} | Motivo: ${data.reason}`,
-        date: data.dateTime.split('T')[0],
-        category: 'Consulta',
-        referenceId: apptId,
-        doctor: data.professional,
-        important: true,
-        createdAt: now,
-      });
-
-      await batch.commit();
-      return newAppt;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('appointments')
+          .doc(apt.id)
+          .set(apt);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao criar consulta:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createAppointment warning:', error?.code || error?.message);
     }
+    return apt;
   }
 
   async updateAppointment(
@@ -737,71 +469,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Appointment | null> {
-    if (!familyId) return null;
-
+    const updated = localStorageEngine.updateAppointment(id, data, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getAppointmentById(id, familyId);
-        if (!existing) return null;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('appointments')
+          .doc(id)
+          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('appointments')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return null;
-
-      await ref.set(
-        {
-          ...data,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as Appointment;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao atualizar consulta ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updateAppointment warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deleteAppointment(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId) return false;
-
+    const res = localStorageEngine.deleteAppointment(id, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getAppointmentById(id, familyId);
-        if (!existing) return false;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('appointments')
+          .doc(id)
+          .delete();
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('appointments')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return false;
-
-      await ref.delete();
-      return true;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir consulta ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deleteAppointment warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -809,30 +511,28 @@ export class FirestoreHealthRepository implements IHealthRepository {
   // ==========================================
 
   async getExams(patientId: string, familyId?: string): Promise<Exam[]> {
-    if (!familyId) return [];
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('exams')
-        .orderBy('requestDate', 'desc')
-        .get();
-
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Exam));
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('exams')
+          .get();
+        if (!snap.empty) {
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Exam));
+        }
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao listar exames do paciente ${patientId}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getExams fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getExams(patientId, familyId);
   }
 
   async getExamById(id: string, familyId?: string, patientId?: string): Promise<Exam | null> {
-    if (!familyId) return null;
-
     try {
-      if (patientId) {
+      if (this.db && familyId && patientId) {
         const snap = await this.db
           .collection('families')
           .doc(familyId)
@@ -841,81 +541,33 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .collection('exams')
           .doc(id)
           .get();
-
-        if (snap.exists) return { id: snap.id, ...snap.data() } as Exam;
-        return null;
-      }
-
-      const patients = await this.getPatients(undefined, familyId);
-      for (const p of patients) {
-        const snap = await this.db
-          .collection('families')
-          .doc(familyId)
-          .collection('patients')
-          .doc(p.id)
-          .collection('exams')
-          .doc(id)
-          .get();
         if (snap.exists) {
           return { id: snap.id, ...snap.data() } as Exam;
         }
       }
-      return null;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar exame ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getExamById fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getExamById(id, familyId, patientId);
   }
 
   async createExam(data: Omit<Exam, 'id'>, familyId?: string): Promise<Exam> {
-    if (!familyId) throw new Error('familyId é obrigatório para cadastrar exame');
-
-    const patientRef = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId);
-
-    const examRef = patientRef.collection('exams').doc();
-    const examId = examRef.id;
-    const now = new Date().toISOString();
-
-    const newExam: Exam = {
-      ...data,
-      id: examId,
-    };
-
-    const eventId = 'evt_' + Date.now() + '_exam';
-    const eventRef = patientRef.collection('timeline').doc(eventId);
-
+    const exam = localStorageEngine.createExam(data, familyId);
     try {
-      const batch = this.db.batch();
-      batch.set(examRef, {
-        ...newExam,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      batch.set(eventRef, {
-        id: eventId,
-        patientId: data.patientId,
-        type: 'exame',
-        title: `Exame solicitado: ${data.name}`,
-        description: `Médico solicitante: ${data.requestingDoctor} | Status: ${data.status}`,
-        date: data.requestDate || now.split('T')[0],
-        category: 'Exame',
-        referenceId: examId,
-        doctor: data.requestingDoctor,
-        important: false,
-        createdAt: now,
-      });
-
-      await batch.commit();
-      return newExam;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('exams')
+          .doc(exam.id)
+          .set(exam);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao cadastrar exame:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createExam warning:', error?.code || error?.message);
     }
+    return exam;
   }
 
   async updateExam(
@@ -924,71 +576,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Exam | null> {
-    if (!familyId) return null;
-
+    const updated = localStorageEngine.updateExam(id, data, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getExamById(id, familyId);
-        if (!existing) return null;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('exams')
+          .doc(id)
+          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('exams')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return null;
-
-      await ref.set(
-        {
-          ...data,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as Exam;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao atualizar exame ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updateExam warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deleteExam(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId) return false;
-
+    const res = localStorageEngine.deleteExam(id, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getExamById(id, familyId);
-        if (!existing) return false;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('exams')
+          .doc(id)
+          .delete();
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('exams')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return false;
-
-      await ref.delete();
-      return true;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir exame ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deleteExam warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -996,30 +618,28 @@ export class FirestoreHealthRepository implements IHealthRepository {
   // ==========================================
 
   async getDocuments(patientId: string, familyId?: string): Promise<MedicalDocument[]> {
-    if (!familyId) return [];
-
     try {
-      const snap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('documents')
-        .orderBy('date', 'desc')
-        .get();
-
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as MedicalDocument));
+      if (this.db && familyId) {
+        const snap = await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('documents')
+          .get();
+        if (!snap.empty) {
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as MedicalDocument));
+        }
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao listar documentos do paciente ${patientId}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getDocuments fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getDocuments(patientId, familyId);
   }
 
   async getDocumentById(id: string, familyId?: string, patientId?: string): Promise<MedicalDocument | null> {
-    if (!familyId) return null;
-
     try {
-      if (patientId) {
+      if (this.db && familyId && patientId) {
         const snap = await this.db
           .collection('families')
           .doc(familyId)
@@ -1028,81 +648,33 @@ export class FirestoreHealthRepository implements IHealthRepository {
           .collection('documents')
           .doc(id)
           .get();
-
-        if (snap.exists) return { id: snap.id, ...snap.data() } as MedicalDocument;
-        return null;
-      }
-
-      const patients = await this.getPatients(undefined, familyId);
-      for (const p of patients) {
-        const snap = await this.db
-          .collection('families')
-          .doc(familyId)
-          .collection('patients')
-          .doc(p.id)
-          .collection('documents')
-          .doc(id)
-          .get();
         if (snap.exists) {
           return { id: snap.id, ...snap.data() } as MedicalDocument;
         }
       }
-      return null;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar documento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getDocumentById fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getDocumentById(id, familyId, patientId);
   }
 
   async createDocument(data: Omit<MedicalDocument, 'id'>, familyId?: string): Promise<MedicalDocument> {
-    if (!familyId) throw new Error('familyId é obrigatório para anexar documento');
-
-    const patientRef = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId);
-
-    const docRef = patientRef.collection('documents').doc();
-    const docId = docRef.id;
-    const now = new Date().toISOString();
-
-    const newDoc: MedicalDocument = {
-      ...data,
-      id: docId,
-    };
-
-    const eventId = 'evt_' + Date.now() + '_doc';
-    const eventRef = patientRef.collection('timeline').doc(eventId);
-
+    const doc = localStorageEngine.createDocument(data, familyId);
     try {
-      const batch = this.db.batch();
-      batch.set(docRef, {
-        ...newDoc,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      batch.set(eventRef, {
-        id: eventId,
-        patientId: data.patientId,
-        type: 'documento',
-        title: `Documento anexado: ${data.title}`,
-        description: `Categoria: ${data.category} | Arquivo: ${data.fileName}`,
-        date: data.date || now.split('T')[0],
-        category: 'Documento',
-        referenceId: docId,
-        doctor: data.doctor,
-        important: false,
-        createdAt: now,
-      });
-
-      await batch.commit();
-      return newDoc;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('documents')
+          .doc(doc.id)
+          .set(doc);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao anexar documento:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createDocument warning:', error?.code || error?.message);
     }
+    return doc;
   }
 
   async updateDocument(
@@ -1111,71 +683,41 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<MedicalDocument | null> {
-    if (!familyId) return null;
-
+    const updated = localStorageEngine.updateDocument(id, data, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getDocumentById(id, familyId);
-        if (!existing) return null;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('documents')
+          .doc(id)
+          .set({ ...data, updatedAt: new Date().toISOString() }, { merge: true });
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('documents')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return null;
-
-      await ref.set(
-        {
-          ...data,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as MedicalDocument;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao atualizar documento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] updateDocument warning:', error?.code || error?.message);
     }
+    return updated;
   }
 
   async deleteDocument(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId) return false;
-
+    const res = localStorageEngine.deleteDocument(id, familyId, patientId);
     try {
-      let pId = patientId;
-      if (!pId) {
-        const existing = await this.getDocumentById(id, familyId);
-        if (!existing) return false;
-        pId = existing.patientId;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('documents')
+          .doc(id)
+          .delete();
       }
-
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pId)
-        .collection('documents')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return false;
-
-      await ref.delete();
-      return true;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir documento ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deleteDocument warning:', error?.code || error?.message);
     }
+    return res;
   }
 
   // ==========================================
@@ -1184,103 +726,75 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
   async getTimelineEvents(
     patientId: string,
-    filter?: {
-      category?: string;
-      type?: TimelineEventType;
-      startDate?: string;
-      endDate?: string;
-    },
+    filter?: { category?: string; type?: TimelineEventType; startDate?: string; endDate?: string },
     familyId?: string
   ): Promise<TimelineEvent[]> {
-    if (!familyId) return [];
-
     try {
-      let query: any = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('timeline');
+      if (this.db && familyId) {
+        let query: any = this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('timeline');
 
-      if (filter?.category && filter.category !== 'Todos') {
-        query = query.where('category', '==', filter.category);
-      }
-      if (filter?.type) {
-        query = query.where('type', '==', filter.type);
-      }
+        if (filter?.type) {
+          query = query.where('type', '==', filter.type);
+        }
 
-      const snap = await query.get();
-      let events = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as TimelineEvent));
-
-      if (filter?.startDate) {
-        events = events.filter((e) => e.date >= filter.startDate!);
+        const snap = await query.get();
+        if (!snap.empty) {
+          let events = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as TimelineEvent));
+          if (filter?.startDate) {
+            events = events.filter((e: any) => e.date >= filter.startDate!);
+          }
+          if (filter?.endDate) {
+            events = events.filter((e: any) => e.date <= filter.endDate!);
+          }
+          return events.sort((a: any, b: any) => b.date.localeCompare(a.date));
+        }
       }
-      if (filter?.endDate) {
-        events = events.filter((e) => e.date <= filter.endDate!);
-      }
-
-      events.sort((a, b) => b.date.localeCompare(a.date));
-      return events;
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao buscar timeline do paciente ${patientId}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] getTimelineEvents fallback:', error?.code || error?.message);
     }
+    return localStorageEngine.getTimelineEvents(patientId, filter, familyId);
   }
 
-  async createTimelineEvent(
-    data: Omit<TimelineEvent, 'id'>,
-    familyId?: string
-  ): Promise<TimelineEvent> {
-    if (!familyId) throw new Error('familyId é obrigatório para criar evento na timeline');
-
-    const ref = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .doc(data.patientId)
-      .collection('timeline')
-      .doc();
-
-    const eventId = ref.id;
-    const now = new Date().toISOString();
-
-    const newEvent: TimelineEvent = {
-      ...data,
-      id: eventId,
-    };
-
+  async createTimelineEvent(data: Omit<TimelineEvent, 'id'>, familyId?: string): Promise<TimelineEvent> {
+    const event = localStorageEngine.createTimelineEvent(data, familyId);
     try {
-      await ref.set({
-        ...newEvent,
-        createdAt: now,
-      });
-      return newEvent;
+      if (this.db && familyId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(data.patientId)
+          .collection('timeline')
+          .doc(event.id)
+          .set(event);
+      }
     } catch (error: any) {
-      console.error('[FirestoreHealthRepository] Erro ao criar evento na timeline:', error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] createTimelineEvent warning:', error?.code || error?.message);
     }
+    return event;
   }
 
   async deleteTimelineEvent(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) return false;
-
+    const res = localStorageEngine.deleteTimelineEvent(id, familyId, patientId);
     try {
-      const ref = this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('timeline')
-        .doc(id);
-
-      const snap = await ref.get();
-      if (!snap.exists) return false;
-
-      await ref.delete();
-      return true;
+      if (this.db && familyId && patientId) {
+        await this.db
+          .collection('families')
+          .doc(familyId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('timeline')
+          .doc(id)
+          .delete();
+      }
     } catch (error: any) {
-      console.error(`[FirestoreHealthRepository] Erro ao excluir evento da timeline ${id}:`, error?.code || error?.message);
-      throw error;
+      console.warn('[FirestoreHealthRepository] deleteTimelineEvent warning:', error?.code || error?.message);
     }
+    return res;
   }
 }

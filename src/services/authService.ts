@@ -101,14 +101,32 @@ class AuthServiceImplementation implements IAuthService {
           this.notifyListeners();
           return user;
         } catch (error: any) {
-          console.error('[Auth] Erro no Google Sign-In via Firebase:', error);
-          if (error.code === 'auth/unauthorized-domain') {
+          const code = error?.code || '';
+          if (code === 'auth/popup-closed-by-user') {
+            console.info('[Auth] Google Sign-In popup foi fechado pelo usuário.');
+            throw new Error('A janela de login do Google foi fechada antes de concluir. Clique em "Entrar com Google" para tentar novamente.');
+          }
+          if (code === 'auth/cancelled-popup-request') {
+            console.info('[Auth] Requisição de login cancelada ou substituída.');
+            throw new Error('Tentativa de login anterior cancelada. Tente novamente.');
+          }
+          if (code === 'auth/popup-blocked') {
+            console.warn('[Auth] Pop-up bloqueado pelo navegador.');
+            throw new Error('A janela pop-up de login foi bloqueada pelo navegador. Permita pop-ups para este site para continuar.');
+          }
+          if (code === 'auth/unauthorized-domain') {
             const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+            console.warn('[Auth] Domínio não autorizado no Firebase Auth:', currentHost);
             throw new Error(
               `Domínio não autorizado no Firebase Auth (${currentHost}). Adicione este domínio em: Console Firebase > Authentication > Settings > Authorized domains.`
             );
           }
-          throw new Error(error.message || 'Falha ao autenticar com Google');
+          if (code === 'auth/network-request-failed') {
+            console.warn('[Auth] Falha de conexão de rede durante autenticação.');
+            throw new Error('Não foi possível conectar aos servidores do Google. Verifique sua conexão com a internet e tente novamente.');
+          }
+          console.warn('[Auth] Aviso durante o Google Sign-In via Firebase:', error?.message || error);
+          throw new Error(error?.message || 'Falha ao autenticar com o Google. Tente novamente.');
         }
       } else {
         throw new Error('Firebase Authentication não está configurado neste ambiente.');

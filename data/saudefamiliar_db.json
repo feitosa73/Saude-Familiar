@@ -1,0 +1,131 @@
+{
+  "users": {
+    "test_owner_uid": {
+      "id": "test_owner_uid",
+      "email": "owner@example.com",
+      "displayName": "Paulo Feitosa",
+      "familyId": "fam_1786839627157_s934728",
+      "createdAt": "2026-08-16T00:20:27.156Z",
+      "updatedAt": "2026-08-16T00:20:27.156Z"
+    },
+    "rose_uid_456": {
+      "id": "rose_uid_456",
+      "email": "rose@example.com",
+      "displayName": "Rose Feitosa",
+      "familyId": "fam_1786839627157_s934728",
+      "createdAt": "2026-08-16T00:20:28.955Z",
+      "updatedAt": "2026-08-16T00:20:28.955Z"
+    }
+  },
+  "families": {
+    "fam_1786839627157_s934728": {
+      "id": "fam_1786839627157_s934728",
+      "name": "Família Feitosa Teste",
+      "createdBy": "test_owner_uid",
+      "primaryOwnerUid": "test_owner_uid",
+      "createdAt": "2026-08-16T00:20:27.156Z",
+      "updatedAt": "2026-08-16T00:20:27.156Z"
+    }
+  },
+  "memberships": {
+    "fam_1786839627157_s934728_test_owner_uid": {
+      "id": "test_owner_uid",
+      "userId": "test_owner_uid",
+      "familyId": "fam_1786839627157_s934728",
+      "role": "owner",
+      "status": "active",
+      "joinedAt": "2026-08-16T00:20:27.156Z",
+      "createdBy": "test_owner_uid",
+      "createdAt": "2026-08-16T00:20:27.156Z",
+      "updatedAt": "2026-08-16T00:20:27.156Z"
+    },
+    "fam_1786839627157_s934728_rose_uid_456": {
+      "id": "rose_uid_456",
+      "userId": "rose_uid_456",
+      "familyId": "fam_1786839627157_s934728",
+      "role": "member",
+      "status": "active",
+      "joinedAt": "2026-08-16T00:20:28.955Z",
+      "createdAt": "2026-08-16T00:20:28.955Z",
+      "createdBy": "test_owner_uid"
+    }
+  },
+  "accessRequests": {},
+  "invitations": {
+    "fam_1786839627157_s934728_inv_1786839628402_s021hqq": {
+      "id": "inv_1786839628402_s021hqq",
+      "familyId": "fam_1786839627157_s934728",
+      "patientId": "pat_1786839628205_rodufaa",
+      "patientName": "Aluízio Feitosa",
+      "invitedEmail": "rose@example.com",
+      "role": "VIEWER",
+      "status": "accepted",
+      "tokenHash": "sample_token_hash_123",
+      "createdBy": "test_owner_uid",
+      "createdAt": "2026-08-16T00:20:28.402Z",
+      "expiresAt": "2026-08-23T00:20:28.402Z",
+      "acceptedAt": "2026-08-16T00:20:28.955Z",
+      "acceptedBy": "rose_uid_456",
+      "revokedAt": null,
+      "revokedBy": null
+    }
+  },
+  "invitationsLookup": {
+    "sample_token_hash_123": {
+      "familyId": "fam_1786839627157_s934728",
+      "invitationId": "inv_1786839628402_s021hqq",
+      "tokenHash": "sample_token_hash_123",
+      "expiresAt": "2026-08-23T00:20:28.402Z",
+      "status": "accepted",
+      "createdAt": "2026-08-16T00:20:28.402Z"
+    }
+  },
+  "patients": {
+    "pat_1786839628205_rodufaa": {
+      "id": "pat_1786839628205_rodufaa",
+      "name": "Aluízio Feitosa",
+      "birthDate": "1948-05-12",
+      "bloodType": "O+",
+      "allergies": [
+        "Dipirona"
+      ],
+      "emergencyContacts": [
+        {
+          "name": "Paulo",
+          "phone": "(11) 98888-7777",
+          "relation": "Filho"
+        }
+      ],
+      "familyId": "fam_1786839627157_s934728",
+      "createdBy": "test_owner_uid"
+    }
+  },
+  "patientAccesses": {
+    "acc_1786839628955_rnzzo2o": {
+      "id": "acc_1786839628955_rnzzo2o",
+      "patientId": "pat_1786839628205_rodufaa",
+      "userId": "rose_uid_456",
+      "role": "VIEWER",
+      "createdAt": "2026-08-16T00:20:28.955Z",
+      "createdBy": "test_owner_uid",
+      "familyId": "fam_1786839627157_s934728"
+    }
+  },
+  "medications": {},
+  "appointments": {},
+  "exams": {},
+  "documents": {},
+  "timeline": {
+    "evt_1786839628205_y8u2jjb": {
+      "id": "evt_1786839628205_y8u2jjb",
+      "patientId": "pat_1786839628205_rodufaa",
+      "familyId": "fam_1786839627157_s934728",
+      "type": "evento_manual",
+      "category": "Geral",
+      "title": "Paciente cadastrado",
+      "date": "2026-08-16",
+      "description": "Cadastro inicial de Aluízio Feitosa realizado no sistema Saúde Familiar.",
+      "createdAt": "2026-08-16T00:20:28.205Z"
+    }
+  }
+}

@@ -52,8 +52,16 @@ export const LoginView: React.FC = () => {
           </div>
 
           {authError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-medium">
-              {authError}
+            <div className="p-3.5 bg-amber-50/90 border border-amber-200 text-amber-900 rounded-xl text-xs font-medium flex items-start justify-between gap-2">
+              <span className="leading-relaxed">{authError}</span>
+              <button
+                type="button"
+                onClick={() => setAuthError(null)}
+                className="text-amber-700 hover:text-amber-900 font-semibold px-1 py-0.5 text-xs shrink-0 cursor-pointer"
+                title="Fechar aviso"
+              >
+                ✕
+              </button>
             </div>
           )}
 
