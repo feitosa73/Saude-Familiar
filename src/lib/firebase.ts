@@ -1,6 +1,11 @@
 import { initializeApp, getApps } from 'firebase/app';
 import {
+  initializeAuth,
   getAuth,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
@@ -32,7 +37,18 @@ let googleProvider: GoogleAuthProvider | null = null;
 if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    auth = getAuth(app);
+    
+    // Explicit cross-browser persistence avoiding Safari & Brave IndexedDB closing/hidden issues
+    // browserPopupRedirectResolver is required for signInWithPopup / signInWithRedirect when using initializeAuth
+    try {
+      auth = initializeAuth(app, {
+        persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
+        popupRedirectResolver: browserPopupRedirectResolver,
+      });
+    } catch {
+      auth = getAuth(app);
+    }
+
     googleProvider = new GoogleAuthProvider();
     googleProvider.setCustomParameters({
       prompt: 'select_account',
@@ -46,6 +62,7 @@ export {
   app,
   auth,
   googleProvider,
+  browserPopupRedirectResolver,
   signInWithPopup,
   signOut,
   onAuthStateChanged,

@@ -102,6 +102,8 @@ class AuthServiceImplementation implements IAuthService {
           return user;
         } catch (error: any) {
           const code = error?.code || '';
+          const msg = String(error?.message || '');
+
           if (code === 'auth/popup-closed-by-user') {
             console.info('[Auth] Google Sign-In popup foi fechado pelo usuário.');
             throw new Error('A janela de login do Google foi fechada antes de concluir. Clique em "Entrar com Google" para tentar novamente.');
@@ -125,8 +127,19 @@ class AuthServiceImplementation implements IAuthService {
             console.warn('[Auth] Falha de conexão de rede durante autenticação.');
             throw new Error('Não foi possível conectar aos servidores do Google. Verifique sua conexão com a internet e tente novamente.');
           }
-          console.warn('[Auth] Aviso durante o Google Sign-In via Firebase:', error?.message || error);
-          throw new Error(error?.message || 'Falha ao autenticar com o Google. Tente novamente.');
+
+          console.error('[Auth] Erro durante o Google Sign-In via Firebase Auth:', error);
+
+          if (
+            msg.toLowerCase().includes('database is closing') ||
+            msg.toLowerCase().includes('hidden') ||
+            msg.toLowerCase().includes('internal error') ||
+            code === 'auth/internal-error'
+          ) {
+            throw new Error('Não foi possível concluir o login. Tente novamente ou utilize outro navegador.');
+          }
+
+          throw new Error('Não foi possível concluir o login. Tente novamente ou utilize outro navegador.');
         }
       } else {
         throw new Error('Firebase Authentication não está configurado neste ambiente.');
