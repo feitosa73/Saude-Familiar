@@ -467,7 +467,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
       )}
 
       {/* Medication Create/Edit Modal */}
-      {isModalOpen && permissions?.canEditRecord && (
+      {isModalOpen && (permissions?.canCreateRecord || permissions?.canEditRecord) && (
         <div
           id="medication-modal-backdrop"
           className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
@@ -482,8 +482,13 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 {editingMedId ? 'Editar Medicamento' : 'Novo Medicamento'}
               </h2>
               <button
-                onClick={onCloseModal}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  onCloseModal();
+                }}
+                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1 cursor-pointer"
+                aria-label="Fechar modal"
               >
                 ✕
               </button>

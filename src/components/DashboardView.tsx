@@ -152,7 +152,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {nextMed && (
         <section
           id="next-med-hero-banner"
-          className="bg-blue-600 rounded-2xl p-6 text-white flex items-center justify-between shadow-md shadow-blue-500/10"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveTab('medicamentos')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActiveTab('medicamentos');
+            }
+          }}
+          className="bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-2xl p-5 sm:p-6 text-white flex items-center justify-between shadow-md shadow-blue-500/10 cursor-pointer touch-manipulation transition-all focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
+          aria-label={`Próximo Medicamento do Dia: ${nextMed.name} ${nextMed.dosage}. Toque para ver medicamentos.`}
         >
           <div>
             <p className="text-blue-100 text-xs sm:text-sm font-medium uppercase tracking-wider">
@@ -165,8 +175,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Horários: {nextMed.times.join(' • ')} ({nextMed.frequency})
             </p>
           </div>
-          <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white/20 backdrop-blur-xs rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0">
-            💊
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-white/20 backdrop-blur-xs rounded-2xl flex items-center justify-center text-2xl sm:text-3xl">
+              💊
+            </div>
+            <ArrowRight className="w-5 h-5 text-blue-200 hidden sm:block" />
           </div>
         </section>
       )}
@@ -206,7 +219,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <a
                 id="emergency-call-btn"
                 href={`tel:${primaryEmergency.phone.replace(/[^0-9]/g, '')}`}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-[0.98] transition-all cursor-pointer touch-manipulation min-h-[44px]"
                 title={`Ligar para ${primaryEmergency.name}`}
               >
                 <Phone className="w-3.5 h-3.5 text-rose-600" />
@@ -214,9 +227,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </a>
             )}
             <button
+              type="button"
               id="view-full-file-btn"
               onClick={() => setOpenPatientProfile(true)}
-              className="inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors"
+              className="inline-flex items-center justify-center gap-1 px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-[0.98] border border-slate-200 transition-all cursor-pointer touch-manipulation min-h-[44px]"
             >
               <User className="w-3.5 h-3.5 text-slate-500" />
               <span>Ver Ficha Médica</span>
@@ -245,12 +259,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         <button
+          type="button"
           id="quick-add-med-btn"
-          onClick={permissions?.canCreateRecord ? onOpenMedicationModal : () => setActiveTab('medicamentos')}
-          className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+          onClick={() => {
+            if (permissions?.canCreateRecord) {
+              onOpenMedicationModal();
+            } else {
+              setActiveTab('medicamentos');
+            }
+          }}
+          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden min-h-[64px]"
+          aria-label={permissions?.canCreateRecord ? 'Cadastrar novo medicamento' : 'Ver lista de medicamentos'}
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
               <Pill className="w-4 h-4" />
             </div>
             <div>
@@ -265,12 +287,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
 
         <button
+          type="button"
           id="quick-add-apt-btn"
-          onClick={permissions?.canCreateRecord ? onOpenAppointmentModal : () => setActiveTab('consultas')}
-          className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+          onClick={() => {
+            if (permissions?.canCreateRecord) {
+              onOpenAppointmentModal();
+            } else {
+              setActiveTab('consultas');
+            }
+          }}
+          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden min-h-[64px]"
+          aria-label={permissions?.canCreateRecord ? 'Agendar nova consulta' : 'Ver consultas agendadas'}
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
               <CalendarCheck2 className="w-4 h-4" />
             </div>
             <div>
@@ -285,12 +315,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
 
         <button
+          type="button"
           id="quick-add-exam-btn"
-          onClick={permissions?.canCreateRecord ? onOpenExamModal : () => setActiveTab('exames')}
-          className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+          onClick={() => {
+            if (permissions?.canCreateRecord) {
+              onOpenExamModal();
+            } else {
+              setActiveTab('exames');
+            }
+          }}
+          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden min-h-[64px]"
+          aria-label={permissions?.canCreateRecord ? 'Cadastrar novo pedido de exame' : 'Ver exames'}
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
               <Activity className="w-4 h-4" />
             </div>
             <div>
@@ -305,12 +343,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
 
         <button
+          type="button"
           id="quick-add-doc-btn"
-          onClick={permissions?.canCreateRecord ? onOpenDocumentModal : () => setActiveTab('documentos')}
-          className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+          onClick={() => {
+            if (permissions?.canCreateRecord) {
+              onOpenDocumentModal();
+            } else {
+              setActiveTab('documentos');
+            }
+          }}
+          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden min-h-[64px]"
+          aria-label={permissions?.canCreateRecord ? 'Anexar novo documento' : 'Ver documentos anexados'}
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
               <FileText className="w-4 h-4" />
             </div>
             <div>
@@ -330,23 +376,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 1. Próximos Medicamentos do Dia */}
         <section
           id="dashboard-medications-card"
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between"
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
+              <button
+                type="button"
+                onClick={() => setActiveTab('medicamentos')}
+                className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para página de Medicamentos"
+              >
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Pill className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-base text-slate-900">Medicamentos Ativos</h2>
+                  <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
+                    Medicamentos Ativos
+                  </h2>
                   <p className="text-xs text-slate-500">Horários e administração diária</p>
                 </div>
-              </div>
+              </button>
               <button
+                type="button"
                 id="view-all-meds-btn"
                 onClick={() => setActiveTab('medicamentos')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-blue-50 transition-colors"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                aria-label="Ver todos os medicamentos ativos"
               >
                 Ver todos ({data?.activeMedicationsCount || 0})
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -358,7 +413,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {data.activeMedications.slice(0, 4).map((med) => (
                   <div
                     key={med.id}
-                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all flex items-center justify-between gap-3"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('medicamentos')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab('medicamentos');
+                      }
+                    }}
+                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+                    aria-label={`Medicamento ${med.name} ${med.dosage}. Toque para ver detalhes.`}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -385,11 +450,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           return (
                             <button
                               key={time}
-                              onClick={() => toggleDose(med.id, time)}
-                              className={`px-2.5 py-0.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDose(med.id, time);
+                              }}
+                              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer touch-manipulation min-h-[28px] ${
                                 isTaken
                                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 line-through'
-                                  : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-500'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-500 active:bg-blue-50'
                               } ${!permissions?.canEditRecord ? 'cursor-default' : ''}`}
                               title={
                                 !permissions?.canEditRecord
@@ -413,12 +482,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 <Pill className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm font-medium text-slate-600">Nenhum medicamento ativo</p>
-                {permissions?.canCreateRecord && (
+                {permissions?.canCreateRecord ? (
                   <button
+                    type="button"
                     onClick={onOpenMedicationModal}
-                    className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
                   >
-                    + Cadastrar medicamento
+                    <Plus className="w-3.5 h-3.5" />
+                    Cadastrar medicamento
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('medicamentos')}
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
+                  >
+                    Ver lista de medicamentos
                   </button>
                 )}
               </div>
@@ -429,23 +508,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 2. Próxima Consulta */}
         <section
           id="dashboard-appointment-card"
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between"
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
+              <button
+                type="button"
+                onClick={() => setActiveTab('consultas')}
+                className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para página de Consultas"
+              >
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <CalendarCheck2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-base text-slate-900">Próximas Consultas</h2>
+                  <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
+                    Próximas Consultas
+                  </h2>
                   <p className="text-xs text-slate-500">Agendamentos e retornos médicos</p>
                 </div>
-              </div>
+              </button>
               <button
+                type="button"
                 id="view-all-appointments-btn"
                 onClick={() => setActiveTab('consultas')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-blue-50 transition-colors"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                aria-label="Ver todas as consultas"
               >
                 Ver todas
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -454,7 +542,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {data?.nextAppointment ? (
               <div className="space-y-3">
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActiveTab('consultas')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveTab('consultas');
+                    }
+                  }}
+                  className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+                  aria-label={`Consulta com ${data.nextAppointment.professional}. Toque para ver detalhes.`}
+                >
                   <div className="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex flex-col items-center justify-center font-bold text-xs shrink-0">
                     <span className="uppercase text-[10px] leading-tight">
                       {new Date(data.nextAppointment.dateTime).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
@@ -484,12 +584,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 <CalendarCheck2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm font-medium text-slate-600">Nenhuma consulta agendada</p>
-                {permissions?.canCreateRecord && (
+                {permissions?.canCreateRecord ? (
                   <button
+                    type="button"
                     onClick={onOpenAppointmentModal}
-                    className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
                   >
-                    + Agendar consulta
+                    <Plus className="w-3.5 h-3.5" />
+                    Agendar consulta
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('consultas')}
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
+                  >
+                    Ver consultas
                   </button>
                 )}
               </div>
@@ -503,19 +613,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 3. Exames Pendentes */}
         <section
           id="dashboard-exams-card"
-          className="bg-slate-900 text-white rounded-2xl shadow-xl p-6 flex flex-col justify-between"
+          className="bg-slate-900 text-white rounded-2xl shadow-xl p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-white/10 text-white">
+              <button
+                type="button"
+                onClick={() => setActiveTab('exames')}
+                className="flex items-center gap-2 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para página de Exames"
+              >
+                <div className="p-1.5 rounded-lg bg-white/10 text-white group-hover:bg-white/20 transition-colors">
                   <Activity className="w-4 h-4" />
                 </div>
-                <h2 className="font-bold text-sm text-white">Exames Pendentes</h2>
-              </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                <h2 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors">
+                  Exames Pendentes
+                </h2>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('exames')}
+                className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 hover:bg-amber-400/30 transition-colors cursor-pointer touch-manipulation"
+                aria-label="Ver exames pendentes"
+              >
                 {data?.pendingExamsCount || 0} pendentes
-              </span>
+              </button>
             </div>
 
             {data?.pendingExams && data.pendingExams.length > 0 ? (
@@ -523,11 +645,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {data.pendingExams.slice(0, 3).map((exam) => (
                   <div
                     key={exam.id}
-                    className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('exames')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab('exames');
+                      }
+                    }}
+                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-[0.99] border border-white/10 text-xs transition-all cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-hidden"
+                    aria-label={`Exame ${exam.name}. Toque para ver detalhes.`}
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-semibold text-slate-100 truncate">{exam.name}</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                         {exam.status === 'solicitado' ? 'Solicitado' : 'Agendado'}
                       </span>
                     </div>
@@ -543,8 +675,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <button
+            type="button"
+            id="view-all-exams-btn"
             onClick={() => setActiveTab('exames')}
-            className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+            className="mt-4 w-full min-h-[44px] py-2.5 bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
+            aria-label="Ver todos os exames"
           >
             Ver todos os exames
             <ArrowRight className="w-3 h-3" />
@@ -554,16 +689,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 4. Documentos Recentes */}
         <section
           id="dashboard-docs-card"
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between"
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700">
+              <button
+                type="button"
+                onClick={() => setActiveTab('documentos')}
+                className="flex items-center gap-2 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para página de Documentos"
+              >
+                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <FileText className="w-4 h-4" />
                 </div>
-                <h2 className="font-bold text-sm text-slate-900">Documentos Recentes</h2>
-              </div>
+                <h2 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Documentos Recentes
+                </h2>
+              </button>
               <span className="text-xs text-slate-400 font-medium">
                 {data?.totalDocumentsCount || 0} arquivos
               </span>
@@ -574,7 +716,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {data.recentDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-300 transition-colors flex items-center justify-between gap-2"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('documentos')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab('documentos');
+                      }
+                    }}
+                    className="p-3 rounded-xl bg-slate-50 hover:bg-blue-50/30 hover:border-blue-200 active:scale-[0.99] border border-slate-100 transition-all flex items-center justify-between gap-2 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+                    aria-label={`Documento ${doc.title}. Toque para ver.`}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-slate-800 truncate">{doc.title}</p>
@@ -594,8 +746,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <button
+            type="button"
+            id="view-all-docs-btn"
             onClick={() => setActiveTab('documentos')}
-            className="mt-4 w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+            className="mt-4 w-full min-h-[44px] py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+            aria-label="Ver todos os documentos"
           >
             Ver todos os documentos
             <ArrowRight className="w-3 h-3" />
@@ -605,24 +760,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 5. Linha do Tempo / Últimos Registros */}
         <section
           id="dashboard-timeline-card"
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between"
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700">
+              <button
+                type="button"
+                onClick={() => setActiveTab('linha_tempo')}
+                className="flex items-center gap-2 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para Linha do Tempo"
+              >
+                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <History className="w-4 h-4" />
                 </div>
-                <h2 className="font-bold text-sm text-slate-900">Histórico Recente</h2>
-              </div>
+                <h2 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Histórico Recente
+                </h2>
+              </button>
               <span className="text-xs text-slate-400 font-medium">Linha do tempo</span>
             </div>
 
             {data?.latestEvents && data.latestEvents.length > 0 ? (
               <div className="space-y-3 mt-3 relative pl-3 border-l-2 border-slate-100">
                 {data.latestEvents.slice(0, 3).map((event) => (
-                  <div key={event.id} className="relative text-xs">
-                    <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white" />
+                  <div
+                    key={event.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('linha_tempo')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab('linha_tempo');
+                      }
+                    }}
+                    className="relative text-xs p-2 rounded-lg hover:bg-slate-50 active:scale-[0.99] cursor-pointer touch-manipulation transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+                    aria-label={`Evento ${event.title}. Toque para ver histórico completo.`}
+                  >
+                    <div className="absolute -left-[19px] top-3 w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white" />
                     <p className="font-semibold text-slate-800 leading-tight truncate">
                       {event.title}
                     </p>
@@ -638,8 +813,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <button
+            type="button"
+            id="view-all-timeline-btn"
             onClick={() => setActiveTab('linha_tempo')}
-            className="mt-4 w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+            className="mt-4 w-full min-h-[44px] py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+            aria-label="Ver linha do tempo completa"
           >
             Ver linha do tempo completa
             <ArrowRight className="w-3 h-3" />

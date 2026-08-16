@@ -43,7 +43,7 @@ const MainContent: React.FC = () => {
     logout,
     isLoading: isAuthLoading,
   } = useAuth();
-  const { activeTab, isInitialLoading, patients } = usePatient();
+  const { activeTab, setActiveTab, isInitialLoading, patients } = usePatient();
 
   const [inviteToken, setInviteToken] = useState<string | null>(() => getInitialInviteToken());
 
@@ -159,10 +159,23 @@ const MainContent: React.FC = () => {
             >
               {activeTab === 'dashboard' && (
                 <DashboardView
-                  onOpenMedicationModal={() => setIsMedModalOpen(true)}
-                  onOpenAppointmentModal={() => setIsAptModalOpen(true)}
-                  onOpenExamModal={() => setIsExamModalOpen(true)}
-                  onOpenDocumentModal={() => setIsDocModalOpen(true)}
+                  onOpenMedicationModal={() => {
+                    setActiveTab('medicamentos');
+                    setIsMedModalOpen(true);
+                  }}
+                  onOpenAppointmentModal={() => {
+                    setActiveTab('consultas');
+                    setIsAptModalOpen(true);
+                  }}
+                  onOpenExamModal={() => {
+                    setActiveTab('exames');
+                    setIsExamModalOpen(true);
+                  }}
+                  onOpenDocumentModal={() => {
+                    setExamIdForDoc(null);
+                    setActiveTab('documentos');
+                    setIsDocModalOpen(true);
+                  }}
                 />
               )}
 
