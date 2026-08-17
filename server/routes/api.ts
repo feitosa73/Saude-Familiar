@@ -178,7 +178,7 @@ export function createApiRouter(
   // 2.2 ACCESS REQUESTS ENDPOINTS (Request access, list, approve, reject)
   // =========================================================================
 
-  // Solicitante envia pedido de acesso informando e-mail do owner da família
+  // Solicitante envia pedido de acesso informando e-mail do owner, identificador da família ou código de convite
   router.post('/access-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
@@ -186,48 +186,94 @@ export function createApiRouter(
         return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
       }
 
-      const { ownerEmail } = req.body;
-      if (!ownerEmail || typeof ownerEmail !== 'string' || !ownerEmail.trim()) {
-        return res.status(400).json({ error: 'E-mail do responsável é obrigatório.' });
+      const input = (req.body.ownerEmail || req.body.familyIdentifier || req.body.inviteCode || '').toString().trim();
+      if (!input) {
+        return res.status(400).json({
+          error: 'Informe o e-mail do responsável, o identificador da família ou o código de convite.',
+          code: 'IDENTIFIER_REQUIRED',
+        });
       }
 
-      const cleanOwnerEmail = ownerEmail.trim().toLowerCase();
       const requesterEmail = (authUser.email || '').trim().toLowerCase();
       const requesterName = (authUser as any).name || authUser.email?.split('@')[0] || 'Usuário';
 
-      // Validação básica de auto-solicitação
-      if (requesterEmail && cleanOwnerEmail === requesterEmail) {
-        return res.status(400).json({
-          error: 'Você já é o usuário titular desta conta. Para compartilhar pacientes, informe o e-mail de outro responsável familiar.',
-          code: 'SELF_REQUEST_NOT_ALLOWED',
-        });
-      }
+      let targetFamilyId: string | null = null;
+      let ownerUid: string | null = null;
+      let targetFamilyName: string = 'Família';
 
-      // Localiza o usuário owner pelo e-mail server-side
-      const ownerUser = await familyRepository.findUserByEmail(cleanOwnerEmail);
+      if (input.includes('@')) {
+        // 1. Busca por e-mail do responsável titular
+        const cleanOwnerEmail = input.toLowerCase();
 
-      if (!ownerUser) {
-        return res.status(404).json({
-          error: `Nenhum responsável familiar cadastrado com o e-mail "${cleanOwnerEmail}". Verifique se o endereço está correto e se o responsável já acessou o Saúde Familiar.`,
-          code: 'OWNER_NOT_FOUND',
-        });
-      }
+        if (requesterEmail && cleanOwnerEmail === requesterEmail) {
+          return res.status(400).json({
+            error: 'Você já é o usuário titular desta conta. Para solicitar acesso a outra família, informe os dados de outro responsável familiar.',
+            code: 'SELF_REQUEST_NOT_ALLOWED',
+          });
+        }
 
-      // Localiza a família em que o usuário é owner
-      let targetFamilyId = ownerUser.familyId;
+        const ownerUser = await familyRepository.findUserByEmail(cleanOwnerEmail);
+        if (!ownerUser) {
+          return res.status(404).json({
+            error: `Nenhum responsável familiar cadastrado com o e-mail "${cleanOwnerEmail}". Verifique se o endereço está correto e se o responsável já acessou o Saúde Familiar.`,
+            code: 'OWNER_NOT_FOUND',
+          });
+        }
 
-      if (!targetFamilyId) {
-        const ownerMemberships = await familyRepository.listMembershipsByUserId(ownerUser.id);
-        const ownerFam = ownerMemberships.find((m) => m.role === 'owner');
-        if (ownerFam) {
-          targetFamilyId = ownerFam.familyId;
+        ownerUid = ownerUser.id;
+        targetFamilyId = ownerUser.familyId || null;
+
+        if (!targetFamilyId) {
+          const ownerMemberships = await familyRepository.listMembershipsByUserId(ownerUser.id);
+          const ownerFam = ownerMemberships.find((m) => m.role === 'owner');
+          if (ownerFam) {
+            targetFamilyId = ownerFam.familyId;
+          }
+        }
+
+        if (!targetFamilyId) {
+          return res.status(404).json({
+            error: `O responsável cadastrado (${cleanOwnerEmail}) ainda não possui uma família criada no sistema.`,
+            code: 'FAMILY_NOT_FOUND',
+          });
+        }
+      } else {
+        // 2. Busca por identificador da família (ID direto) ou Token/Código de convite
+        // 2.1 Verifica se é ID de família
+        const directFamily = await familyRepository.getFamily(input);
+        if (directFamily) {
+          targetFamilyId = directFamily.id;
+          targetFamilyName = directFamily.name;
+          ownerUid = directFamily.createdBy || null;
+        } else {
+          // 2.2 Verifica se é token de convite (hash SHA256)
+          const tokenHash = crypto.createHash('sha256').update(input).digest('hex');
+          const invitation = await familyRepository.getInvitationByTokenHash(tokenHash);
+          if (invitation) {
+            targetFamilyId = invitation.familyId;
+            ownerUid = invitation.createdBy;
+          }
+        }
+
+        if (!targetFamilyId) {
+          return res.status(404).json({
+            error: `Nenhuma família ou convite válido encontrado com o identificador "${input}". Verifique o código informado ou utilize o e-mail do responsável.`,
+            code: 'FAMILY_NOT_FOUND',
+          });
+        }
+
+        // Se o ownerUid ainda não foi localizado, busca o owner da família
+        if (!ownerUid) {
+          const memberships = await familyRepository.listMemberships(targetFamilyId);
+          const ownerMem = memberships.find((m) => m.role === 'owner');
+          ownerUid = ownerMem?.userId || null;
         }
       }
 
-      if (!targetFamilyId) {
-        return res.status(404).json({
-          error: `O responsável cadastrado (${cleanOwnerEmail}) ainda não possui uma família criada no sistema.`,
-          code: 'FAMILY_NOT_FOUND',
+      if (ownerUid === authUser.uid) {
+        return res.status(400).json({
+          error: 'Você já é o responsável titular desta família.',
+          code: 'SELF_REQUEST_NOT_ALLOWED',
         });
       }
 
@@ -251,17 +297,20 @@ export function createApiRouter(
         });
       }
 
-      // Obtém dados da família
+      // Obtém dados atualizados da família
       const family = await familyRepository.getFamily(targetFamilyId);
+      if (family) {
+        targetFamilyName = family.name;
+      }
 
       // Cria a solicitação pendente no Firestore
       const newRequest = await familyRepository.createAccessRequest({
         familyId: targetFamilyId,
-        familyName: family?.name || 'Família',
+        familyName: targetFamilyName || 'Família',
         requesterUid: authUser.uid,
         requesterEmail: authUser.email || '',
         requesterName: requesterName,
-        ownerUid: ownerUser.id,
+        ownerUid: ownerUid || '',
         status: 'pending',
         requestedAt: new Date().toISOString(),
         resolvedAt: null,
@@ -270,7 +319,7 @@ export function createApiRouter(
 
       return res.status(201).json({
         success: true,
-        message: 'Solicitação de acesso enviada com sucesso! Aguardando aprovação do responsável.',
+        message: `Solicitação para participar da "${targetFamilyName}" enviada com sucesso! Aguardando aprovação do responsável titular.`,
         request: newRequest,
       });
     } catch (error: any) {

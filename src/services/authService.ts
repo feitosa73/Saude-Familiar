@@ -2,15 +2,26 @@ import { User, PatientAccess } from '../types';
 import {
   auth,
   googleProvider,
+  EmailAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification as firebaseSendEmailVerification,
+  updatePassword as firebaseUpdatePassword,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  multiFactor,
+  TotpMultiFactorGenerator,
+  TotpSecret,
+  getMultiFactorResolver,
+  MultiFactorResolver,
   updateProfile,
   signOut,
   onAuthStateChanged as onFirebaseAuthStateChanged,
   isFirebaseConfigured,
   FirebaseUser,
+  MultiFactorInfo,
 } from '../lib/firebase';
 
 export interface GoogleAuthCredentials {
@@ -25,12 +36,34 @@ export interface PasswordAuthCredentials {
 
 export type AuthCredentials = GoogleAuthCredentials | PasswordAuthCredentials;
 
+export class MultiFactorAuthRequiredError extends Error {
+  code = 'auth/multi-factor-auth-required';
+  resolver: MultiFactorResolver;
+  hints: any[];
+
+  constructor(resolver: MultiFactorResolver) {
+    super('Autenticação em duas etapas (MFA) necessária.');
+    this.name = 'MultiFactorAuthRequiredError';
+    this.resolver = resolver;
+    this.hints = resolver.hints;
+  }
+}
+
 export interface IAuthService {
   getCurrentUser(): User | null;
+  getFirebaseUser(): FirebaseUser | null;
   getIdToken(forceRefresh?: boolean): Promise<string | null>;
   login(credentials?: AuthCredentials): Promise<User>;
+  resolveMfaSignIn(resolver: MultiFactorResolver, verificationCode: string): Promise<User>;
   register(name: string, email: string, password: string): Promise<User>;
   sendPasswordReset(email: string): Promise<void>;
+  sendEmailVerification(): Promise<void>;
+  reloadUser(): Promise<FirebaseUser | null>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  getEnrolledMfaFactors(): MultiFactorInfo[];
+  startTotpMfaEnrollment(): Promise<{ secret: TotpSecret; qrCodeUrl: string; secretKey: string }>;
+  finalizeTotpMfaEnrollment(secret: TotpSecret, verificationCode: string, displayName?: string): Promise<void>;
+  unenrollMfa(factorUid: string, options?: string | { password?: string; useGoogle?: boolean }): Promise<void>;
   logout(): Promise<void>;
   isAuthenticated(): boolean;
   onAuthStateChanged(callback: (user: User | null) => void): () => void;
@@ -71,7 +104,11 @@ function formatFirebaseAuthError(error: any, defaultMessage: string): string {
       return `Domínio não autorizado no Firebase Auth (${currentHost}). Adicione este domínio no Console do Firebase > Authentication > Settings > Authorized domains.`;
     }
     case 'auth/operation-not-allowed':
-      return 'O provedor de E-mail e Senha não está habilitado no Firebase Console. Ative o provedor Email/Password no Console do Firebase > Authentication > Sign-in method.';
+      return 'O provedor de autenticação não está habilitado no Firebase Console.';
+    case 'auth/requires-recent-login':
+      return 'Por segurança, faça login novamente antes de prosseguir com esta alteração.';
+    case 'auth/invalid-verification-code':
+      return 'Código do autenticador incorreto ou expirado. Digite o código atual de 6 dígitos gerado pelo seu app autenticador.';
     default:
       if (
         msg.toLowerCase().includes('database is closing') ||
@@ -134,6 +171,10 @@ class AuthServiceImplementation implements IAuthService {
   async waitForInitialization(): Promise<FirebaseUser | null> {
     if (this.isInitialized) return this.currentFirebaseUser;
     return this.initPromise;
+  }
+
+  getFirebaseUser(): FirebaseUser | null {
+    return auth?.currentUser || this.currentFirebaseUser;
   }
 
   getCurrentUser(): User | null {
@@ -207,6 +248,10 @@ class AuthServiceImplementation implements IAuthService {
         return user;
       } catch (error: any) {
         console.error('[Auth] Erro ao autenticar com e-mail e senha:', error);
+        if (error?.code === 'auth/multi-factor-auth-required') {
+          const resolver = getMultiFactorResolver(auth, error);
+          throw new MultiFactorAuthRequiredError(resolver);
+        }
         throw new Error(formatFirebaseAuthError(error, 'Não foi possível entrar. Verifique seu e-mail e senha.'));
       }
     }
@@ -230,11 +275,54 @@ class AuthServiceImplementation implements IAuthService {
         return user;
       } catch (error: any) {
         console.error('[Auth] Erro durante o Google Sign-In via Firebase Auth:', error);
+        if (error?.code === 'auth/multi-factor-auth-required') {
+          const resolver = getMultiFactorResolver(auth, error);
+          throw new MultiFactorAuthRequiredError(resolver);
+        }
         throw new Error(formatFirebaseAuthError(error, 'Não foi possível concluir o login com Google. Tente novamente.'));
       }
     }
 
     throw new Error('Método de autenticação não suportado.');
+  }
+
+  async resolveMfaSignIn(resolver: MultiFactorResolver, verificationCode: string): Promise<User> {
+    const totpHint = resolver.hints.find(
+      (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID
+    );
+    if (!totpHint) {
+      throw new Error('Nenhum método de autenticação TOTP configurado para esta conta.');
+    }
+    const cleanCode = verificationCode.trim().replace(/\D/g, '');
+    if (!cleanCode || cleanCode.length !== 6) {
+      throw new Error('Informe o código de 6 dígitos gerado pelo seu aplicativo autenticador.');
+    }
+    try {
+      const assertion = TotpMultiFactorGenerator.assertionForSignIn(
+        totpHint.uid,
+        cleanCode
+      );
+      const userCredential = await resolver.resolveSignIn(assertion);
+      const fbUser = userCredential.user;
+      this.currentFirebaseUser = fbUser;
+      const user: User = {
+        id: fbUser.uid,
+        name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário',
+        email: fbUser.email || '',
+        avatarUrl: fbUser.photoURL || undefined,
+        patientIds: [],
+      };
+      this.currentUser = user;
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      this.notifyListeners();
+      return user;
+    } catch (error: any) {
+      console.error('[Auth] Erro ao resolver segundo fator:', error);
+      if (error?.code === 'auth/invalid-verification-code') {
+        throw new Error('Código do autenticador incorreto ou expirado. Digite o código atual exibido no app.');
+      }
+      throw new Error('Não foi possível verificar o código do autenticador. Tente novamente.');
+    }
   }
 
   async register(name: string, email: string, password: string): Promise<User> {
@@ -306,7 +394,168 @@ class AuthServiceImplementation implements IAuthService {
       if (code === 'auth/network-request-failed') {
         throw new Error('Falha de conexão com os servidores. Verifique sua internet e tente novamente.');
       }
-      // For security and preventing user enumeration, do not expose if user doesn't exist
+    }
+  }
+
+  async sendEmailVerification(): Promise<void> {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser) throw new Error('Usuário não autenticado.');
+    try {
+      await firebaseSendEmailVerification(fbUser);
+    } catch (error: any) {
+      console.error('[Auth] Erro ao enviar e-mail de verificação:', error);
+      if (error?.code === 'auth/too-many-requests') {
+        throw new Error('Muitas solicitações recentes. Aguarde alguns instantes antes de reenviar.');
+      }
+      throw new Error('Não foi possível enviar o e-mail de verificação. Tente novamente mais tarde.');
+    }
+  }
+
+  async reloadUser(): Promise<FirebaseUser | null> {
+    const fbUser = this.getFirebaseUser();
+    if (fbUser) {
+      await fbUser.reload();
+      this.currentFirebaseUser = auth?.currentUser || fbUser;
+      return this.currentFirebaseUser;
+    }
+    return null;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser || !fbUser.email) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const isPasswordUser = fbUser.providerData.some((p) => p.providerId === 'password');
+    if (!isPasswordUser) {
+      throw new Error('Seu acesso é gerenciado pela sua Conta Google. Não é possível alterar a senha por este canal.');
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('A nova senha deve ter no mínimo 6 caracteres.');
+    }
+    if (currentPassword === newPassword) {
+      throw new Error('A nova senha não pode ser igual à senha atual.');
+    }
+
+    try {
+      // Reauthenticate first with current password to ensure fresh session
+      const credential = EmailAuthProvider.credential(fbUser.email, currentPassword);
+      await reauthenticateWithCredential(fbUser, credential);
+      await firebaseUpdatePassword(fbUser, newPassword);
+    } catch (error: any) {
+      console.error('[Auth] Erro ao alterar senha:', error);
+      const code = error?.code || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+        throw new Error('Senha atual incorreta. Verifique e tente novamente.');
+      } else if (code === 'auth/weak-password') {
+        throw new Error('A nova senha informada é muito fraca. Escolha uma senha mais segura.');
+      } else if (code === 'auth/requires-recent-login') {
+        throw new Error('Sua sessão expirou. Por favor, saia e entre novamente antes de alterar a senha.');
+      }
+      throw new Error('Não foi possível alterar a senha. Verifique os dados e tente novamente.');
+    }
+  }
+
+  getEnrolledMfaFactors(): MultiFactorInfo[] {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser) return [];
+    try {
+      return multiFactor(fbUser).enrolledFactors || [];
+    } catch (e) {
+      console.warn('[Auth] Erro ao obter fatores MFA:', e);
+      return [];
+    }
+  }
+
+  async startTotpMfaEnrollment(): Promise<{ secret: TotpSecret; qrCodeUrl: string; secretKey: string }> {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser) throw new Error('Usuário não autenticado.');
+
+    if (!fbUser.emailVerified) {
+      throw new Error('É necessário verificar seu endereço de e-mail antes de ativar o Autenticador (MFA).');
+    }
+
+    try {
+      const session = await multiFactor(fbUser).getSession();
+      const secret = await TotpMultiFactorGenerator.generateSecret(session);
+      const appName = 'SaudeFamiliar';
+      const accountName = fbUser.email || 'usuario';
+      const qrCodeUrl = secret.generateQrCodeUrl(accountName, appName);
+      return {
+        secret,
+        qrCodeUrl,
+        secretKey: secret.secretKey,
+      };
+    } catch (error: any) {
+      console.error('[Auth] Erro ao iniciar enrollment TOTP:', error);
+      const code = error?.code || '';
+      if (code === 'auth/requires-recent-login') {
+        throw new Error('Para sua segurança, faça login novamente antes de configurar o autenticador.');
+      } else if (code === 'auth/unverified-email') {
+        throw new Error('É necessário verificar seu e-mail antes de ativar o autenticador.');
+      } else if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
+        throw new Error('O recurso de MFA TOTP requer a ativação do Identity Platform no console do Google Cloud / Firebase.');
+      }
+      throw new Error('Não foi possível iniciar a configuração do autenticador. Tente novamente.');
+    }
+  }
+
+  async finalizeTotpMfaEnrollment(
+    secret: TotpSecret,
+    verificationCode: string,
+    displayName = 'Aplicativo Autenticador (TOTP)'
+  ): Promise<void> {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser) throw new Error('Usuário não autenticado.');
+
+    const cleanCode = verificationCode.trim().replace(/\D/g, '');
+    if (!cleanCode || cleanCode.length !== 6) {
+      throw new Error('Informe o código de 6 dígitos gerado pelo seu aplicativo autenticador.');
+    }
+
+    try {
+      const assertion = TotpMultiFactorGenerator.assertionForEnrollment(secret, cleanCode);
+      await multiFactor(fbUser).enroll(assertion, displayName);
+    } catch (error: any) {
+      console.error('[Auth] Erro ao finalizar enrollment TOTP:', error);
+      const code = error?.code || '';
+      if (code === 'auth/invalid-verification-code') {
+        throw new Error('Código do autenticador incorreto ou expirado. Digite o código atual de 6 dígitos exibido no app.');
+      } else if (code === 'auth/requires-recent-login') {
+        throw new Error('Sua sessão expirou. Faça login novamente antes de concluir a ativação.');
+      }
+      throw new Error('Não foi possível validar o código do autenticador. Tente novamente.');
+    }
+  }
+
+  async unenrollMfa(factorUid: string, options?: string | { password?: string; useGoogle?: boolean }): Promise<void> {
+    const fbUser = this.getFirebaseUser();
+    if (!fbUser) throw new Error('Usuário não autenticado.');
+
+    const password = typeof options === 'string' ? options : options?.password;
+    const useGoogle = typeof options === 'object' ? options?.useGoogle : false;
+
+    try {
+      if (useGoogle && googleProvider) {
+        await reauthenticateWithPopup(fbUser, googleProvider);
+      } else if (password && fbUser.email && fbUser.providerData.some((p) => p.providerId === 'password')) {
+        const credential = EmailAuthProvider.credential(fbUser.email, password);
+        await reauthenticateWithCredential(fbUser, credential);
+      }
+      await multiFactor(fbUser).unenroll(factorUid);
+    } catch (error: any) {
+      console.error('[Auth] Erro ao remover MFA:', error);
+      const code = error?.code || '';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+        throw new Error('Senha atual incorreta.');
+      } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        throw new Error('Confirmação do Google cancelada. É necessário confirmar sua identidade para desativar a proteção.');
+      } else if (code === 'auth/requires-recent-login') {
+        throw new Error('Por segurança, faça login novamente antes de desativar a autenticação em duas etapas.');
+      }
+      throw new Error('Não foi possível desativar a autenticação em duas etapas. Tente novamente.');
     }
   }
 

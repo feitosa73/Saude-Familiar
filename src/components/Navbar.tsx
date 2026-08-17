@@ -6,6 +6,7 @@ import { AccessRequestsManagerModal } from './AccessRequestsManagerModal';
 import { InviteMemberModal } from './InviteMemberModal';
 import { FamilyMembersManagerModal } from './FamilyMembersManagerModal';
 import { ExportDataModal } from './ExportDataModal';
+import { AccountSecurityModal } from './AccountSecurityModal';
 import {
   HeartPulse,
   Users,
@@ -22,6 +23,7 @@ import {
   RotateCcw,
   UserCheck,
   FileSpreadsheet,
+  KeyRound,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -54,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isAccountSecurityModalOpen, setIsAccountSecurityModalOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -493,8 +496,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                       </div>
                     )}
 
-                    {/* Export Data Option for all authenticated users */}
-                    <div className="px-2 pt-1 border-t border-slate-100">
+                    {/* Export Data & Account Security Options for all authenticated users */}
+                    <div className="px-2 pt-1 border-t border-slate-100 space-y-0.5">
+                      <button
+                        type="button"
+                        id="btn-user-menu-account-security"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setIsAccountSecurityModalOpen(true);
+                        }}
+                        className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                      >
+                        <KeyRound className="w-4 h-4 text-indigo-600" />
+                        <span>Segurança da conta</span>
+                      </button>
+
                       <button
                         type="button"
                         id="btn-user-menu-export-data"
@@ -530,6 +546,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
           </div>
         </div>
       </div>
+
+      {/* Account Security Modal (Password & MFA TOTP) */}
+      <AccountSecurityModal
+        isOpen={isAccountSecurityModalOpen}
+        onClose={() => setIsAccountSecurityModalOpen(false)}
+      />
 
       {/* Family Members and Accesses Manager Modal for Owners */}
       <FamilyMembersManagerModal

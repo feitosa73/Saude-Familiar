@@ -21,9 +21,11 @@ import {
   Calendar,
   AlertTriangle,
   Info,
+  Building2,
 } from 'lucide-react';
 import { FamilyMemberWithAccess, Patient, Family, PatientRole } from '../types';
 import { api } from '../services/api';
+import { JoinFamilyModal } from './JoinFamilyModal';
 
 interface FamilyMembersManagerModalProps {
   isOpen: boolean;
@@ -53,6 +55,7 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isJoinFamilyModalOpen, setIsJoinFamilyModalOpen] = useState<boolean>(false);
 
   // Add patient access inline state per member: userId -> { patientId, role }
   const [grantingMemberId, setGrantingMemberId] = useState<string | null>(null);
@@ -414,6 +417,17 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
                 )}
               </button>
             )}
+
+            <button
+              type="button"
+              id="btn-quick-join-other-family"
+              onClick={() => setIsJoinFamilyModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition"
+              title="Solicitar participação em outra família"
+            >
+              <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Participar de outra família</span>
+            </button>
           </div>
         </div>
 
@@ -844,6 +858,15 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
           </div>
         </div>
       )}
+
+      {/* Join Another Family Modal */}
+      <JoinFamilyModal
+        isOpen={isJoinFamilyModalOpen}
+        onClose={() => setIsJoinFamilyModalOpen(false)}
+        onRequestSent={() => {
+          if (onMembersUpdated) onMembersUpdated();
+        }}
+      />
     </div>
   );
 };

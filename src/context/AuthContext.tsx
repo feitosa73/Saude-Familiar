@@ -7,9 +7,10 @@ import {
   FamilyMembership,
   UserMeResponse,
 } from '../types';
-import { authService, AuthCredentials } from '../services/authService';
+import { authService, AuthCredentials, MultiFactorAuthRequiredError } from '../services/authService';
 import { authorizationService, PatientPermissions } from '../services/authorizationService';
 import { api, ApiError } from '../services/api';
+import type { MultiFactorResolver } from '../lib/firebase';
 
 export type AuthAccessStatus =
   | 'loading'
@@ -34,6 +35,7 @@ interface AuthContextType {
   statusMessage: string | null;
   patientAccesses: PatientAccess[];
   login: (credentials?: AuthCredentials) => Promise<void>;
+  loginWithMfa: (resolver: MultiFactorResolver, verificationCode: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -201,6 +203,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithMfa = async (resolver: MultiFactorResolver, verificationCode: string) => {
+    setIsLoading(true);
+    try {
+      const loggedUser = await authService.resolveMfaSignIn(resolver, verificationCode);
+      setUser(loggedUser);
+      await loadAuthoritativeState(loggedUser);
+      await fetchAccesses(loggedUser.id);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -302,6 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         statusMessage,
         patientAccesses,
         login,
+        loginWithMfa,
         register,
         sendPasswordReset,
         logout,
