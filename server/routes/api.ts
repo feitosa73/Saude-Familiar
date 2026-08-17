@@ -155,6 +155,20 @@ export function createApiRouter(
       });
     } catch (error: any) {
       console.error('[API] Erro ao criar família:', error);
+      const isPermissionDenied =
+        error?.code === 7 ||
+        error?.code === 'PERMISSION_DENIED' ||
+        error?.message?.includes('PERMISSION_DENIED') ||
+        error?.message?.includes('Missing or insufficient permissions');
+
+      if (isPermissionDenied) {
+        return res.status(503).json({
+          error:
+            'Acesso ao Firestore não autorizado ou permissão IAM insuficiente no Google Cloud. Garanta que a Service Account possua o papel Cloud Datastore User.',
+          code: 'FIRESTORE_PERMISSION_DENIED',
+        });
+      }
+
       res.status(500).json({
         error: error.message || 'Erro ao criar família',
         code: 'INTERNAL_ERROR',
