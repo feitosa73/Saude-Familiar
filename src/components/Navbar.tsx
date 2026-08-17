@@ -22,7 +22,6 @@ import {
   RotateCcw,
   UserCheck,
   FileSpreadsheet,
-  Download,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -238,18 +237,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                 )}
               </button>
             )}
-
-            {/* Export Data Button */}
-            <button
-              type="button"
-              id="btn-nav-export-data"
-              onClick={() => setIsExportModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-xs transition"
-              title="Exportar dados do prontuário ou baixar modelo XLSX"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden xl:inline">Exportar dados</span>
-            </button>
 
             {/* Patient Switcher Dropdown */}
             <div className="relative">
@@ -518,7 +505,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                         className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
                       >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                        <span>Exportar dados (.xlsx)</span>
+                        <span>Exportar dados</span>
                       </button>
                     </div>
 
