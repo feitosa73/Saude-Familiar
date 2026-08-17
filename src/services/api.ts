@@ -41,7 +41,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+    ...(idToken && idToken !== 'null' && idToken !== 'undefined' ? { Authorization: `Bearer ${idToken}` } : {}),
     ...(currentActiveFamilyId ? { 'x-family-id': currentActiveFamilyId } : {}),
     ...(options?.headers as Record<string, string>),
   };

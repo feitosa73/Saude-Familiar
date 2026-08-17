@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
 import { ShieldCheck, HeartPulse, Lock } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { AuthForm, AuthMode } from './AuthForm';
 
 export const LoginView: React.FC = () => {
-  const { login, isLoading } = useAuth();
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  const handleGoogleLogin = async () => {
-    setAuthError(null);
-    try {
-      await login({ provider: 'google' });
-    } catch (err: any) {
-      setAuthError(err.message || 'Erro ao autenticar com o Google.');
-    }
-  };
+  const [initialMode] = useState<AuthMode>('login');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900">
@@ -51,54 +41,8 @@ export const LoginView: React.FC = () => {
             </p>
           </div>
 
-          {authError && (
-            <div className="p-3.5 bg-amber-50/90 border border-amber-200 text-amber-900 rounded-xl text-xs font-medium flex items-start justify-between gap-2">
-              <span className="leading-relaxed">{authError}</span>
-              <button
-                type="button"
-                onClick={() => setAuthError(null)}
-                className="text-amber-700 hover:text-amber-900 font-semibold px-1 py-0.5 text-xs shrink-0 cursor-pointer"
-                title="Fechar aviso"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          {/* Google Sign-in Button (Firebase Auth) */}
-          <div className="space-y-4 pt-2">
-            <button
-              id="google-login-btn"
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl font-semibold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-[0.99] disabled:opacity-50"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>{isLoading ? 'Conectando ao Firebase...' : 'Entrar com Google'}</span>
-            </button>
-
-            <p className="text-center text-xs text-slate-500">
-              Autenticação segura via <strong>Firebase Authentication</strong>
-            </p>
-          </div>
+          {/* Full Auth Form */}
+          <AuthForm initialMode={initialMode} />
 
           {/* Security Notice */}
           <div className="pt-4 border-t border-slate-100 text-center">
@@ -116,3 +60,4 @@ export const LoginView: React.FC = () => {
     </div>
   );
 };
+

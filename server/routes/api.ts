@@ -106,25 +106,23 @@ export function createApiRouter(
 
       res.json(response);
     } catch (error: any) {
-      const isFirestoreUnavailable =
-        error?.message?.includes('Cloud Firestore API has not been used') ||
-        error?.message?.includes('PERMISSION_DENIED') ||
+      console.error('[API] Error fetching /user/me from Firestore:', error?.code || error?.message || error);
+      const isPermissionDenied =
         error?.code === 7 ||
-        error?.code === 'PERMISSION_DENIED';
+        error?.code === 'PERMISSION_DENIED' ||
+        error?.message?.includes('PERMISSION_DENIED') ||
+        error?.message?.includes('Missing or insufficient permissions');
 
-      if (isFirestoreUnavailable) {
-        console.error('[API] /user/me: Erro de permissão IAM ou API desabilitada no Firestore:', error?.code || error?.message);
+      if (isPermissionDenied) {
         return res.status(503).json({
-          error:
-            'Acesso ao Firestore não autorizado ou serviço indisponível. Verifique as permissões IAM da Service Account.',
+          error: 'Não foi possível acessar os dados da família neste momento. Tente novamente.',
           code: 'FIRESTORE_PERMISSION_DENIED',
         });
       }
 
-      console.error('[API] Error fetching /user/me:', error);
       res.status(500).json({
-        error: 'Erro interno ao consultar perfil e associação do usuário',
-        code: 'INTERNAL_ERROR',
+        error: 'Não foi possível acessar os dados da família neste momento. Tente novamente.',
+        code: 'FIRESTORE_ERROR',
       });
     }
   });

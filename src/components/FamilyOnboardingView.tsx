@@ -79,7 +79,10 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
       setErrorMessage(null);
       setSuccessMessage(null);
       setAccessLookupMessage(null);
-      await api.createFamily({ name: familyName.trim() });
+      const res = await api.createFamily({ name: familyName.trim() });
+      if (res?.family?.id) {
+        api.setActiveFamilyId(res.family.id);
+      }
       await onFamilyCreated();
     } catch (err: any) {
       console.error('Erro ao criar família:', err);

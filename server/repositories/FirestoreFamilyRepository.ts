@@ -6,7 +6,6 @@ import {
   AccessRequestStatus,
   PatientAccess,
   FamilyInvitation,
-  InvitationStatus,
   FamilyMemberWithAccess,
   MemberPatientAccessItem,
   Patient,
@@ -14,80 +13,100 @@ import {
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 
+/**
+ * FirestoreFamilyRepository
+ *
+ * Implementação autoritativa estrita utilizando Cloud Firestore via Firebase Admin SDK.
+ * O Firestore é a ÚNICA fonte da verdade para persistência de dados.
+ *
+ * Caminho canônico de Membership:
+ * families/{familyId}/memberships/{uid}
+ */
 export class FirestoreFamilyRepository implements IFamilyRepository {
   private get db() {
     return getFirebaseFirestore();
   }
 
+  // =========================================================================
+  // USERS
+  // =========================================================================
+
   async getUser(uid: string): Promise<UserDocument | null> {
     const snap = await this.db.collection('users').doc(uid).get();
-    if (snap.exists) {
-      return snap.data() as UserDocument;
+    if (!snap.exists) {
+      return null;
     }
-    return null;
+    return { id: snap.id, ...snap.data() } as UserDocument;
   }
 
   async saveUser(user: UserDocument): Promise<void> {
-    await this.db.collection('users').doc(user.id).set(user, { merge: true });
+    await this.db.collection('users').doc(user.id).set(
+      {
+        ...user,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
   }
 
   async findUserByEmail(email: string): Promise<UserDocument | null> {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) return null;
 
-    // 1. Direct query in Firestore 'users' collection
-    try {
-      const snap = await this.db
-        .collection('users')
-        .where('email', '==', cleanEmail)
-        .limit(1)
-        .get();
+    // 1. Consulta coleção users no Firestore
+    const snap = await this.db
+      .collection('users')
+      .where('email', '==', cleanEmail)
+      .limit(1)
+      .get();
 
-      if (!snap.empty) {
-        return snap.docs[0].data() as UserDocument;
-      }
-    } catch (error: any) {
-      console.warn(`[FirestoreFamilyRepository] Firestore findUserByEmail query error:`, error?.code || error?.message);
+    if (!snap.empty) {
+      return { id: snap.docs[0].id, ...snap.docs[0].data() } as UserDocument;
     }
 
-    // 2. Query Firebase Auth as secondary lookup
+    // 2. Consulta secundária no Firebase Auth
     try {
       const auth = getFirebaseAuth();
       const authUser = await auth.getUserByEmail(cleanEmail);
       if (authUser && authUser.uid) {
-        const userDoc = await this.getUser(authUser.uid);
-        if (userDoc) {
-          return userDoc;
-        }
-        const createdUser: UserDocument = {
+        const userDoc: UserDocument = {
           id: authUser.uid,
           email: authUser.email || cleanEmail,
           displayName: authUser.displayName || null,
+          photoURL: authUser.photoURL || null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        await this.saveUser(createdUser);
-        return createdUser;
+        await this.saveUser(userDoc);
+        return userDoc;
       }
-    } catch (authError: any) {
-      if (authError?.code !== 'auth/user-not-found') {
-        console.warn(`[FirestoreFamilyRepository] FirebaseAuth getUserByEmail check:`, authError?.code || authError?.message);
-      }
+    } catch {
+      // Usuário não encontrado no Auth
     }
 
     return null;
   }
+
+  // =========================================================================
+  // FAMILIES & MEMBERSHIPS (Authoritative Path: families/{familyId}/memberships/{uid})
+  // =========================================================================
 
   async getFamily(familyId: string): Promise<Family | null> {
     const snap = await this.db.collection('families').doc(familyId).get();
-    if (snap.exists) {
-      return { id: snap.id, ...snap.data() } as Family;
+    if (!snap.exists) {
+      return null;
     }
-    return null;
+    return { id: snap.id, ...snap.data() } as Family;
   }
 
   async saveFamily(family: Family): Promise<void> {
-    await this.db.collection('families').doc(family.id).set(family, { merge: true });
+    await this.db.collection('families').doc(family.id).set(
+      {
+        ...family,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
   }
 
   async getMembership(familyId: string, uid: string): Promise<FamilyMembership | null> {
@@ -97,35 +116,36 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .collection('memberships')
       .doc(uid)
       .get();
-    if (snap.exists) {
-      return { id: snap.id, ...snap.data() } as FamilyMembership;
+
+    if (!snap.exists) {
+      return null;
     }
-    return null;
+    return { id: snap.id, ...snap.data() } as FamilyMembership;
   }
 
   async listMembershipsByUserId(uid: string): Promise<FamilyMembership[]> {
     const membershipsMap = new Map<string, FamilyMembership>();
 
-    // 1. Query all memberships where userId == uid
+    // 1. Busca por Collection Group queries em subcoleções 'memberships'
     try {
-      const snapshot = await this.db
+      const groupSnap = await this.db
         .collectionGroup('memberships')
         .where('userId', '==', uid)
         .get();
 
-      if (!snapshot.empty) {
-        for (const doc of snapshot.docs) {
+      if (!groupSnap.empty) {
+        for (const doc of groupSnap.docs) {
           const mem = { id: doc.id, ...doc.data() } as FamilyMembership;
-          if (mem.status === 'active') {
+          if (mem.familyId && mem.status === 'active') {
             membershipsMap.set(mem.familyId, mem);
           }
         }
       }
-    } catch (error: any) {
-      console.warn(`[FirestoreFamilyRepository] CollectionGroup memberships lookup for ${uid}:`, error?.code || error?.message);
+    } catch (err: any) {
+      console.warn('[FirestoreFamilyRepository] collectionGroup memberships query error:', err?.message || err);
     }
 
-    // 2. Query owned families
+    // 2. Consulta adicional em famílias onde o usuário é o criador/proprietário principal
     try {
       const ownedSnap = await this.db
         .collection('families')
@@ -134,21 +154,60 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
       for (const doc of ownedSnap.docs) {
         if (!membershipsMap.has(doc.id)) {
-          const mem: FamilyMembership = {
-            id: uid,
-            userId: uid,
-            familyId: doc.id,
-            role: 'owner',
-            status: 'active',
-            joinedAt: doc.data().createdAt || new Date().toISOString(),
-            createdAt: doc.data().createdAt || new Date().toISOString(),
-            createdBy: doc.data().createdBy || uid,
-          };
-          membershipsMap.set(doc.id, mem);
+          const famData = doc.data() as Family;
+          // Verifica se o doc de membership existe explicitamente
+          const memDoc = await this.getMembership(doc.id, uid);
+          if (memDoc && memDoc.status === 'active') {
+            membershipsMap.set(doc.id, memDoc);
+          } else {
+            const fallbackOwnerMem: FamilyMembership = {
+              id: uid,
+              userId: uid,
+              familyId: doc.id,
+              role: 'owner',
+              status: 'active',
+              joinedAt: famData.createdAt || new Date().toISOString(),
+              createdAt: famData.createdAt || new Date().toISOString(),
+              createdBy: famData.createdBy || uid,
+            };
+            membershipsMap.set(doc.id, fallbackOwnerMem);
+          }
         }
       }
     } catch (err: any) {
-      console.warn(`[FirestoreFamilyRepository] Owned families lookup for ${uid}:`, err?.code || err?.message);
+      console.warn('[FirestoreFamilyRepository] owned families query error:', err?.message || err);
+    }
+
+    // 3. Consulta em famílias criadas pelo usuário (createdBy)
+    try {
+      const createdSnap = await this.db
+        .collection('families')
+        .where('createdBy', '==', uid)
+        .get();
+
+      for (const doc of createdSnap.docs) {
+        if (!membershipsMap.has(doc.id)) {
+          const famData = doc.data() as Family;
+          const memDoc = await this.getMembership(doc.id, uid);
+          if (memDoc && memDoc.status === 'active') {
+            membershipsMap.set(doc.id, memDoc);
+          } else {
+            const fallbackOwnerMem: FamilyMembership = {
+              id: uid,
+              userId: uid,
+              familyId: doc.id,
+              role: 'owner',
+              status: 'active',
+              joinedAt: famData.createdAt || new Date().toISOString(),
+              createdAt: famData.createdAt || new Date().toISOString(),
+              createdBy: famData.createdBy || uid,
+            };
+            membershipsMap.set(doc.id, fallbackOwnerMem);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[FirestoreFamilyRepository] createdBy families query error:', err?.message || err);
     }
 
     return Array.from(membershipsMap.values());
@@ -156,10 +215,32 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
   async findMembershipByUserId(uid: string, targetFamilyId?: string): Promise<FamilyMembership | null> {
     if (targetFamilyId) {
-      const mem = await this.getMembership(targetFamilyId, uid);
-      if (mem && mem.status === 'active') return mem;
+      // 1. Busca direta pontual na subcoleção authoritative da família
+      const directMem = await this.getMembership(targetFamilyId, uid);
+      if (directMem && directMem.status === 'active') {
+        return directMem;
+      }
+
+      // 2. Verifica se o usuário é o criador da família alvo
+      const fam = await this.getFamily(targetFamilyId);
+      if (fam && (fam.primaryOwnerUid === uid || fam.createdBy === uid)) {
+        const ownerMem: FamilyMembership = {
+          id: uid,
+          userId: uid,
+          familyId: targetFamilyId,
+          role: 'owner',
+          status: 'active',
+          joinedAt: fam.createdAt || new Date().toISOString(),
+          createdAt: fam.createdAt || new Date().toISOString(),
+          createdBy: fam.createdBy || uid,
+        };
+        // Assegura que o documento de membership existe no Firestore
+        await this.saveMembership(ownerMem);
+        return ownerMem;
+      }
     }
 
+    // Busca geral nas memberships do usuário
     const allMemberships = await this.listMembershipsByUserId(uid);
     if (allMemberships.length > 0) {
       const ownerMem = allMemberships.find((m) => m.role === 'owner');
@@ -170,39 +251,33 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   }
 
   async saveMembership(membership: FamilyMembership): Promise<void> {
-    const batch = this.db.batch();
     const membershipRef = this.db
       .collection('families')
       .doc(membership.familyId)
       .collection('memberships')
       .doc(membership.userId);
-    const userRef = this.db.collection('users').doc(membership.userId);
 
-    batch.set(membershipRef, membership, { merge: true });
-    batch.set(
-      userRef,
+    await membershipRef.set(
       {
-        id: membership.userId,
-        familyId: membership.familyId,
+        ...membership,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     );
-
-    await batch.commit();
   }
 
   async listMemberships(familyId: string): Promise<FamilyMembership[]> {
-    const snapshot = await this.db
+    const snap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('memberships')
       .get();
 
-    if (!snapshot.empty) {
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as FamilyMembership));
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as FamilyMembership));
   }
 
   async createFamilyWithOwner(
@@ -235,27 +310,26 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       updatedAt: now,
     };
 
+    const userDoc: UserDocument = {
+      id: ownerUid,
+      email: ownerEmail ? ownerEmail.trim().toLowerCase() : null,
+      displayName: ownerDisplayName || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Operação atômica em batch no Firestore
+    const batch = this.db.batch();
     const familyRef = this.db.collection('families').doc(family.id);
     const membershipRef = familyRef.collection('memberships').doc(ownerUid);
     const userRef = this.db.collection('users').doc(ownerUid);
 
-    const batch = this.db.batch();
     batch.set(familyRef, family);
     batch.set(membershipRef, membership);
-    batch.set(
-      userRef,
-      {
-        id: ownerUid,
-        email: ownerEmail ? ownerEmail.trim().toLowerCase() : null,
-        displayName: ownerDisplayName || null,
-        familyId: family.id,
-        createdAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
+    batch.set(userRef, userDoc, { merge: true });
 
     await batch.commit();
+
     return { family, membership };
   }
 
@@ -288,17 +362,17 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .doc(requestId)
       .get();
 
-    if (snap.exists) {
-      return { id: snap.id, ...snap.data() } as AccessRequest;
+    if (!snap.exists) {
+      return null;
     }
-    return null;
+    return { id: snap.id, ...snap.data() } as AccessRequest;
   }
 
   async listAccessRequestsByFamily(
     familyId: string,
     status?: AccessRequestStatus
   ): Promise<AccessRequest[]> {
-    let query: any = this.db
+    let query: FirebaseFirestore.Query = this.db
       .collection('families')
       .doc(familyId)
       .collection('accessRequests');
@@ -308,11 +382,12 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     }
 
     const snap = await query.get();
-    if (!snap.empty) {
-      const list = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as AccessRequest));
-      return list.sort((a: any, b: any) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
+    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async listAccessRequestsByRequester(requesterUid: string): Promise<AccessRequest[]> {
@@ -321,11 +396,12 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .where('requesterUid', '==', requesterUid)
       .get();
 
-    if (!snap.empty) {
-      const list = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as AccessRequest));
-      return list.sort((a: any, b: any) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
+    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async approveAccessRequest(
@@ -364,14 +440,13 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     };
 
     const accessId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const patientAccess: PatientAccess & { familyId: string } = {
+    const patientAccess: PatientAccess = {
       id: accessId,
       patientId,
       userId: req.requesterUid,
       role: grantedRole,
       createdAt: now,
       createdBy: ownerUid,
-      familyId,
     };
 
     const batch = this.db.batch();
@@ -406,7 +481,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         id: membership.userId,
         email: updatedRequest.requesterEmail,
         displayName: updatedRequest.requesterName,
-        familyId: familyId,
         updatedAt: now,
       },
       { merge: true }
@@ -445,30 +519,33 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
   async countPendingRequestsForOwner(ownerUid: string): Promise<number> {
     try {
-      const ownedFamilies = await this.db
+      const familiesSnap = await this.db
         .collection('families')
         .where('primaryOwnerUid', '==', ownerUid)
         .get();
 
-      let count = 0;
-      for (const famDoc of ownedFamilies.docs) {
+      if (familiesSnap.empty) return 0;
+
+      let total = 0;
+      for (const famDoc of familiesSnap.docs) {
         const pendingSnap = await this.db
           .collection('families')
           .doc(famDoc.id)
           .collection('accessRequests')
           .where('status', '==', 'pending')
           .get();
-        count += pendingSnap.size;
+        total += pendingSnap.size;
       }
-      return count;
+
+      return total;
     } catch {
       return 0;
     }
   }
 
-  // ==========================================
-  // FAMILY INVITATIONS MANAGEMENT
-  // ==========================================
+  // =========================================================================
+  // FAMILY INVITATIONS
+  // =========================================================================
 
   async createInvitation(data: {
     familyId: string;
@@ -522,27 +599,33 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     });
 
     await batch.commit();
+
     return invitation;
   }
 
   async getInvitationByTokenHash(tokenHash: string): Promise<FamilyInvitation | null> {
     const lookupSnap = await this.db.collection('invitations_lookup').doc(tokenHash).get();
-    if (lookupSnap.exists) {
-      const lookupData = lookupSnap.data() || {};
-      if (lookupData.familyId && lookupData.invitationId) {
-        const invSnap = await this.db
-          .collection('families')
-          .doc(lookupData.familyId)
-          .collection('invitations')
-          .doc(lookupData.invitationId)
-          .get();
-
-        if (invSnap.exists) {
-          return { id: invSnap.id, ...invSnap.data() } as FamilyInvitation;
-        }
-      }
+    if (!lookupSnap.exists) {
+      return null;
     }
-    return null;
+
+    const lookupData = lookupSnap.data() || {};
+    if (!lookupData.familyId || !lookupData.invitationId) {
+      return null;
+    }
+
+    const invSnap = await this.db
+      .collection('families')
+      .doc(lookupData.familyId)
+      .collection('invitations')
+      .doc(lookupData.invitationId)
+      .get();
+
+    if (!invSnap.exists) {
+      return null;
+    }
+
+    return { id: invSnap.id, ...invSnap.data() } as FamilyInvitation;
   }
 
   async getInvitation(familyId: string, invitationId: string): Promise<FamilyInvitation | null> {
@@ -553,10 +636,11 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .doc(invitationId)
       .get();
 
-    if (snap.exists) {
-      return { id: snap.id, ...snap.data() } as FamilyInvitation;
+    if (!snap.exists) {
+      return null;
     }
-    return null;
+
+    return { id: snap.id, ...snap.data() } as FamilyInvitation;
   }
 
   async findPendingInvitation(
@@ -574,15 +658,18 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .where('status', '==', 'pending')
       .get();
 
-    if (!snap.empty) {
-      const now = Date.now();
-      for (const doc of snap.docs) {
-        const inv = { id: doc.id, ...doc.data() } as FamilyInvitation;
-        if (new Date(inv.expiresAt).getTime() > now) {
-          return inv;
-        }
+    if (snap.empty) {
+      return null;
+    }
+
+    const now = Date.now();
+    for (const doc of snap.docs) {
+      const inv = { id: doc.id, ...doc.data() } as FamilyInvitation;
+      if (new Date(inv.expiresAt).getTime() > now) {
+        return inv;
       }
     }
+
     return null;
   }
 
@@ -593,17 +680,20 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .collection('invitations')
       .get();
 
-    if (!snap.empty) {
-      const list = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as FamilyInvitation));
-      const now = Date.now();
-      return list.map((inv: any) => {
-        if (inv.status === 'pending' && new Date(inv.expiresAt).getTime() <= now) {
-          return { ...inv, status: 'expired' as const };
-        }
-        return inv;
-      }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    const now = Date.now();
+    const list: FamilyInvitation[] = snap.docs.map((doc) => {
+      const inv = { id: doc.id, ...doc.data() } as FamilyInvitation;
+      if (inv.status === 'pending' && new Date(inv.expiresAt).getTime() <= now) {
+        return { ...inv, status: 'expired' };
+      }
+      return inv;
+    });
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async revokeInvitation(
@@ -635,6 +725,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     batch.set(lookupRef, { status: 'revoked', revokedAt: updated.revokedAt, revokedBy }, { merge: true });
 
     await batch.commit();
+
     return updated;
   }
 
@@ -699,7 +790,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       role: inv.role,
       createdAt: now,
       createdBy: inv.createdBy,
-      familyId,
     };
 
     const updatedInvitation: FamilyInvitation = {
@@ -710,7 +800,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     };
 
     const batch = this.db.batch();
-
     const membershipRef = this.db
       .collection('families')
       .doc(familyId)
@@ -734,7 +823,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         id: uid,
         email: userEmail,
         displayName: user.displayName || null,
-        familyId,
         updatedAt: now,
       },
       { merge: true }
@@ -760,28 +848,16 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   }
 
   // =========================================================================
-  // FAMILY MEMBERS & ACCESS MANAGEMENT (AUTHORITATIVE)
+  // FAMILY MEMBERS & ACCESS MANAGEMENT
   // =========================================================================
 
   async listFamilyMembersWithAccess(familyId: string): Promise<FamilyMemberWithAccess[]> {
-    const familyDoc = await this.db.collection('families').doc(familyId).get();
-    if (!familyDoc.exists) {
+    const family = await this.getFamily(familyId);
+    if (!family) {
       return [];
     }
-    const family = { id: familyDoc.id, ...familyDoc.data() } as Family;
 
-    // Get active memberships
-    const memsSnap = await this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('memberships')
-      .where('status', '==', 'active')
-      .get();
-
-    const memberships: FamilyMembership[] = memsSnap.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as FamilyMembership)
-    );
-
+    const memberships = await this.listMemberships(familyId);
     if (family.primaryOwnerUid && !memberships.some((m) => m.userId === family.primaryOwnerUid)) {
       memberships.unshift({
         id: family.primaryOwnerUid,
@@ -795,29 +871,34 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       });
     }
 
+    // Carrega pacientes da família
     const patientsSnap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
       .get();
+    const patients: Patient[] = patientsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Patient));
 
-    const patients: Patient[] = patientsSnap.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Patient)
-    );
+    const invitations = await this.listInvitations(familyId);
+    const accessRequests = await this.listAccessRequestsByFamily(familyId);
 
-    const invSnap = await this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('invitations')
-      .get();
-    const invitations = invSnap.docs.map((d) => ({ id: d.id, ...d.data() } as FamilyInvitation));
-
-    const reqSnap = await this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('accessRequests')
-      .get();
-    const accessRequests = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AccessRequest));
+    // Carrega acessos de cada paciente
+    const patientAccessMap = new Map<string, PatientAccess[]>(); // patientId -> accesses
+    for (const p of patients) {
+      const accSnap = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(p.id)
+        .collection('accesses')
+        .get();
+      if (!accSnap.empty) {
+        patientAccessMap.set(
+          p.id,
+          accSnap.docs.map((d) => ({ id: d.id, ...d.data() } as PatientAccess))
+        );
+      }
+    }
 
     const result: FamilyMemberWithAccess[] = await Promise.all(
       memberships.map(async (membership) => {
@@ -861,38 +942,22 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
             grantedAt: p.createdAt || family.createdAt,
           }));
         } else {
-          const accessesList = await Promise.all(
-            patients.map(async (p) => {
-              try {
-                const accSnap = await this.db
-                  .collection('families')
-                  .doc(familyId)
-                  .collection('patients')
-                  .doc(p.id)
-                  .collection('accesses')
-                  .where('userId', '==', membership.userId)
-                  .limit(1)
-                  .get();
-
-                if (!accSnap.empty) {
-                  const accDoc = accSnap.docs[0];
-                  const accData = accDoc.data();
-                  return {
-                    patientId: p.id,
-                    patientName: p.name,
-                    role: accData.role as PatientRole,
-                    accessId: accDoc.id,
-                    grantedAt: accData.createdAt || membership.joinedAt,
-                  };
-                }
-              } catch (e) {
-                console.warn(`[FirestoreFamilyRepository] Error fetching access for patient ${p.id}:`, e);
+          patientAccesses = patients
+            .map((p) => {
+              const accList = patientAccessMap.get(p.id) || [];
+              const acc = accList.find((a) => a.userId === membership.userId);
+              if (acc) {
+                return {
+                  patientId: p.id,
+                  patientName: p.name,
+                  role: acc.role as PatientRole,
+                  accessId: acc.id,
+                  grantedAt: acc.createdAt || membership.joinedAt,
+                };
               }
               return null;
             })
-          );
-
-          patientAccesses = accessesList.filter((a): a is NonNullable<typeof a> => a !== null);
+            .filter((a): a is NonNullable<typeof a> => a !== null);
         }
 
         return {
@@ -932,8 +997,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       role,
       createdBy: grantedBy,
       createdAt: now,
-      familyId,
-      updatedAt: now,
     };
 
     const accRef = this.db
@@ -945,6 +1008,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .doc(accessId);
 
     await accRef.set(newAccess);
+
     return newAccess;
   }
 
@@ -954,8 +1018,6 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     patientId: string,
     role: 'VIEWER' | 'CAREGIVER'
   ): Promise<PatientAccess> {
-    const now = new Date().toISOString();
-
     const snap = await this.db
       .collection('families')
       .doc(familyId)
@@ -963,15 +1025,21 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .doc(patientId)
       .collection('accesses')
       .where('userId', '==', userId)
+      .limit(1)
       .get();
 
+    const now = new Date().toISOString();
+
     if (!snap.empty) {
-      const docRef = snap.docs[0].ref;
-      await docRef.update({
+      const doc = snap.docs[0];
+      const existing = { id: doc.id, ...doc.data() } as PatientAccess;
+      const updated: PatientAccess = {
+        ...existing,
         role,
-        updatedAt: now,
-      });
-      return { id: snap.docs[0].id, ...snap.docs[0].data(), role, updatedAt: now } as PatientAccess;
+      };
+
+      await doc.ref.update({ role, updatedAt: now });
+      return updated;
     }
 
     return this.grantMemberPatientAccess(familyId, userId, patientId, role, 'system');
@@ -993,7 +1061,9 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
     if (!snap.empty) {
       const batch = this.db.batch();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+      }
       await batch.commit();
     }
 
@@ -1007,59 +1077,30 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .collection('patients')
       .get();
 
-    const batch = this.db.batch();
-    for (const pDoc of patientsSnap.docs) {
-      const accSnap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pDoc.id)
-        .collection('accesses')
-        .where('userId', '==', userId)
-        .get();
-
-      accSnap.docs.forEach((doc) => batch.delete(doc.ref));
+    if (!patientsSnap.empty) {
+      for (const pDoc of patientsSnap.docs) {
+        await this.revokeMemberPatientAccess(familyId, userId, pDoc.id);
+      }
     }
-    await batch.commit();
 
     return true;
   }
 
   async removeFamilyMember(familyId: string, userId: string, removedBy: string): Promise<boolean> {
-    const familyDoc = await this.db.collection('families').doc(familyId).get();
-    if (familyDoc.exists && familyDoc.data()?.primaryOwnerUid === userId) {
+    const family = await this.getFamily(familyId);
+    if (family?.primaryOwnerUid === userId) {
       throw new Error('Não é possível remover o Responsável principal da família.');
     }
-
-    const batch = this.db.batch();
 
     const memRef = this.db
       .collection('families')
       .doc(familyId)
       .collection('memberships')
       .doc(userId);
-    batch.delete(memRef);
 
-    const patientsSnap = await this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('patients')
-      .get();
+    await memRef.delete();
+    await this.revokeAllMemberAccesses(familyId, userId);
 
-    for (const pDoc of patientsSnap.docs) {
-      const accSnap = await this.db
-        .collection('families')
-        .doc(familyId)
-        .collection('patients')
-        .doc(pDoc.id)
-        .collection('accesses')
-        .where('userId', '==', userId)
-        .get();
-
-      accSnap.docs.forEach((doc) => batch.delete(doc.ref));
-    }
-
-    await batch.commit();
     return true;
   }
 }

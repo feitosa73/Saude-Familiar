@@ -34,6 +34,8 @@ interface AuthContextType {
   statusMessage: string | null;
   patientAccesses: PatientAccess[];
   login: (credentials?: AuthCredentials) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUserMe: () => Promise<void>;
   switchFamily: (familyId: string) => Promise<void>;
@@ -137,9 +139,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return;
         }
-        if (error.status === 503 || error.code === 'FIRESTORE_NOT_INITIALIZED') {
+        if (error.status === 503 || error.code === 'FIRESTORE_PERMISSION_DENIED' || error.code === 'FIRESTORE_NOT_INITIALIZED') {
           setAccessStatus('firestore_not_initialized');
-          setStatusMessage('Banco Firestore ainda não provisionado');
+          setStatusMessage(error.message || 'Não foi possível acessar os dados da família neste momento. Tente novamente.');
           return;
         }
       }
@@ -197,6 +199,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const newUser = await authService.register(name, email, password);
+      setUser(newUser);
+      await loadAuthoritativeState(newUser);
+      await fetchAccesses(newUser.id);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    await authService.sendPasswordReset(email);
   };
 
   const logout = async () => {
@@ -284,6 +302,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         statusMessage,
         patientAccesses,
         login,
+        register,
+        sendPasswordReset,
         logout,
         refreshUserMe,
         switchFamily,

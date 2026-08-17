@@ -8,16 +8,24 @@ import {
   Lock,
   ArrowRight,
   AlertTriangle,
-  FileText,
-  Activity,
-  CheckCircle2,
   Sparkles,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AuthModal } from './AuthModal';
+import { AuthMode } from './AuthForm';
 
 export const PublicLandingView: React.FC = () => {
   const { login, isLoading } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
+
+  const openAuth = (mode: AuthMode = 'login') => {
+    setAuthError(null);
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
@@ -53,28 +61,28 @@ export const PublicLandingView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Action: Entrar */}
+          {/* Right Action: Entrar & Criar Conta */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               id="btn-nav-entrar"
-              onClick={handleGoogleLogin}
+              onClick={() => openAuth('login')}
               disabled={isLoading}
               className="inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs hover:shadow-xs transition active:scale-[0.98] disabled:opacity-50 min-h-[40px] touch-manipulation cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5 text-slate-500" />
-              <span>{isLoading ? 'Conectando...' : 'Entrar'}</span>
+              <span>Entrar</span>
             </button>
 
             <button
               type="button"
               id="btn-nav-comecar-testar"
-              onClick={handleGoogleLogin}
+              onClick={() => openAuth('register')}
               disabled={isLoading}
               className="hidden sm:inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20 transition active:scale-[0.98] disabled:opacity-50 min-h-[40px] touch-manipulation cursor-pointer"
             >
-              <span>Começar a testar</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Criar conta</span>
             </button>
           </div>
         </div>
@@ -151,15 +159,15 @@ export const PublicLandingView: React.FC = () => {
 
             {/* Primary Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto">
-              {/* Começar a testar CTA */}
+              {/* Começar / Entrar CTA */}
               <button
                 type="button"
                 id="btn-hero-comecar-testar"
-                onClick={handleGoogleLogin}
+                onClick={() => openAuth('login')}
                 disabled={isLoading}
                 className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm sm:text-base transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 min-h-[48px] touch-manipulation cursor-pointer"
               >
-                <span>{isLoading ? 'Conectando...' : 'Começar a testar'}</span>
+                <span>Acessar Plataforma</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -189,12 +197,12 @@ export const PublicLandingView: React.FC = () => {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Entrar com Google</span>
+                <span>{isLoading ? 'Conectando...' : 'Entrar com Google'}</span>
               </button>
             </div>
 
             <p className="text-xs text-slate-500 pt-1">
-              Acesso seguro e autenticado via conta Google
+              Acesso seguro via <strong>Google</strong> ou <strong>E-mail e Senha</strong>
             </p>
           </div>
         </section>
@@ -229,7 +237,7 @@ export const PublicLandingView: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 <span>Controle de tomadas e posologias</span>
               </div>
             </div>
@@ -252,7 +260,7 @@ export const PublicLandingView: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-teal-700 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                <Sparkles className="w-4 h-4 text-teal-600" />
                 <span>Anexos médicos e histórico centralizado</span>
               </div>
             </div>
@@ -275,7 +283,7 @@ export const PublicLandingView: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-indigo-700 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-indigo-600" />
                 <span>Permissões claras por paciente</span>
               </div>
             </div>
@@ -305,9 +313,9 @@ export const PublicLandingView: React.FC = () => {
             <button
               type="button"
               id="btn-trust-comecar-testar"
-              onClick={handleGoogleLogin}
+              onClick={() => openAuth('register')}
               disabled={isLoading}
-              className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-[0.98] disabled:opacity-50 min-h-[40px] shrink-0"
+              className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-[0.98] disabled:opacity-50 min-h-[40px] shrink-0 cursor-pointer"
             >
               <span>Testar Agora</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -327,6 +335,14 @@ export const PublicLandingView: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Auth Modal for Login, Register and Forgot Password */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 };
+

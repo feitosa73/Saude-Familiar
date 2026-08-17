@@ -29,7 +29,11 @@ export async function requireAuth(
     return;
   }
 
-  const idToken = parts[1];
+  const idToken = parts[1].trim();
+  if (!idToken || idToken === 'null' || idToken === 'undefined' || idToken.length < 20) {
+    res.status(401).json({ error: 'Unauthorized: Token de autenticação ausente ou inválido' });
+    return;
+  }
 
   try {
     const auth = getFirebaseAuth();

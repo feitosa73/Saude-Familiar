@@ -13,14 +13,20 @@ import {
 } from '../types';
 import { IHealthRepository } from './IRepository';
 
+/**
+ * FirestoreHealthRepository
+ *
+ * Repositório autoritativo para entidades clínicas e de saúde utilizando Cloud Firestore.
+ * Subcoleções estruturadas hierarquicamente sob families/{familyId}/patients/...
+ */
 export class FirestoreHealthRepository implements IHealthRepository {
   private get db() {
     return getFirebaseFirestore();
   }
 
-  // ==========================================
+  // =========================================================================
   // USERS & ACCESSES
-  // ==========================================
+  // =========================================================================
 
   async getUsers(familyId?: string): Promise<User[]> {
     if (!familyId) return [];
@@ -31,23 +37,22 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('memberships')
       .get();
 
-    if (memSnap.empty) return [];
+    if (memSnap.empty) {
+      return [];
+    }
 
-    const userIds = memSnap.docs.map((d) => d.id);
     const users: User[] = [];
-
-    for (const uid of userIds) {
+    for (const doc of memSnap.docs) {
+      const uid = doc.id;
       const uDoc = await this.db.collection('users').doc(uid).get();
-      if (uDoc.exists) {
-        const uData = uDoc.data() || {};
-        users.push({
-          id: uid,
-          name: uData.displayName || 'Membro da Família',
-          email: uData.email || '',
-          avatarUrl: uData.photoURL || undefined,
-          patientIds: [],
-        });
-      }
+      const uData = uDoc.data() || {};
+      users.push({
+        id: uid,
+        name: uData.displayName || 'Membro da Família',
+        email: uData.email || '',
+        avatarUrl: uData.photoURL || undefined,
+        patientIds: [],
+      });
     }
 
     return users;
@@ -55,17 +60,17 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
   async getUserById(id: string): Promise<User | null> {
     const doc = await this.db.collection('users').doc(id).get();
-    if (doc.exists) {
-      const data = doc.data() || {};
-      return {
-        id,
-        name: data.displayName || 'Usuário',
-        email: data.email || '',
-        avatarUrl: data.photoURL || undefined,
-        patientIds: [],
-      };
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+    const data = doc.data() || {};
+    return {
+      id,
+      name: data.displayName || 'Usuário',
+      email: data.email || '',
+      avatarUrl: data.photoURL || undefined,
+      patientIds: [],
+    };
   }
 
   async getPatientAccesses(
@@ -75,22 +80,23 @@ export class FirestoreHealthRepository implements IHealthRepository {
   ): Promise<PatientAccess[]> {
     if (!familyId || !patientId) return [];
 
-    const snap = await this.db
+    let query: FirebaseFirestore.Query = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
       .doc(patientId)
-      .collection('accesses')
-      .get();
+      .collection('accesses');
 
-    if (!snap.empty) {
-      let accesses = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PatientAccess));
-      if (userId) {
-        accesses = accesses.filter((a) => a.userId === userId);
-      }
-      return accesses;
+    if (userId) {
+      query = query.where('userId', '==', userId);
     }
-    return [];
+
+    const snap = await query.get();
+    if (snap.empty) {
+      return [];
+    }
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as PatientAccess));
   }
 
   async getPatientAccess(userId: string, patientId: string, familyId?: string): Promise<PatientAccess | null> {
@@ -106,11 +112,12 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .limit(1)
       .get();
 
-    if (!snap.empty) {
-      const doc = snap.docs[0];
-      return { id: doc.id, ...doc.data() } as PatientAccess;
+    if (snap.empty) {
+      return null;
     }
-    return null;
+
+    const doc = snap.docs[0];
+    return { id: doc.id, ...doc.data() } as PatientAccess;
   }
 
   async createPatientAccess(
@@ -124,7 +131,6 @@ export class FirestoreHealthRepository implements IHealthRepository {
     const access: PatientAccess = {
       id: accessId,
       ...data,
-      familyId,
       createdAt: now,
     };
 
@@ -156,14 +162,16 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('accesses')
       .doc(id);
 
-    const snap = await ref.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await ref.update({ role, updatedAt: now });
-      const updatedSnap = await ref.get();
-      return { id: updatedSnap.id, ...updatedSnap.data() } as PatientAccess;
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await ref.update({ role, updatedAt: now });
+
+    const updated = { id: doc.id, ...doc.data(), role, updatedAt: now } as PatientAccess;
+    return updated;
   }
 
   async deletePatientAccess(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -181,40 +189,34 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // PATIENTS
-  // ==========================================
+  // =========================================================================
 
   async getPatients(userId?: string, familyId?: string): Promise<Patient[]> {
     if (!familyId) return [];
 
     const snap = await this.db.collection('families').doc(familyId).collection('patients').get();
-    if (snap.empty) return [];
+    if (snap.empty) {
+      return [];
+    }
 
-    let list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
+    const list: Patient[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Patient));
 
     if (userId) {
-      const famDoc = await this.db.collection('families').doc(familyId).get();
-      const isOwner = famDoc.data()?.primaryOwnerUid === userId;
+      const famSnap = await this.db.collection('families').doc(familyId).get();
+      const fam = famSnap.data();
+      const isOwner = fam?.primaryOwnerUid === userId || fam?.createdBy === userId;
 
       if (!isOwner) {
-        const userAccesses: string[] = [];
+        const allowedPatients: Patient[] = [];
         for (const p of list) {
-          const accSnap = await this.db
-            .collection('families')
-            .doc(familyId)
-            .collection('patients')
-            .doc(p.id)
-            .collection('accesses')
-            .where('userId', '==', userId)
-            .limit(1)
-            .get();
-
-          if (!accSnap.empty) {
-            userAccesses.push(p.id);
+          const acc = await this.getPatientAccess(userId, p.id, familyId);
+          if (acc) {
+            allowedPatients.push(p);
           }
         }
-        list = list.filter((p) => userAccesses.includes(p.id));
+        return allowedPatients;
       }
     }
 
@@ -225,10 +227,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
     if (!familyId) return null;
 
     const doc = await this.db.collection('families').doc(familyId).collection('patients').doc(id).get();
-    if (doc.exists) {
-      return { id: doc.id, ...doc.data() } as Patient;
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    return { id: doc.id, ...doc.data() } as Patient;
   }
 
   async createPatient(
@@ -249,7 +252,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
     };
 
     const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(patient.id);
-    await pRef.set({ ...patient, familyId });
+    await pRef.set(patient);
 
     if (createdByUserId) {
       await this.createPatientAccess(
@@ -270,14 +273,15 @@ export class FirestoreHealthRepository implements IHealthRepository {
     if (!familyId) throw new Error('familyId é obrigatório');
 
     const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(id);
-    const snap = await pRef.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await pRef.update({ ...data, updatedAt: now });
-      const updated = await pRef.get();
-      return { id: updated.id, ...updated.data() } as Patient;
+    const doc = await pRef.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await pRef.update({ ...data, updatedAt: now });
+
+    return { id, ...doc.data(), ...data, updatedAt: now } as Patient;
   }
 
   async deletePatient(id: string, familyId?: string): Promise<boolean> {
@@ -287,9 +291,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // MEDICATIONS
-  // ==========================================
+  // =========================================================================
 
   async getMedications(patientId: string, familyId?: string): Promise<Medication[]> {
     if (!familyId) return [];
@@ -302,10 +306,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('medications')
       .get();
 
-    if (!snap.empty) {
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Medication));
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Medication));
   }
 
   async getMedicationById(id: string, familyId?: string, patientId?: string): Promise<Medication | null> {
@@ -320,10 +325,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(id)
       .get();
 
-    if (doc.exists) {
-      return { id: doc.id, ...doc.data() } as Medication;
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    return { id: doc.id, ...doc.data() } as Medication;
   }
 
   async createMedication(data: Omit<Medication, 'id'>, familyId?: string): Promise<Medication> {
@@ -345,7 +351,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(data.patientId)
       .collection('medications')
       .doc(medication.id)
-      .set({ ...medication, familyId });
+      .set(medication);
 
     return medication;
   }
@@ -366,14 +372,15 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('medications')
       .doc(id);
 
-    const snap = await ref.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await ref.update({ ...data, updatedAt: now });
-      const updated = await ref.get();
-      return { id: updated.id, ...updated.data() } as Medication;
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await ref.update({ ...data, updatedAt: now });
+
+    return { id, ...doc.data(), ...data, updatedAt: now } as Medication;
   }
 
   async deleteMedication(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -391,9 +398,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // APPOINTMENTS
-  // ==========================================
+  // =========================================================================
 
   async getAppointments(patientId: string, familyId?: string): Promise<Appointment[]> {
     if (!familyId) return [];
@@ -406,10 +413,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('appointments')
       .get();
 
-    if (!snap.empty) {
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Appointment));
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Appointment));
   }
 
   async getAppointmentById(id: string, familyId?: string, patientId?: string): Promise<Appointment | null> {
@@ -424,10 +432,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(id)
       .get();
 
-    if (doc.exists) {
-      return { id: doc.id, ...doc.data() } as Appointment;
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    return { id: doc.id, ...doc.data() } as Appointment;
   }
 
   async createAppointment(data: Omit<Appointment, 'id'>, familyId?: string): Promise<Appointment> {
@@ -449,7 +458,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(data.patientId)
       .collection('appointments')
       .doc(appointment.id)
-      .set({ ...appointment, familyId });
+      .set(appointment);
 
     return appointment;
   }
@@ -470,14 +479,15 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('appointments')
       .doc(id);
 
-    const snap = await ref.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await ref.update({ ...data, updatedAt: now });
-      const updated = await ref.get();
-      return { id: updated.id, ...updated.data() } as Appointment;
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await ref.update({ ...data, updatedAt: now });
+
+    return { id, ...doc.data(), ...data, updatedAt: now } as Appointment;
   }
 
   async deleteAppointment(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -495,9 +505,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // EXAMS
-  // ==========================================
+  // =========================================================================
 
   async getExams(patientId: string, familyId?: string): Promise<Exam[]> {
     if (!familyId) return [];
@@ -510,10 +520,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('exams')
       .get();
 
-    if (!snap.empty) {
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Exam));
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Exam));
   }
 
   async getExamById(id: string, familyId?: string, patientId?: string): Promise<Exam | null> {
@@ -528,10 +539,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(id)
       .get();
 
-    if (doc.exists) {
-      return { id: doc.id, ...doc.data() } as Exam;
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    return { id: doc.id, ...doc.data() } as Exam;
   }
 
   async createExam(data: Omit<Exam, 'id'>, familyId?: string): Promise<Exam> {
@@ -553,7 +565,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(data.patientId)
       .collection('exams')
       .doc(exam.id)
-      .set({ ...exam, familyId });
+      .set(exam);
 
     return exam;
   }
@@ -574,14 +586,15 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('exams')
       .doc(id);
 
-    const snap = await ref.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await ref.update({ ...data, updatedAt: now });
-      const updated = await ref.get();
-      return { id: updated.id, ...updated.data() } as Exam;
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await ref.update({ ...data, updatedAt: now });
+
+    return { id, ...doc.data(), ...data, updatedAt: now } as Exam;
   }
 
   async deleteExam(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -599,9 +612,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // DOCUMENTS
-  // ==========================================
+  // =========================================================================
 
   async getDocuments(patientId: string, familyId?: string): Promise<MedicalDocument[]> {
     if (!familyId) return [];
@@ -614,10 +627,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('documents')
       .get();
 
-    if (!snap.empty) {
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as MedicalDocument));
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as MedicalDocument));
   }
 
   async getDocumentById(id: string, familyId?: string, patientId?: string): Promise<MedicalDocument | null> {
@@ -632,10 +646,11 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(id)
       .get();
 
-    if (doc.exists) {
-      return { id: doc.id, ...doc.data() } as MedicalDocument;
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    return { id: doc.id, ...doc.data() } as MedicalDocument;
   }
 
   async createDocument(data: Omit<MedicalDocument, 'id'>, familyId?: string): Promise<MedicalDocument> {
@@ -657,7 +672,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(data.patientId)
       .collection('documents')
       .doc(doc.id)
-      .set({ ...doc, familyId });
+      .set(doc);
 
     return doc;
   }
@@ -678,14 +693,15 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .collection('documents')
       .doc(id);
 
-    const snap = await ref.get();
-    if (snap.exists) {
-      const now = new Date().toISOString();
-      await ref.update({ ...data, updatedAt: now });
-      const updated = await ref.get();
-      return { id: updated.id, ...updated.data() } as MedicalDocument;
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return null;
     }
-    return null;
+
+    const now = new Date().toISOString();
+    await ref.update({ ...data, updatedAt: now });
+
+    return { id, ...doc.data(), ...data, updatedAt: now } as MedicalDocument;
   }
 
   async deleteDocument(id: string, familyId?: string, patientId?: string): Promise<boolean> {
@@ -703,9 +719,9 @@ export class FirestoreHealthRepository implements IHealthRepository {
     return true;
   }
 
-  // ==========================================
+  // =========================================================================
   // TIMELINE
-  // ==========================================
+  // =========================================================================
 
   async getTimelineEvents(
     patientId: string,
@@ -714,7 +730,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
   ): Promise<TimelineEvent[]> {
     if (!familyId) return [];
 
-    let query: any = this.db
+    let query: FirebaseFirestore.Query = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
@@ -729,17 +745,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
     }
 
     const snap = await query.get();
-    if (!snap.empty) {
-      let events = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as TimelineEvent));
-      if (filter?.startDate) {
-        events = events.filter((e: any) => e.date >= filter.startDate!);
-      }
-      if (filter?.endDate) {
-        events = events.filter((e: any) => e.date <= filter.endDate!);
-      }
-      return events.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (snap.empty) {
+      return [];
     }
-    return [];
+
+    let events: TimelineEvent[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as TimelineEvent));
+
+    if (filter?.startDate) {
+      events = events.filter((e) => e.date >= filter.startDate!);
+    }
+    if (filter?.endDate) {
+      events = events.filter((e) => e.date <= filter.endDate!);
+    }
+
+    return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async createTimelineEvent(data: Omit<TimelineEvent, 'id'>, familyId?: string): Promise<TimelineEvent> {
@@ -761,7 +780,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .doc(data.patientId)
       .collection('timeline')
       .doc(event.id)
-      .set({ ...event, familyId });
+      .set(event);
 
     return event;
   }

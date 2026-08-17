@@ -8,6 +8,10 @@ import {
   browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -16,12 +20,12 @@ import {
 const env = (import.meta as any).env || {};
 
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY,
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: env.VITE_FIREBASE_APP_ID,
+  apiKey: env.VITE_FIREBASE_API_KEY || '',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'prj-saudefamiliar-pessoal-pfl.firebaseapp.com',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || 'prj-saudefamiliar-pessoal-pfl',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'prj-saudefamiliar-pessoal-pfl.firebasestorage.app',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: env.VITE_FIREBASE_APP_ID || '',
 };
 
 export const isFirebaseConfigured = Boolean(
@@ -64,6 +68,10 @@ export {
   googleProvider,
   browserPopupRedirectResolver,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   type FirebaseUser,
