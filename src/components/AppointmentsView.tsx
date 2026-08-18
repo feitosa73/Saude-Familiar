@@ -145,6 +145,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       setIsSubmitting(true);
       if (editingAptId) {
         await api.updateAppointment(editingAptId, {
+          patientId: selectedPatient.id,
           specialty,
           professional,
           location,

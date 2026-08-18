@@ -314,22 +314,38 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async getMedicationById(id: string, familyId?: string, patientId?: string): Promise<Medication | null> {
-    if (!familyId || !patientId) return null;
+    if (!familyId) return null;
 
-    const doc = await this.db
+    if (patientId) {
+      const doc = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('medications')
+        .doc(id)
+        .get();
+
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Medication;
+      }
+    }
+
+    // Lookup across patients in this family
+    const patientsSnap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
-      .collection('medications')
-      .doc(id)
       .get();
 
-    if (!doc.exists) {
-      return null;
+    for (const pDoc of patientsSnap.docs) {
+      const doc = await pDoc.ref.collection('medications').doc(id).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Medication;
+      }
     }
 
-    return { id: doc.id, ...doc.data() } as Medication;
+    return null;
   }
 
   async createMedication(data: Omit<Medication, 'id'>, familyId?: string): Promise<Medication> {
@@ -362,13 +378,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Medication | null> {
-    if (!familyId || !patientId) throw new Error('familyId e patientId são obrigatórios');
+    if (!familyId) throw new Error('familyId é obrigatório');
+
+    let targetPatientId = patientId || data.patientId;
+    if (!targetPatientId) {
+      const existing = await this.getMedicationById(id, familyId);
+      if (!existing) return null;
+      targetPatientId = existing.patientId;
+    }
 
     const ref = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('medications')
       .doc(id);
 
@@ -384,13 +407,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async deleteMedication(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) return false;
+    if (!familyId) return false;
+
+    let targetPatientId = patientId;
+    if (!targetPatientId) {
+      const existing = await this.getMedicationById(id, familyId);
+      if (!existing) return false;
+      targetPatientId = existing.patientId;
+    }
 
     await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('medications')
       .doc(id)
       .delete();
@@ -421,22 +451,38 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async getAppointmentById(id: string, familyId?: string, patientId?: string): Promise<Appointment | null> {
-    if (!familyId || !patientId) return null;
+    if (!familyId) return null;
 
-    const doc = await this.db
+    if (patientId) {
+      const doc = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('appointments')
+        .doc(id)
+        .get();
+
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Appointment;
+      }
+    }
+
+    // Lookup across patients in this family
+    const patientsSnap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
-      .collection('appointments')
-      .doc(id)
       .get();
 
-    if (!doc.exists) {
-      return null;
+    for (const pDoc of patientsSnap.docs) {
+      const doc = await pDoc.ref.collection('appointments').doc(id).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Appointment;
+      }
     }
 
-    return { id: doc.id, ...doc.data() } as Appointment;
+    return null;
   }
 
   async createAppointment(data: Omit<Appointment, 'id'>, familyId?: string): Promise<Appointment> {
@@ -469,13 +515,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Appointment | null> {
-    if (!familyId || !patientId) throw new Error('familyId e patientId são obrigatórios');
+    if (!familyId) throw new Error('familyId é obrigatório');
+
+    let targetPatientId = patientId || data.patientId;
+    if (!targetPatientId) {
+      const existing = await this.getAppointmentById(id, familyId);
+      if (!existing) return null;
+      targetPatientId = existing.patientId;
+    }
 
     const ref = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('appointments')
       .doc(id);
 
@@ -491,13 +544,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async deleteAppointment(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) return false;
+    if (!familyId) return false;
+
+    let targetPatientId = patientId;
+    if (!targetPatientId) {
+      const existing = await this.getAppointmentById(id, familyId);
+      if (!existing) return false;
+      targetPatientId = existing.patientId;
+    }
 
     await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('appointments')
       .doc(id)
       .delete();
@@ -528,22 +588,38 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async getExamById(id: string, familyId?: string, patientId?: string): Promise<Exam | null> {
-    if (!familyId || !patientId) return null;
+    if (!familyId) return null;
 
-    const doc = await this.db
+    if (patientId) {
+      const doc = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('exams')
+        .doc(id)
+        .get();
+
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Exam;
+      }
+    }
+
+    // Lookup across patients in this family
+    const patientsSnap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
-      .collection('exams')
-      .doc(id)
       .get();
 
-    if (!doc.exists) {
-      return null;
+    for (const pDoc of patientsSnap.docs) {
+      const doc = await pDoc.ref.collection('exams').doc(id).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as Exam;
+      }
     }
 
-    return { id: doc.id, ...doc.data() } as Exam;
+    return null;
   }
 
   async createExam(data: Omit<Exam, 'id'>, familyId?: string): Promise<Exam> {
@@ -576,13 +652,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<Exam | null> {
-    if (!familyId || !patientId) throw new Error('familyId e patientId são obrigatórios');
+    if (!familyId) throw new Error('familyId é obrigatório');
+
+    let targetPatientId = patientId || data.patientId;
+    if (!targetPatientId) {
+      const existing = await this.getExamById(id, familyId);
+      if (!existing) return null;
+      targetPatientId = existing.patientId;
+    }
 
     const ref = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('exams')
       .doc(id);
 
@@ -598,13 +681,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async deleteExam(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) return false;
+    if (!familyId) return false;
+
+    let targetPatientId = patientId;
+    if (!targetPatientId) {
+      const existing = await this.getExamById(id, familyId);
+      if (!existing) return false;
+      targetPatientId = existing.patientId;
+    }
 
     await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('exams')
       .doc(id)
       .delete();
@@ -635,22 +725,38 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async getDocumentById(id: string, familyId?: string, patientId?: string): Promise<MedicalDocument | null> {
-    if (!familyId || !patientId) return null;
+    if (!familyId) return null;
 
-    const doc = await this.db
+    if (patientId) {
+      const doc = await this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('documents')
+        .doc(id)
+        .get();
+
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as MedicalDocument;
+      }
+    }
+
+    // Lookup across patients in this family
+    const patientsSnap = await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
-      .collection('documents')
-      .doc(id)
       .get();
 
-    if (!doc.exists) {
-      return null;
+    for (const pDoc of patientsSnap.docs) {
+      const doc = await pDoc.ref.collection('documents').doc(id).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() } as MedicalDocument;
+      }
     }
 
-    return { id: doc.id, ...doc.data() } as MedicalDocument;
+    return null;
   }
 
   async createDocument(data: Omit<MedicalDocument, 'id'>, familyId?: string): Promise<MedicalDocument> {
@@ -683,13 +789,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
     familyId?: string,
     patientId?: string
   ): Promise<MedicalDocument | null> {
-    if (!familyId || !patientId) throw new Error('familyId e patientId são obrigatórios');
+    if (!familyId) throw new Error('familyId é obrigatório');
+
+    let targetPatientId = patientId || data.patientId;
+    if (!targetPatientId) {
+      const existing = await this.getDocumentById(id, familyId);
+      if (!existing) return null;
+      targetPatientId = existing.patientId;
+    }
 
     const ref = this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('documents')
       .doc(id);
 
@@ -705,13 +818,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async deleteDocument(id: string, familyId?: string, patientId?: string): Promise<boolean> {
-    if (!familyId || !patientId) return false;
+    if (!familyId) return false;
+
+    let targetPatientId = patientId;
+    if (!targetPatientId) {
+      const existing = await this.getDocumentById(id, familyId);
+      if (!existing) return false;
+      targetPatientId = existing.patientId;
+    }
 
     await this.db
       .collection('families')
       .doc(familyId)
       .collection('patients')
-      .doc(patientId)
+      .doc(targetPatientId)
       .collection('documents')
       .doc(id)
       .delete();

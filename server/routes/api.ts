@@ -1394,7 +1394,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const med = await repository.getMedicationById(req.params.id, familyId);
+        const patientId = req.body?.patientId || (req.query.patientId as string);
+        const med = await repository.getMedicationById(req.params.id, familyId, patientId);
         if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
         const userId = getCurrentUserId(req);
@@ -1421,7 +1422,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const med = await repository.getMedicationById(req.params.id, familyId);
+        const patientId = (req.query.patientId as string) || req.body?.patientId;
+        const med = await repository.getMedicationById(req.params.id, familyId, patientId);
         if (!med) return res.status(404).json({ error: 'Medicamento não encontrado' });
 
         const userId = getCurrentUserId(req);
@@ -1519,7 +1521,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const appt = await repository.getAppointmentById(req.params.id, familyId);
+        const patientId = req.body?.patientId || (req.query.patientId as string);
+        const appt = await repository.getAppointmentById(req.params.id, familyId, patientId);
         if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
         const userId = getCurrentUserId(req);
@@ -1546,7 +1549,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const appt = await repository.getAppointmentById(req.params.id, familyId);
+        const patientId = (req.query.patientId as string) || req.body?.patientId;
+        const appt = await repository.getAppointmentById(req.params.id, familyId, patientId);
         if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
 
         const userId = getCurrentUserId(req);
@@ -1633,7 +1637,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const exam = await repository.getExamById(req.params.id, familyId);
+        const patientId = req.body?.patientId || (req.query.patientId as string);
+        const exam = await repository.getExamById(req.params.id, familyId, patientId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
         const userId = getCurrentUserId(req);
@@ -1660,7 +1665,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const exam = await repository.getExamById(req.params.id, familyId);
+        const patientId = (req.query.patientId as string) || req.body?.patientId;
+        const exam = await repository.getExamById(req.params.id, familyId, patientId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
 
         const userId = getCurrentUserId(req);
@@ -1710,7 +1716,7 @@ export function createApiRouter(
         const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
         if (!canCreate && req.membership?.role !== 'owner') {
           return res.status(403).json({
-            error: 'Visualizadores não possuem permissão para anexar documentos',
+            error: 'Visualizadores não possuem permissão para adicionar documentos',
           });
         }
 
@@ -1760,7 +1766,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const doc = await repository.getDocumentById(req.params.id, familyId);
+        const patientId = req.body?.patientId || (req.query.patientId as string);
+        const doc = await repository.getDocumentById(req.params.id, familyId, patientId);
         if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
         const userId = getCurrentUserId(req);
@@ -1787,7 +1794,8 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const doc = await repository.getDocumentById(req.params.id, familyId);
+        const patientId = (req.query.patientId as string) || req.body?.patientId;
+        const doc = await repository.getDocumentById(req.params.id, familyId, patientId);
         if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
 
         const userId = getCurrentUserId(req);
