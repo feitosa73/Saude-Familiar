@@ -19,7 +19,9 @@ import {
   Shield,
   Eye,
   Lock,
+  Sparkles,
 } from 'lucide-react';
+import { PrescriptionScannerModal } from './PrescriptionScannerModal';
 
 interface MedicationsViewProps {
   isModalOpen: boolean;
@@ -42,6 +44,9 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const isViewer = permissions?.role === 'VIEWER';
   const isCaregiver = permissions?.role === 'CAREGIVER';
+
+  // AI Scanner Modal State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   // Form State
   const [editingMedId, setEditingMedId] = useState<string | null>(null);
@@ -240,14 +245,25 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
         </div>
 
         {permissions?.canCreateRecord ? (
-          <button
-            id="add-medication-main-btn"
-            onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Cadastrar Medicamento
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              id="ai-prescription-scan-btn"
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-all"
+            >
+              <Sparkles className="w-4 h-4" />
+              Escanear Receita (IA)
+            </button>
+            <button
+              id="add-medication-main-btn"
+              onClick={handleOpenCreate}
+              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              Cadastrar Manualmente
+            </button>
+          </div>
         ) : (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
             <Lock className="w-3.5 h-3.5 text-slate-400" />
@@ -640,6 +656,16 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+      {/* AI Prescription Scanner Modal */}
+      {selectedPatient && (
+        <PrescriptionScannerModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          onSuccess={fetchMedications}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
       )}
     </div>
   );

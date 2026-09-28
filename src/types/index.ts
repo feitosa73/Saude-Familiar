@@ -206,16 +206,37 @@ export interface MedicalDocument {
   patientId: string;
   title: string;
   category: DocumentCategory;
-  fileUrl: string;
-  fileName: string;
-  fileType: string;
-  fileSize: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: string;
   date: string;
   doctor?: string;
   notes?: string;
   relatedExamId?: string;
+  extractedByAi?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ExtractedPrescriptionMedication {
+  name: string;
+  dosage: string;
+  frequency: string;
+  times: string[];
+  durationDays?: number;
+  startDate?: string;
+  notes?: string;
+}
+
+export interface ExtractedPrescriptionResponse {
+  prescribingDoctor?: string;
+  doctorCrm?: string;
+  prescriptionDate?: string;
+  patientNameIdentified?: string;
+  medications: ExtractedPrescriptionMedication[];
+  generalNotes?: string;
+  confidenceWarning?: string;
 }
 
 export type TimelineEventType =

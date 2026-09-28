@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePatient } from '../context/PatientContext';
 import { api } from '../services/api';
 import { MedicalDocument, DocumentCategory, Exam } from '../types';
@@ -7,18 +7,19 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Upload,
   Calendar,
   User,
   Search,
   FileCheck,
   FileSpreadsheet,
-  Download,
   Eye,
   FileCode,
   CheckCircle2,
-  Paperclip,
+  Sparkles,
+  ShieldCheck,
+  Stethoscope,
 } from 'lucide-react';
+import { PrescriptionScannerModal } from './PrescriptionScannerModal';
 
 interface DocumentsViewProps {
   isModalOpen: boolean;
@@ -43,6 +44,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Preview Modal
   const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
 
+  // AI Prescription Scanner Modal
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
   // Document Form State
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -51,12 +55,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [doctor, setDoctor] = useState('');
   const [notes, setNotes] = useState('');
   const [relatedExamId, setRelatedExamId] = useState<string>(preselectedExamId || '');
-  const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState('850 KB');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocsAndExams = async () => {
     if (!selectedPatient) return;
@@ -94,8 +93,6 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     setDoctor(selectedPatient?.primaryDoctor || '');
     setNotes('');
     setRelatedExamId(preselectedExamId || '');
-    setFileName('');
-    setFileSize('720 KB');
   };
 
   const handleOpenCreate = () => {
@@ -111,34 +108,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     setDoctor(doc.doctor || '');
     setNotes(doc.notes || '');
     setRelatedExamId(doc.relatedExamId || '');
-    setFileName(doc.fileName);
-    setFileSize(doc.fileSize);
     onOpenModal();
-  };
-
-  const handleSimulatedFileUpload = (file?: File) => {
-    if (file) {
-      setFileName(file.name);
-      const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
-      setFileSize(parseFloat(sizeInMb) > 1 ? `${sizeInMb} MB` : `${Math.round(file.size / 1024)} KB`);
-      if (!title) {
-        // Auto-generate title from filename
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-        setTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
-      }
-    } else {
-      // Generated placeholder name if manual trigger
-      setFileName(`documento-${Date.now().toString().slice(-4)}.pdf`);
-      setFileSize('1.2 MB');
-    }
-  };
-
-  const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleSimulatedFileUpload(e.dataTransfer.files[0]);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,97 +116,97 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     if (!selectedPatient) return;
 
     if (!title.trim()) {
-      showToast('O título do documento é obrigatório', 'error');
+      showToast('O título do registro é obrigatório', 'error');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const finalFileName = fileName.trim() || `${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}.pdf`;
 
       if (editingDocId) {
         await api.updateDocument(editingDocId, {
-          title,
+          title: title.trim(),
           category,
           date,
-          doctor,
-          notes,
-          fileName: finalFileName,
-          fileSize,
+          doctor: doctor.trim() || undefined,
+          notes: notes.trim() || undefined,
           relatedExamId: relatedExamId || undefined,
         });
-        showToast('Documento atualizado com sucesso!', 'success');
+        showToast('Registro clínico atualizado com sucesso!', 'success');
       } else {
         await api.createDocument(selectedPatient.id, {
-          title,
+          title: title.trim(),
           category,
-          fileUrl: `/mock-storage/${finalFileName}`,
-          fileName: finalFileName,
-          fileType: 'application/pdf',
-          fileSize,
           date,
-          doctor,
-          notes,
+          doctor: doctor.trim() || undefined,
+          notes: notes.trim() || undefined,
           relatedExamId: relatedExamId || undefined,
         });
-        showToast('Documento arquivado com sucesso no prontuário!', 'success');
+        showToast('Registro clínico arquivado no prontuário!', 'success');
       }
 
       onCloseModal();
       resetForm();
       fetchDocsAndExams();
     } catch (err: any) {
-      showToast(err.message || 'Erro ao salvar documento', 'error');
+      showToast(err.message || 'Erro ao salvar registro', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string, docTitle: string) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o documento "${docTitle}"?`)) {
+    if (!window.confirm(`Tem certeza que deseja excluir o registro "${docTitle}"?`)) {
       return;
     }
     try {
       await api.deleteDocument(id);
-      showToast('Documento removido com sucesso', 'success');
+      showToast('Registro excluído com sucesso', 'success');
       fetchDocsAndExams();
     } catch (err: any) {
-      showToast(err.message || 'Erro ao excluir documento', 'error');
+      showToast(err.message || 'Erro ao excluir registro', 'error');
     }
   };
 
-  const formatDate = (isoString?: string) => {
-    if (!isoString) return '';
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return isoString;
-    }
-  };
-
-  const categoryLabels: Record<DocumentCategory, { label: string; color: string }> = {
-    pedido_exame: { label: 'Pedido de Exame', color: 'bg-amber-100 text-amber-800' },
-    resultado_exame: { label: 'Resultado / Laudo', color: 'bg-emerald-100 text-emerald-800' },
-    receita: { label: 'Receita Médica', color: 'bg-teal-100 text-teal-800' },
-    relatorio_medico: { label: 'Relatório Médico', color: 'bg-indigo-100 text-indigo-800' },
-    outro: { label: 'Outro Documento', color: 'bg-slate-100 text-slate-800' },
+  const categoryLabels: Record<
+    DocumentCategory,
+    { label: string; color: string; icon: React.ReactNode }
+  > = {
+    resultado_exame: {
+      label: 'Laudo de Exame',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      icon: <FileCheck className="w-3.5 h-3.5" />,
+    },
+    receita: {
+      label: 'Receita Médica',
+      color: 'bg-blue-50 text-blue-700 border-blue-200',
+      icon: <FileSpreadsheet className="w-3.5 h-3.5" />,
+    },
+    relatorio_medico: {
+      label: 'Relatório Médico',
+      color: 'bg-purple-50 text-purple-700 border-purple-200',
+      icon: <FileText className="w-3.5 h-3.5" />,
+    },
+    pedido_exame: {
+      label: 'Pedido de Exame',
+      color: 'bg-amber-50 text-amber-700 border-amber-200',
+      icon: <FileCode className="w-3.5 h-3.5" />,
+    },
+    outro: {
+      label: 'Outro',
+      color: 'bg-slate-50 text-slate-700 border-slate-200',
+      icon: <FileText className="w-3.5 h-3.5" />,
+    },
   };
 
   const filteredDocs = documents.filter((doc) => {
     const matchesSearch =
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (doc.doctor && doc.doctor.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (doc.notes && doc.notes.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (!matchesSearch) return false;
-    if (filterCategory !== 'all' && doc.category !== filterCategory) return false;
-    return true;
+    const matchesCategory = filterCategory === 'all' || doc.category === filterCategory;
+    return matchesSearch && matchesCategory;
   });
 
   return (
@@ -253,23 +223,33 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           </p>
         </div>
 
-        <button
-          id="add-document-main-btn"
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          Anexar Documento
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAiModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-all"
+          >
+            <Sparkles className="w-4 h-4" />
+            Escanear Receita (IA)
+          </button>
+          <button
+            id="add-document-main-btn"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Registro Clínico
+          </button>
+        </div>
       </div>
 
-      {/* Cloud Storage Architecture Note Banner */}
-      <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-3 text-xs text-blue-900">
-        <Paperclip className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+      {/* Zero Storage Architecture Note */}
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-3 text-xs text-slate-700">
+        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold">Armazenamento Seguro de Documentos: </span>
+          <span className="font-semibold text-slate-900">Privacidade & Prontuário Estruturado (Zero Storage): </span>
           <span>
-            Os arquivos são catalogados com metadados estruturados e prontos para armazenamento definitivo em bucket privado do Google Cloud Storage com URLs assinadas.
+            Os laudos e receitas são transcritos e catalogados com dados clínicos estruturados no prontuário. Documentos via IA são processados estritamente em memória volátil, sem persistência binária externa.
           </span>
         </div>
       </div>
@@ -281,7 +261,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           <input
             id="search-documents-input"
             type="text"
-            placeholder="Buscar por título, nome do arquivo ou médico..."
+            placeholder="Buscar por título, médico ou anotações..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white text-slate-800"
@@ -336,75 +316,73 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
       </div>
 
-      {/* Documents Grid */}
+      {/* Documents List */}
       {loading ? (
-        <div className="p-8 text-center text-slate-500 text-sm">Carregando documentos...</div>
+        <div className="py-12 text-center text-slate-400">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs">Carregando prontuário...</p>
+        </div>
       ) : filteredDocs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDocs.map((doc) => {
-            const catInfo = categoryLabels[doc.category] || categoryLabels.outro;
+            const cat = categoryLabels[doc.category] || categoryLabels.outro;
             return (
               <div
                 key={doc.id}
                 id={`document-card-${doc.id}`}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all p-5 flex flex-col justify-between"
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100 mt-0.5">
-                        <FileCheck className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-1 ${catInfo.color}`}
-                        >
-                          {catInfo.label}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border ${cat.color}`}
+                    >
+                      {cat.icon}
+                      {cat.label}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {doc.extractedByAi && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-md">
+                          <Sparkles className="w-3 h-3 text-indigo-600" />
+                          IA
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 leading-snug">
-                          {doc.title}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
+                      )}
                       <button
-                        id={`edit-doc-${doc.id}`}
                         onClick={() => handleOpenEdit(doc)}
-                        className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                        title="Editar detalhes do documento"
+                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors"
+                        title="Editar"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        id={`delete-doc-${doc.id}`}
                         onClick={() => handleDelete(doc.id, doc.title)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                        title="Excluir documento"
+                        className="text-slate-400 hover:text-rose-600 p-1 rounded-md transition-colors"
+                        title="Excluir"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Metadata */}
-                  <div className="mt-3.5 space-y-1.5 text-xs text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Data do Documento: {formatDate(doc.date)}</span>
-                      <span> • {doc.fileSize}</span>
-                    </div>
+                  <h3 className="font-bold text-slate-900 text-sm mb-1 leading-snug line-clamp-2">
+                    {doc.title}
+                  </h3>
+
+                  <div className="space-y-1 text-xs text-slate-500 mt-2">
+                    {doc.date && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Data: {new Date(doc.date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    )}
                     {doc.doctor && (
                       <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <User className="w-3.5 h-3.5 text-slate-400" />
                         <span>Profissional: <strong className="text-slate-700">{doc.doctor}</strong></span>
                       </div>
                     )}
-                    <div className="text-[11px] text-slate-400 font-mono truncate">
-                      Arquivo: {doc.fileName}
-                    </div>
                     {doc.notes && (
-                      <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5">
+                      <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5 line-clamp-3">
                         {doc.notes}
                       </p>
                     )}
@@ -419,18 +397,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    Visualizar Documento
-                  </button>
-
-                  <button
-                    id={`download-doc-btn-${doc.id}`}
-                    onClick={() => {
-                      showToast(`Iniciando download simulado de ${doc.fileName}`, 'info');
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-                    title="Baixar arquivo"
-                  >
-                    <Download className="w-4 h-4" />
+                    Visualizar Registro
                   </button>
                 </div>
               </div>
@@ -444,19 +411,28 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             {searchTerm
               ? 'Nenhum documento corresponde ao filtro pesquisado.'
-              : 'Digitalize e anexe receitas, laudos laboratoriais e relatórios médicos em um só lugar seguro.'}
+              : 'Arquive prescrições médicas, laudos e relatórios em prontuário seguro.'}
           </p>
-          <button
-            onClick={handleOpenCreate}
-            className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Anexar primeiro documento
-          </button>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setIsAiModalOpen(true)}
+              className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Escanear Receita (IA)
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Novo Registro Manual
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Document Create / Upload Modal */}
+      {/* Document Create / Edit Modal */}
       {isModalOpen && (
         <div
           id="document-modal-backdrop"
@@ -469,7 +445,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
-                {editingDocId ? 'Editar Documento' : 'Anexar Novo Documento'}
+                {editingDocId ? 'Editar Registro Clínico' : 'Cadastrar Registro no Prontuário'}
               </h2>
               <button
                 onClick={onCloseModal}
@@ -480,67 +456,14 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Drag & Drop simulated area */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Arquivo Digitalizado (PDF ou Imagem)
-                </label>
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleFileDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                    isDragging
-                      ? 'border-blue-500 bg-blue-50'
-                      : fileName
-                      ? 'border-emerald-400 bg-emerald-50/40'
-                      : 'border-slate-300 hover:border-blue-400 bg-slate-50'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleSimulatedFileUpload(e.target.files[0]);
-                      }
-                    }}
-                  />
-
-                  {fileName ? (
-                    <div className="flex items-center justify-center gap-2 text-emerald-800">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                      <div className="text-left">
-                        <div className="text-xs font-bold truncate max-w-xs">{fileName}</div>
-                        <div className="text-[11px] text-emerald-700">Tamanho: {fileSize} (Pronto para salvar)</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <Upload className="w-6 h-6 text-slate-400 mx-auto" />
-                      <p className="text-xs font-semibold text-slate-700">
-                        Arraste e solte o arquivo aqui ou <span className="text-blue-600 underline">clique para selecionar</span>
-                      </p>
-                      <p className="text-[11px] text-slate-400">Suporta PDF, JPEG, PNG de até 15MB</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Título do Documento *
+                  Título do Registro / Documento *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Laudo de Exames Laboratoriais - Agosto 2026"
+                  placeholder="Ex: Laudo de Exames Laboratoriais - Hemograma"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
@@ -579,42 +502,44 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Médico / Especialista Emissor
+                  Médico / Especialista Responsável
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Dra. Helena Martins"
+                  placeholder="Ex: Dr. Roberto Alencar"
                   value={doctor}
                   onChange={(e) => setDoctor(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Vincular a Exame Cadastrado (opcional)
-                </label>
-                <select
-                  value={relatedExamId}
-                  onChange={(e) => setRelatedExamId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                >
-                  <option value="">Nenhum exame vinculado</option>
-                  {exams.map((ex) => (
-                    <option key={ex.id} value={ex.id}>
-                      {ex.name} (Solicitado por {ex.requestingDoctor})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {category === 'resultado_exame' && exams.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Vincular a Exame Cadastrado
+                  </label>
+                  <select
+                    value={relatedExamId}
+                    onChange={(e) => setRelatedExamId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  >
+                    <option value="">Nenhum exame vinculado</option>
+                    {exams.map((ex) => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.name} ({new Date(ex.requestDate + 'T12:00:00').toLocaleDateString('pt-BR')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Resumo dos Resultados e Observações
+                  Anotações, Laudo ou Prescrição Textual
                 </label>
                 <textarea
-                  rows={2}
-                  placeholder="Ex: Todos os marcadores normais. Glicemia 92mg/dL, Colesterol 185..."
+                  rows={4}
+                  placeholder="Descreva o conteúdo do documento, valores de referência ou orientações..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
@@ -625,16 +550,16 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+                  className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-xs disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Salvando...' : editingDocId ? 'Atualizar' : 'Salvar Documento'}
+                  {isSubmitting ? 'Salvando...' : editingDocId ? 'Salvar Alterações' : 'Salvar Registro'}
                 </button>
               </div>
             </form>
@@ -642,88 +567,95 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
       )}
 
-      {/* Document Detail Preview Modal */}
+      {/* Details View Modal */}
       {previewDoc && (
-        <div
-          id="preview-document-modal"
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-        >
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                  <FileCheck className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900">{previewDoc.title}</h2>
-                  <p className="text-xs text-slate-500">{formatDate(previewDoc.date)} • {previewDoc.fileSize}</p>
+                  <h3 className="font-bold text-slate-900 text-sm">Detalhes do Registro Clínico</h3>
+                  <p className="text-[11px] text-slate-500">{selectedPatient?.name}</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 text-sm font-semibold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Simulated Viewer Box */}
-              <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-800 text-center space-y-2">
-                <FileText className="w-12 h-12 text-blue-400 mx-auto" />
-                <h4 className="font-bold text-sm text-white">{previewDoc.fileName}</h4>
-                <p className="text-xs text-slate-400">Documento digitalizado arquivado no prontuário de {selectedPatient?.name}</p>
-                <div className="pt-2">
-                  <span className="inline-block px-3 py-1 bg-slate-800 text-blue-300 text-xs font-mono rounded-md border border-slate-700">
-                    Tipo: {previewDoc.fileType} • {previewDoc.fileSize}
-                  </span>
+            <div className="space-y-3 text-xs text-slate-700">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex justify-between py-1 border-b border-slate-200/60">
+                  <span className="font-semibold text-slate-500">Título:</span>
+                  <span className="font-bold text-slate-900">{previewDoc.title}</span>
                 </div>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs text-slate-700">
                 <div className="flex justify-between py-1 border-b border-slate-200/60">
                   <span className="font-semibold text-slate-500">Categoria:</span>
-                  <span className="font-bold text-slate-800">{categoryLabels[previewDoc.category]?.label}</span>
+                  <span className="font-bold text-slate-800">
+                    {categoryLabels[previewDoc.category]?.label || previewDoc.category}
+                  </span>
                 </div>
+                {previewDoc.date && (
+                  <div className="flex justify-between py-1 border-b border-slate-200/60">
+                    <span className="font-semibold text-slate-500">Data:</span>
+                    <span className="font-bold text-slate-800">
+                      {new Date(previewDoc.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
                 {previewDoc.doctor && (
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="font-semibold text-slate-500">Médico Responsável:</span>
+                    <span className="font-semibold text-slate-500">Profissional / CRM:</span>
                     <span className="font-bold text-slate-800">{previewDoc.doctor}</span>
                   </div>
                 )}
-                {previewDoc.notes && (
-                  <div className="pt-1">
-                    <span className="font-semibold text-slate-500 block mb-1">Anotações e Laudo:</span>
-                    <p className="p-2.5 bg-white rounded-lg border border-slate-200 text-slate-800 italic">
-                      {previewDoc.notes}
-                    </p>
+                {previewDoc.extractedByAi && (
+                  <div className="py-1 flex items-center gap-1.5 text-indigo-700 font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Processado via IA (Zero Storage / Transcrição Concluída)</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    showToast(`Simulando download do arquivo ${previewDoc.fileName}`, 'info');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
-                >
-                  <Download className="w-4 h-4" />
-                  Baixar Arquivo
-                </button>
+              {previewDoc.notes && (
+                <div className="space-y-1">
+                  <span className="font-bold text-slate-700 block">Conteúdo / Orientações Registradas:</span>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto font-mono text-[11px]">
+                    {previewDoc.notes}
+                  </div>
+                </div>
+              )}
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPreviewDoc(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
-                >
-                  Fechar
-                </button>
-              </div>
+            <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Prescription Scanner Modal */}
+      {selectedPatient && (
+        <PrescriptionScannerModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          onSuccess={fetchDocsAndExams}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
       )}
     </div>
   );

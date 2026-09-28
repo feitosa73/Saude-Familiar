@@ -17,6 +17,7 @@ import {
   CreateInvitationResponse,
   FamilyMemberWithAccess,
   MemberPatientAccessItem,
+  ExtractedPrescriptionResponse,
 } from '../types';
 import { authService } from './authService';
 
@@ -262,6 +263,42 @@ export const api = {
     request<{ success: boolean }>(`/medications/${id}`, {
       method: 'DELETE',
     }),
+
+  // AI Prescription Extraction (In-memory, Zero Storage)
+  extractPrescriptionWithAi: async (
+    patientId: string,
+    file: File
+  ): Promise<ExtractedPrescriptionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (currentActiveFamilyId) {
+      headers['x-family-id'] = currentActiveFamilyId;
+    }
+    const token = await authService.getIdToken();
+    if (token && token !== 'null' && token !== 'undefined') {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-prescription`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const isJson = (response.headers.get('content-type') || '').includes('application/json');
+    if (!response.ok) {
+      let errorMsg = 'Falha ao processar receita médica com IA';
+      if (isJson) {
+        const errorData = await response.json().catch(() => ({}));
+        errorMsg = errorData.error || errorMsg;
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    return response.json();
+  },
 
   // Appointments
   getAppointments: (patientId: string) =>

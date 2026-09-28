@@ -13,6 +13,15 @@ import {
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 
+function isPermissionDeniedError(err: any): boolean {
+  return (
+    err?.code === 7 ||
+    err?.code === 'PERMISSION_DENIED' ||
+    err?.message?.includes('PERMISSION_DENIED') ||
+    err?.message?.includes('Missing or insufficient permissions')
+  );
+}
+
 /**
  * FirestoreFamilyRepository
  *
@@ -142,6 +151,10 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         }
       }
     } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        // Se houver erro de permissão IAM no Firestore, interromper imediatamente e propagar
+        throw err;
+      }
       console.warn('[FirestoreFamilyRepository] collectionGroup memberships query error:', err?.message || err);
     }
 
@@ -175,6 +188,9 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         }
       }
     } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        throw err;
+      }
       console.warn('[FirestoreFamilyRepository] owned families query error:', err?.message || err);
     }
 
@@ -207,6 +223,9 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         }
       }
     } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        throw err;
+      }
       console.warn('[FirestoreFamilyRepository] createdBy families query error:', err?.message || err);
     }
 
@@ -538,7 +557,10 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       }
 
       return total;
-    } catch {
+    } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        throw err;
+      }
       return 0;
     }
   }

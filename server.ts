@@ -7,7 +7,7 @@ import { requestLogger } from './server/middlewares/requestLogger';
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
 
   // JSON Body parser
   app.use(express.json());

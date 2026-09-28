@@ -1,11 +1,13 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import multer from 'multer';
 import { IHealthRepository } from '../repositories/IRepository';
 import { FirestoreHealthRepository } from '../repositories/FirestoreHealthRepository';
 import { IFamilyRepository } from '../repositories/IFamilyRepository';
 import { FirestoreFamilyRepository } from '../repositories/FirestoreFamilyRepository';
 import { TimelineEventType, PatientRole, UserMeResponse } from '../types';
 import { ServerAuthorizationService } from '../services/authorizationService';
+import { prescriptionAiService } from '../services/prescriptionAiService';
 import { requireAuth, AuthenticatedRequest } from '../middlewares/requireAuth';
 import {
   requireActiveMembership,
@@ -19,6 +21,14 @@ export function createApiRouter(
 ): Router {
   const router = Router();
   const authzService = new ServerAuthorizationService(repository);
+
+  // In-memory Multer for transitory AI file processing (Zero Storage / In-memory only)
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+  });
 
   // 1. Basic Token & Identity verification
   router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
@@ -1443,6 +1453,54 @@ export function createApiRouter(
     }
   );
 
+  // 7.1 AI Prescription Extraction (In-memory, Zero Storage)
+  router.post(
+    '/patients/:patientId/ai/extract-prescription',
+    requireAuth,
+    requireActiveMembership,
+    upload.single('file'),
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
+        if (!canCreate && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Visualizadores não possuem permissão para extrair receitas com IA',
+          });
+        }
+
+        if (!req.file || !req.file.buffer) {
+          return res.status(400).json({ error: 'Nenhum arquivo enviado para processamento' });
+        }
+
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (!allowedMimes.includes(req.file.mimetype)) {
+          return res.status(400).json({
+            error: 'Formato inválido. Envie um arquivo PDF ou imagem (JPEG, PNG, WEBP).',
+          });
+        }
+
+        const result = await prescriptionAiService.extractFromBuffer(
+          req.file.buffer,
+          req.file.mimetype
+        );
+
+        // Descarte explícito do buffer da memória imediatamente após uso (Zero Storage)
+        (req.file as any).buffer = null;
+
+        res.json(result);
+      } catch (error: any) {
+        console.error('[API] Erro ao extrair receita médica via Gemini IA:', error);
+        res.status(500).json({
+          error: error.message || 'Falha ao processar receita médica com Inteligência Artificial.',
+        });
+      }
+    }
+  );
+
   // 8. Appointments (Protected)
   router.get(
     '/patients/:patientId/appointments',
@@ -1731,6 +1789,7 @@ export function createApiRouter(
           doctor,
           notes,
           relatedExamId,
+          extractedByAi,
         } = req.body;
         if (!title || !category) {
           return res.status(400).json({ error: 'Título e categoria são obrigatórios' });
@@ -1740,14 +1799,15 @@ export function createApiRouter(
             patientId,
             title,
             category,
-            fileUrl: fileUrl || '/mock-files/documento-anexado.pdf',
-            fileName: fileName || `${title.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-            fileType: fileType || 'application/pdf',
-            fileSize: fileSize || '1.2 MB',
+            fileUrl: fileUrl || '',
+            fileName: fileName || '',
+            fileType: fileType || '',
+            fileSize: fileSize || '',
             date: date || new Date().toISOString().split('T')[0],
             doctor,
             notes,
             relatedExamId,
+            extractedByAi: Boolean(extractedByAi),
           },
           familyId
         );
