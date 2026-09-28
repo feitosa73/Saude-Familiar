@@ -250,18 +250,18 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
               id="ai-prescription-scan-btn"
               type="button"
               onClick={() => setIsAiModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-all"
+              className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
             >
               <Sparkles className="w-4 h-4" />
-              Escanear Receita (IA)
+              <span>Ler Receita com IA (Foto / PDF)</span>
             </button>
             <button
               id="add-medication-main-btn"
               onClick={handleOpenCreate}
-              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-colors active:scale-[0.98]"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              Cadastrar Manualmente
+              <span>Cadastrar Manualmente</span>
             </button>
           </div>
         ) : (
@@ -471,13 +471,26 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
               : 'Cadastre os medicamentos receitados para manter o cronograma e alertas organizados.'}
           </p>
           {permissions?.canCreateRecord && (
-            <button
-              onClick={handleOpenCreate}
-              className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Cadastrar primeiro medicamento
-            </button>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                id="empty-ai-scan-med-btn"
+                onClick={() => setIsAiModalOpen(true)}
+                className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-[0.98]"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Ler Receita com IA (Foto ou PDF)</span>
+              </button>
+              <button
+                type="button"
+                id="empty-manual-add-med-btn"
+                onClick={handleOpenCreate}
+                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4 text-slate-500" />
+                <span>Cadastrar Manualmente</span>
+              </button>
+            </div>
           )}
         </div>
       )}

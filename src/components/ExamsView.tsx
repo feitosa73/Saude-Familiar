@@ -376,7 +376,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 py-1 transition-colors"
                     >
                       <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                      Anexar arquivo/laudo do exame
+                      Vincular laudo / anotação clínica
                     </button>
                   )}
 

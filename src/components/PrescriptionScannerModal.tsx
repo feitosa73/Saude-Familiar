@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   UserCheck,
   FileSpreadsheet,
+  Camera,
 } from 'lucide-react';
 import {
   Patient,
@@ -53,6 +54,7 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
   const [archiveInDocuments, setArchiveInDocuments] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -303,13 +305,52 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
                 </div>
               </div>
 
+              {/* Hidden file inputs */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+
+              {/* Action buttons to trigger camera or file picker */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  id="btn-scanner-take-photo"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 text-blue-800 font-bold text-xs sm:text-sm transition-all active:scale-[0.98] shadow-2xs"
+                >
+                  <Camera className="w-4 h-4 text-blue-600" />
+                  <span>Tirar Foto com a Câmera</span>
+                </button>
+                <button
+                  type="button"
+                  id="btn-scanner-choose-file"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all active:scale-[0.98] shadow-2xs"
+                >
+                  <UploadCloud className="w-4 h-4 text-slate-500" />
+                  <span>Escolher Arquivo (PDF ou Imagem)</span>
+                </button>
+              </div>
+
               {/* Dropzone */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                className={`border-2 border-dashed rounded-2xl p-7 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
                   isDragging
                     ? 'border-blue-500 bg-blue-50/50'
                     : selectedFile
@@ -317,14 +358,6 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
                     : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50/60'
                 }`}
               >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  className="hidden"
-                />
-
                 {selectedFile ? (
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
@@ -342,15 +375,15 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
-                      <UploadCloud className="w-6 h-6" />
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shadow-2xs">
+                      <UploadCloud className="w-5 h-5" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-slate-800">
-                        Arraste a foto ou PDF da receita médica aqui
+                    <div className="space-y-0.5">
+                      <p className="text-xs sm:text-sm font-bold text-slate-800">
+                        Ou arraste a foto / PDF da receita médica para cá
                       </p>
-                      <p className="text-xs text-slate-500">
-                        Ou clique para selecionar no seu dispositivo (PDF, JPG, PNG ou WEBP até 10 MB)
+                      <p className="text-[11px] text-slate-400">
+                        Formatos suportados: PDF, JPG, PNG e WEBP (até 10 MB)
                       </p>
                     </div>
                   </>

@@ -420,5 +420,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ token }),
     }),
+
+  // Wipe All Data (Permanent delete)
+  wipeAllData: () =>
+    request<{ success: boolean; message: string }>('/user/wipe-all-data', {
+      method: 'POST',
+    }),
 };
 

@@ -6,6 +6,7 @@ import {
   CalendarCheck2,
   Activity,
   FileText,
+  Clock,
   History,
 } from 'lucide-react';
 
@@ -22,7 +23,8 @@ const TABS: TabItem[] = [
   { id: 'consultas', label: 'Consultas', shortLabel: 'Consultas', icon: CalendarCheck2 },
   { id: 'exames', label: 'Exames', shortLabel: 'Exames', icon: Activity },
   { id: 'documentos', label: 'Documentos', shortLabel: 'Docs', icon: FileText },
-  { id: 'linha_tempo', label: 'Linha do Tempo', shortLabel: 'Histórico', icon: History },
+  { id: 'linha_tempo', label: 'Linha do Tempo', shortLabel: 'Linha', icon: Clock },
+  { id: 'historico', label: 'Histórico', shortLabel: 'Histórico', icon: History },
 ];
 
 export const TabNavigation: React.FC = () => {
@@ -68,7 +70,7 @@ export const TabNavigation: React.FC = () => {
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-1 py-1 shadow-lg"
         aria-label="Navegação Mobile"
       >
-        <div className="grid grid-cols-6 gap-0.5 max-w-lg mx-auto">
+        <div className="grid grid-cols-7 gap-0.5 max-w-xl mx-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

@@ -919,4 +919,42 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
     return true;
   }
+
+  // =========================================================================
+  // DATA MANAGEMENT & CLEANUP
+  // =========================================================================
+
+  async wipeFamilyHealthData(familyId: string): Promise<void> {
+    if (!familyId) return;
+
+    // 1. Fetch all patients of this family
+    const patientsSnap = await this.db
+      .collection('families')
+      .doc(familyId)
+      .collection('patients')
+      .get();
+
+    for (const patDoc of patientsSnap.docs) {
+      const patRef = patDoc.ref;
+      const subcollections = [
+        'medications',
+        'appointments',
+        'exams',
+        'documents',
+        'timeline',
+        'accesses',
+      ];
+
+      for (const sub of subcollections) {
+        const subSnap = await patRef.collection(sub).get();
+        if (!subSnap.empty) {
+          const batch = this.db.batch();
+          subSnap.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      }
+
+      await patRef.delete();
+    }
+  }
 }

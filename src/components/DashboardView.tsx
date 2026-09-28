@@ -353,7 +353,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }
           }}
           className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden min-h-[64px]"
-          aria-label={permissions?.canCreateRecord ? 'Anexar novo documento' : 'Ver documentos anexados'}
+          aria-label={permissions?.canCreateRecord ? 'Ler receita ou documento com IA' : 'Ver prontuário'}
         >
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
@@ -361,10 +361,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div>
               <div className="text-xs font-semibold text-slate-800 leading-tight">
-                {permissions?.canCreateRecord ? '+ Documento' : 'Documentos'}
+                {permissions?.canCreateRecord ? 'Ler com IA' : 'Prontuário'}
               </div>
               <div className="text-[11px] text-slate-400">
-                {permissions?.canCreateRecord ? 'Anexar laudo/receita' : 'Ver arquivos'}
+                {permissions?.canCreateRecord ? 'Receita / Laudo (OCR)' : 'Ver prontuário'}
               </div>
             </div>
           </div>

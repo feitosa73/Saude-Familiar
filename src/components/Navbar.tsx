@@ -7,6 +7,7 @@ import { InviteMemberModal } from './InviteMemberModal';
 import { FamilyMembersManagerModal } from './FamilyMembersManagerModal';
 import { ExportDataModal } from './ExportDataModal';
 import { AccountSecurityModal } from './AccountSecurityModal';
+import { DeleteAllDataModal } from './DeleteAllDataModal';
 import {
   HeartPulse,
   Users,
@@ -24,6 +25,7 @@ import {
   UserCheck,
   FileSpreadsheet,
   KeyRound,
+  Trash2,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -57,6 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAccountSecurityModalOpen, setIsAccountSecurityModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -523,6 +526,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                         <span>Exportar dados</span>
                       </button>
+
+                      <button
+                        type="button"
+                        id="btn-user-menu-delete-all-data"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-600" />
+                        <span>Apagar todos os dados</span>
+                      </button>
                     </div>
 
                     {/* Logout Option */}
@@ -586,6 +602,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
       <ExportDataModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+
+      {/* Delete All Data Modal */}
+      <DeleteAllDataModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onDataWiped={async () => {
+          await refreshUserMe();
+          await refreshPatients();
+        }}
       />
     </header>
   );

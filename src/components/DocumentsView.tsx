@@ -226,30 +226,31 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            id="doc-scan-ai-header-btn"
             onClick={() => setIsAiModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4" />
-            Escanear Receita (IA)
+            <span>Ler com IA (Foto / PDF)</span>
           </button>
           <button
             id="add-document-main-btn"
             onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-colors active:scale-[0.98]"
           >
-            <Plus className="w-4 h-4" />
-            Novo Registro Clínico
+            <Plus className="w-4 h-4 text-slate-500" />
+            <span>Adicionar Anotação Textual</span>
           </button>
         </div>
       </div>
 
       {/* Zero Storage Architecture Note */}
-      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-3 text-xs text-slate-700">
-        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+      <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3 text-xs text-blue-950">
+        <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-slate-900">Privacidade & Prontuário Estruturado (Zero Storage): </span>
-          <span>
-            Os laudos e receitas são transcritos e catalogados com dados clínicos estruturados no prontuário. Documentos via IA são processados estritamente em memória volátil, sem persistência binária externa.
+          <span className="font-bold text-blue-900">Privacidade Absoluta & Zero Storage de Arquivos: </span>
+          <span className="text-blue-800 leading-relaxed">
+            O aplicativo <strong>não armazena nem hospeda fotos ou arquivos PDF</strong> em nuvem. A funcionalidade de envio é utilizada exclusivamente para a IA ler o conteúdo em memória volátil (RAM), sugerir os dados nas tabelas do app e descartar a imagem imediatamente.
           </span>
         </div>
       </div>
@@ -407,26 +408,27 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
       ) : (
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
           <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800">Nenhum documento arquivado</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-slate-800">Nenhum prontuário transcrito ainda</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
             {searchTerm
-              ? 'Nenhum documento corresponde ao filtro pesquisado.'
-              : 'Arquive prescrições médicas, laudos e relatórios em prontuário seguro.'}
+              ? 'Nenhum registro corresponde ao filtro pesquisado.'
+              : 'O aplicativo não hospeda arquivos para manter custo zero e garantir sua privacidade. Envie fotos ou PDFs para que a IA leia e transcreva as informações diretamente para as tabelas do sistema.'}
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <button
+              id="empty-doc-scan-ai-btn"
               onClick={() => setIsAiModalOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700"
+              className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-[0.98]"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Escanear Receita (IA)
+              <Sparkles className="w-4 h-4" />
+              <span>Ler Receita / Documento com IA (Foto ou PDF)</span>
             </button>
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
             >
-              <Plus className="w-3.5 h-3.5" />
-              Novo Registro Manual
+              <Plus className="w-4 h-4 text-slate-500" />
+              <span>Nova Anotação Textual</span>
             </button>
           </div>
         </div>

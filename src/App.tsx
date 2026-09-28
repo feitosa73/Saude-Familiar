@@ -14,6 +14,7 @@ import { AppointmentsView } from './components/AppointmentsView';
 import { ExamsView } from './components/ExamsView';
 import { DocumentsView } from './components/DocumentsView';
 import { TimelineView } from './components/TimelineView';
+import { AppHistoryView } from './components/AppHistoryView';
 import { PatientProfileModal } from './components/PatientProfileModal';
 import { NewPatientModal } from './components/NewPatientModal';
 import { NotificationToast } from './components/NotificationToast';
@@ -236,6 +237,8 @@ const MainContent: React.FC = () => {
                   onCloseModal={() => setIsTimelineModalOpen(false)}
                 />
               )}
+
+              {activeTab === 'historico' && <AppHistoryView />}
             </motion.div>
           </AnimatePresence>
         )}

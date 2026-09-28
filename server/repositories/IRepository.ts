@@ -60,4 +60,7 @@ export interface IHealthRepository {
   getTimelineEvents(patientId: string, filter?: { category?: string; type?: TimelineEventType; startDate?: string; endDate?: string }, familyId?: string): Promise<TimelineEvent[]>;
   createTimelineEvent(data: Omit<TimelineEvent, 'id'>, familyId?: string): Promise<TimelineEvent>;
   deleteTimelineEvent(id: string, familyId?: string, patientId?: string): Promise<boolean>;
+
+  // Data Management & Wipe
+  wipeFamilyHealthData(familyId: string): Promise<void>;
 }

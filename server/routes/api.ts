@@ -116,7 +116,6 @@ export function createApiRouter(
 
       res.json(response);
     } catch (error: any) {
-      console.error('[API] Error fetching /user/me from Firestore:', error?.code || error?.message || error);
       const isPermissionDenied =
         error?.code === 7 ||
         error?.code === 'PERMISSION_DENIED' ||
@@ -124,12 +123,14 @@ export function createApiRouter(
         error?.message?.includes('Missing or insufficient permissions');
 
       if (isPermissionDenied) {
+        console.warn('[API] /user/me: Firestore indisponível ou permissão IAM insuficiente (código 7 / PERMISSION_DENIED). Retornando 503.');
         return res.status(503).json({
           error: 'Não foi possível acessar os dados da família neste momento. Tente novamente.',
           code: 'FIRESTORE_PERMISSION_DENIED',
         });
       }
 
+      console.error('[API] Error fetching /user/me from Firestore:', error?.code || error?.message || error);
       res.status(500).json({
         error: 'Não foi possível acessar os dados da família neste momento. Tente novamente.',
         code: 'FIRESTORE_ERROR',
@@ -162,7 +163,6 @@ export function createApiRouter(
         membership,
       });
     } catch (error: any) {
-      console.error('[API] Erro ao criar família:', error);
       const isPermissionDenied =
         error?.code === 7 ||
         error?.code === 'PERMISSION_DENIED' ||
@@ -170,6 +170,7 @@ export function createApiRouter(
         error?.message?.includes('Missing or insufficient permissions');
 
       if (isPermissionDenied) {
+        console.warn('[API] /families: Firestore indisponível ou permissão IAM insuficiente (código 7 / PERMISSION_DENIED). Retornando 503.');
         return res.status(503).json({
           error:
             'Acesso ao Firestore não autorizado ou permissão IAM insuficiente no Google Cloud. Garanta que a Service Account possua o papel Cloud Datastore User.',
@@ -177,6 +178,7 @@ export function createApiRouter(
         });
       }
 
+      console.error('[API] Erro ao criar família:', error);
       res.status(500).json({
         error: error.message || 'Erro ao criar família',
         code: 'INTERNAL_ERROR',
@@ -1265,6 +1267,33 @@ export function createApiRouter(
       } catch (error) {
         console.error('Error deleting patient:', error);
         res.status(500).json({ error: 'Erro ao excluir paciente' });
+      }
+    }
+  );
+
+  // 5.1 Wipe All Family Health Data (Irreversible administrative action, requires Family Owner)
+  router.post(
+    '/user/wipe-all-data',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        console.log(`[API] Wiping all health data for family=${familyId} by owner=${req.user?.uid}`);
+
+        await repository.wipeFamilyHealthData(familyId);
+
+        res.json({
+          success: true,
+          message: 'Todos os dados de pacientes, medicamentos, consultas, exames e prontuários foram excluídos permanentemente.',
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao apagar todos os dados da família:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao apagar dados do sistema.',
+          code: 'WIPE_DATA_FAILED',
+        });
       }
     }
   );
