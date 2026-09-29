@@ -10,7 +10,7 @@ WORKDIR /app
 
 # Instala dependências
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci || npm install
 
 # Copia o código-fonte da aplicação
 COPY . .
@@ -43,7 +43,7 @@ ENV PORT=8080
 
 # Instala apenas dependências de produção necessárias
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN (npm ci --omit=dev || npm install --omit=dev) && npm cache clean --force
 
 # Copia os artefatos compilados do estágio anterior
 COPY --from=builder /app/dist ./dist
