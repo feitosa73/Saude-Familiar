@@ -16,8 +16,10 @@ import {
   Paperclip,
   ArrowUpRight,
   Sparkles,
+  Share2,
 } from 'lucide-react';
 import { ExamReportScannerModal } from './ExamReportScannerModal';
+import { buildExamShareText, shareContentNative } from '../utils/shareUtils';
 
 interface ExamsViewProps {
   isModalOpen: boolean;
@@ -169,6 +171,40 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       });
     } catch {
       return isoString;
+    }
+  };
+
+  const handleShareExam = async (exam: Exam) => {
+    if (!selectedPatient) return;
+    const statusLabels: Record<ExamStatus, string> = {
+      solicitado: 'Solicitado pelo médico',
+      agendado: 'Agendado',
+      realizado: 'Realizado (Aguardando laudo)',
+      resultado_disponivel: 'Resultado / Laudo Disponível',
+    };
+
+    const dateToUse = exam.executionDate
+      ? `${formatDate(exam.executionDate)} (Agendado/Realizado)`
+      : formatDate(exam.requestDate) || 'A definir';
+
+    const { title, text } = buildExamShareText({
+      patientName: selectedPatient.name,
+      examName: exam.name,
+      requestingDoctor: exam.requestingDoctor,
+      dateStr: dateToUse,
+      statusLabel: statusLabels[exam.status] || exam.status,
+      notes: exam.notes,
+    });
+
+    const res = await shareContentNative(title, text);
+    if (res.success) {
+      if (res.method === 'clipboard') {
+        showToast('Texto copiado para a área de transferência! Cole no WhatsApp ou envie à família.', 'success');
+      } else {
+        showToast('Compartilhamento aberto com sucesso!', 'info');
+      }
+    } else if (!res.cancelled && res.error) {
+      showToast(res.error, 'error');
     }
   };
 
@@ -326,6 +362,14 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                     <div className="flex items-center gap-1">
                       <button
+                        id={`share-exam-quick-${exam.id}`}
+                        onClick={() => handleShareExam(exam)}
+                        className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        title="Avisar Família / Compartilhar Exame"
+                      >
+                        <Share2 className="w-4 h-4 text-blue-600" />
+                      </button>
+                      <button
                         id={`edit-exam-${exam.id}`}
                         onClick={() => handleOpenEdit(exam)}
                         className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
@@ -365,38 +409,46 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Linked Document Footer */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  {linkedDoc ? (
-                    <button
-                      id={`view-linked-doc-${exam.id}`}
-                      onClick={() => setActiveTab('documentos')}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 transition-colors truncate"
-                    >
-                      <FileCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span className="truncate">Laudo: {linkedDoc.fileName}</span>
-                      <ArrowUpRight className="w-3 h-3 shrink-0" />
-                    </button>
-                  ) : (
-                    <button
-                      id={`attach-doc-exam-${exam.id}`}
-                      onClick={() => {
-                        if (onOpenDocumentUploadWithExam) {
-                          onOpenDocumentUploadWithExam(exam.id, exam.name);
-                        } else {
-                          setActiveTab('documentos');
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 py-1 transition-colors"
-                    >
-                      <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                      Vincular laudo / anotação clínica
-                    </button>
-                  )}
+                {/* Linked Document Footer & Share Action */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    {linkedDoc ? (
+                      <button
+                        id={`view-linked-doc-${exam.id}`}
+                        onClick={() => setActiveTab('documentos')}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 transition-colors truncate"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate">Laudo: {linkedDoc.fileName}</span>
+                        <ArrowUpRight className="w-3 h-3 shrink-0" />
+                      </button>
+                    ) : (
+                      <button
+                        id={`attach-doc-exam-${exam.id}`}
+                        onClick={() => {
+                          if (onOpenDocumentUploadWithExam) {
+                            onOpenDocumentUploadWithExam(exam.id, exam.name);
+                          } else {
+                            setActiveTab('documentos');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 py-1 transition-colors"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                        Vincular laudo / anotação clínica
+                      </button>
+                    )}
+                  </div>
 
-                  <span className="text-[11px] text-slate-400 shrink-0">
-                    ID: {exam.id}
-                  </span>
+                  <button
+                    id={`share-exam-btn-${exam.id}`}
+                    onClick={() => handleShareExam(exam)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
+                    title="Avisar família sobre este exame (WhatsApp / SMS)"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Avisar Família</span>
+                  </button>
                 </div>
               </div>
             );

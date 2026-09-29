@@ -19,8 +19,10 @@ import {
   MessageSquarePlus,
   BookOpen,
   Sparkles,
+  Share2,
 } from 'lucide-react';
 import { ScheduleScannerModal } from './ScheduleScannerModal';
+import { buildAppointmentShareText, shareContentNative } from '../utils/shareUtils';
 
 interface AppointmentsViewProps {
   isModalOpen: boolean;
@@ -216,6 +218,32 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       };
     } catch {
       return { dateStr: isoString, timeStr: '' };
+    }
+  };
+
+  const handleShareAppointment = async (apt: Appointment) => {
+    if (!selectedPatient) return;
+    const { dateStr, timeStr } = formatDateTime(apt.dateTime);
+    const { title, text } = buildAppointmentShareText({
+      patientName: selectedPatient.name,
+      specialty: apt.specialty,
+      professional: apt.professional,
+      dateStr,
+      timeStr,
+      location: apt.location,
+      reason: apt.reason,
+      notes: apt.notes,
+    });
+
+    const res = await shareContentNative(title, text);
+    if (res.success) {
+      if (res.method === 'clipboard') {
+        showToast('Texto copiado para a área de transferência! Cole no WhatsApp ou envie à família.', 'success');
+      } else {
+        showToast('Compartilhamento aberto com sucesso!', 'info');
+      }
+    } else if (!res.cancelled && res.error) {
+      showToast(res.error, 'error');
     }
   };
 
@@ -425,6 +453,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                   <div className="flex lg:flex-col items-center lg:items-end justify-between lg:justify-start gap-2 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                     <div className="flex items-center gap-1">
                       <button
+                        id={`share-apt-quick-${apt.id}`}
+                        onClick={() => handleShareAppointment(apt)}
+                        className="p-2 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        title="Avisar Família / Compartilhar Consulta"
+                      >
+                        <Share2 className="w-4 h-4 text-blue-600" />
+                      </button>
+                      <button
                         id={`edit-apt-${apt.id}`}
                         onClick={() => handleOpenEdit(apt)}
                         className="p-2 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
@@ -442,25 +478,37 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       </button>
                     </div>
 
-                    {isAgendada ? (
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
                       <button
-                        id={`mark-done-apt-${apt.id}`}
-                        onClick={() => handleOpenPostConsultation(apt)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition-colors"
+                        id={`share-apt-${apt.id}`}
+                        onClick={() => handleShareAppointment(apt)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
+                        title="Avisar família sobre a consulta (WhatsApp / SMS)"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Registrar Pós-Consulta
+                        <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                        Avisar Família
                       </button>
-                    ) : (
-                      <button
-                        id={`edit-post-apt-${apt.id}`}
-                        onClick={() => handleOpenPostConsultation(apt)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors border border-slate-200"
-                      >
-                        <MessageSquarePlus className="w-3.5 h-3.5 text-slate-500" />
-                        Editar Orientações
-                      </button>
-                    )}
+
+                      {isAgendada ? (
+                        <button
+                          id={`mark-done-apt-${apt.id}`}
+                          onClick={() => handleOpenPostConsultation(apt)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition-colors"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Registrar Pós-Consulta
+                        </button>
+                      ) : (
+                        <button
+                          id={`edit-post-apt-${apt.id}`}
+                          onClick={() => handleOpenPostConsultation(apt)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors border border-slate-200"
+                        >
+                          <MessageSquarePlus className="w-3.5 h-3.5 text-slate-500" />
+                          Editar Orientações
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
