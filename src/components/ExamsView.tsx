@@ -95,7 +95,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setName(exam.name);
     setRequestDate(exam.requestDate || '');
     setRequestingDoctor(exam.requestingDoctor || '');
-    setExecutionDate(exam.executionDate || '');
+    let execDate = exam.executionDate || '';
+    if (execDate.length > 16 && execDate.includes('T')) {
+      execDate = execDate.slice(0, 16);
+    }
+    setExecutionDate(execDate);
     setStatus(exam.status);
     setNotes(exam.notes || '');
     setDocumentId(exam.documentId || '');
@@ -174,6 +178,28 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     }
   };
 
+  const formatExecutionDateTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      const dateStr = date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      if (isoString.includes('T')) {
+        const timeStr = date.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        return `${dateStr} às ${timeStr}`;
+      }
+      return dateStr;
+    } catch {
+      return isoString;
+    }
+  };
+
   const handleShareExam = async (exam: Exam) => {
     if (!selectedPatient) return;
     const statusLabels: Record<ExamStatus, string> = {
@@ -184,7 +210,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     };
 
     const dateToUse = exam.executionDate
-      ? `${formatDate(exam.executionDate)} (Agendado/Realizado)`
+      ? `${formatExecutionDateTime(exam.executionDate)} (Agendado/Realizado)`
       : formatDate(exam.requestDate) || 'A definir';
 
     const { title, text } = buildExamShareText({
@@ -394,11 +420,16 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span>Solicitado por: <strong className="text-slate-700">{exam.requestingDoctor}</strong></span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span>Data do Pedido: {formatDate(exam.requestDate)}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Data do Pedido: {formatDate(exam.requestDate)}</span>
+                      </div>
                       {exam.executionDate && (
-                        <span> • Execução: {formatDate(exam.executionDate)}</span>
+                        <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                          <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                          <span>Execução: {formatExecutionDateTime(exam.executionDate)}</span>
+                        </div>
                       )}
                     </div>
                     {exam.notes && (
@@ -556,10 +587,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data da Coleta / Realização
+                    Data e Horário da Realização
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={executionDate}
                     onChange={(e) => setExecutionDate(e.target.value)}
                     className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"

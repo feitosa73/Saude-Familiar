@@ -134,7 +134,23 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
       setPatientIdentified(data.patientNameIdentified || '');
       setConfidenceWarning(data.confidenceWarning || null);
       setGeneralNotes(data.generalNotes || '');
-      setSchedules(data.schedules || []);
+
+      const normalizedSchedules = (data.schedules || []).map((item) => {
+        let dt = item.dateTime ? item.dateTime.trim() : '';
+        if (dt.includes(' ')) {
+          dt = dt.replace(' ', 'T');
+        }
+        if (dt.length === 10) {
+          dt = `${dt}T08:00`;
+        } else if (dt.length > 16 && dt.includes('T')) {
+          dt = dt.slice(0, 16);
+        }
+        return {
+          ...item,
+          dateTime: dt,
+        };
+      });
+      setSchedules(normalizedSchedules);
 
       setStep('review');
       showToast('Agendamentos identificados com sucesso! Revise os detalhes abaixo.', 'info');
@@ -235,7 +251,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
           await api.createExam(patient.id, {
             name: item.title.trim(),
             requestDate: today,
-            executionDate: itemDateOnly,
+            executionDate: item.dateTime ? item.dateTime.trim() : itemDateOnly,
             requestingDoctor: item.professional?.trim() || 'Médico Assistente',
             status: 'agendado',
             notes: examNotes || undefined,
@@ -571,14 +587,39 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
 
                           {/* Date and Time */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                              Data e Hora *
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                              Data do Agendamento *
                             </label>
                             <input
-                              type="datetime-local"
-                              value={item.dateTime}
-                              onChange={(e) => handleScheduleChange(idx, 'dateTime', e.target.value)}
+                              type="date"
+                              required
+                              value={item.dateTime ? item.dateTime.split('T')[0] : ''}
+                              onChange={(e) => {
+                                const newDate = e.target.value;
+                                const currentTime = item.dateTime && item.dateTime.includes('T')
+                                  ? item.dateTime.split('T')[1].slice(0, 5)
+                                  : '08:00';
+                                handleScheduleChange(idx, 'dateTime', newDate ? `${newDate}T${currentTime}` : '');
+                              }}
                               className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-semibold text-slate-800"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                              <span>Horário *</span>
+                              <span className="text-[10px] text-purple-600 font-medium">Hora exata</span>
+                            </label>
+                            <input
+                              type="time"
+                              required
+                              value={item.dateTime && item.dateTime.includes('T') ? item.dateTime.split('T')[1].slice(0, 5) : '08:00'}
+                              onChange={(e) => {
+                                const newTime = e.target.value || '08:00';
+                                const currentDate = item.dateTime ? item.dateTime.split('T')[0] : new Date().toISOString().split('T')[0];
+                                handleScheduleChange(idx, 'dateTime', `${currentDate}T${newTime}`);
+                              }}
+                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-purple-900"
                             />
                           </div>
 
