@@ -295,17 +295,17 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[94vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[94vh] sm:max-w-4xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-emerald-50 via-teal-50/40 to-slate-50">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-emerald-50 via-teal-50/40 to-slate-50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs shrink-0">
               <Activity className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                Leitura de Laudo de Exame com IA
+                Leitura de Laudo com IA
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
                   Zero Storage
                 </span>
@@ -318,14 +318,14 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Area */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 overscroll-contain">
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-6">

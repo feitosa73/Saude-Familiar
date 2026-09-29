@@ -280,13 +280,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl shrink-0 overflow-x-auto">
           <button
             id="filter-apt-all"
             onClick={() => setFilterStatus('all')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] whitespace-nowrap transition-all ${
               filterStatus === 'all'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -295,9 +295,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <button
             id="filter-apt-agendada"
             onClick={() => setFilterStatus('agendada')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] whitespace-nowrap transition-all ${
               filterStatus === 'agendada'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -306,9 +306,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <button
             id="filter-apt-realizada"
             onClick={() => setFilterStatus('realizada')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] whitespace-nowrap transition-all ${
               filterStatus === 'realizada'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -317,9 +317,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <button
             id="filter-apt-cancelada"
             onClick={() => setFilterStatus('cancelada')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] whitespace-nowrap transition-all ${
               filterStatus === 'cancelada'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >

@@ -70,35 +70,35 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-linear-to-r from-slate-50 to-blue-50/30">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-slate-50 to-blue-50/30 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 via-purple-500 to-blue-600 flex items-center justify-center text-white shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 via-purple-500 to-blue-600 flex items-center justify-center text-white shadow-xs shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 O que você deseja ler com a IA?
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 {patientName ? `Paciente: ${patientName} • ` : ''}
-                Selecione o tipo de documento para garantir a melhor leitura
+                Selecione o tipo de documento
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content / Options */}
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 overscroll-contain pb-28 sm:pb-6">
           <div className="grid grid-cols-1 gap-3.5">
             {options.map((opt) => (
               <div

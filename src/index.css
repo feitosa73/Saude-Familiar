@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #090d16;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overscroll-behavior-y: contain;
+  }
+
+  /* Refined High Contrast & Typography Scale for Mobile Devices */
+  @media (max-width: 768px) {
+    body {
+      font-size: 16px;
+      line-height: 1.55;
+      color: #020617;
+    }
+
+    /* Boost outdoor text contrast for secondary/muted labels */
+    .text-slate-500,
+    .text-slate-400 {
+      color: #334155;
+    }
+
+    /* Minimum 44px - 48px touch targets for clickable elements */
+    button,
+    [role="button"],
+    a.touch-target,
+    select,
+    input[type="text"],
+    input[type="date"],
+    input[type="datetime-local"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="search"] {
+      min-height: 48px;
+    }
+
+    /* Inputs comfortable padding and font size preventing iOS auto-zoom */
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Safe Area Inset Classes */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+/* Native App Smooth Transitions & Scroll Control */
+@media (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}

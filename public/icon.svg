@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f0f9ff" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#blueGrad)" />
+
+  <!-- Shield Base for Security & Healthcare -->
+  <g filter="url(#shadow)">
+    <!-- Heart & Medical Cross Icon in Center Safe Zone -->
+    <path
+      d="M256 100 C 275 80, 310 70, 345 78 C 395 89, 430 135, 428 185 C 426 230, 388 280, 256 380 C 124 280, 86 230, 84 185 C 82 135, 117 89, 167 78 C 202 70, 237 80, 256 100 Z"
+      fill="#ffffff"
+    />
+    <!-- Vibrant Emerald Healthcare Cross inside Heart -->
+    <rect x="232" y="160" width="48" height="120" rx="14" fill="#059669" />
+    <rect x="196" y="196" width="120" height="48" rx="14" fill="#059669" />
+    <!-- Pulse Line -->
+    <path
+      d="M170 330 L 220 330 L 235 295 L 256 355 L 275 315 L 290 330 L 342 330"
+      stroke="#2563eb"
+      stroke-width="12"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+  </g>
+</svg>

@@ -8,6 +8,7 @@ import { FamilyMembersManagerModal } from './FamilyMembersManagerModal';
 import { ExportDataModal } from './ExportDataModal';
 import { AccountSecurityModal } from './AccountSecurityModal';
 import { DeleteAllDataModal } from './DeleteAllDataModal';
+import { PWAInstallButton } from './PWAInstallButton';
 import {
   HeartPulse,
   Users,
@@ -193,13 +194,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
 
           {/* Center / Right: Patient Selector and User Profile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Owner Familiares e Acessos Button */}
+            {/* PWA Install Button */}
+            <PWAInstallButton compact />
+
+            {/* Owner Familiares e Acessos Button (Desktop/Tablet) */}
             {isOwner && (
               <button
                 type="button"
                 id="btn-open-family-members-nav"
                 onClick={() => setIsMembersModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-xs transition"
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-xs transition min-h-[44px]"
                 title="Gestão de familiares ativos e permissões por paciente"
               >
                 <Users className="w-4 h-4 text-blue-600" />
@@ -207,13 +211,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
               </button>
             )}
 
-            {/* Owner Invite Member Button */}
+            {/* Owner Invite Member Button (Desktop/Tablet) */}
             {isOwner && (
               <button
                 type="button"
                 id="btn-open-invite-modal-nav"
                 onClick={() => setIsInviteModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 shadow-xs transition"
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 shadow-xs transition min-h-[44px]"
                 title="Convidar familiar ou cuidador para acessar um paciente"
               >
                 <Send className="w-3.5 h-3.5" />
@@ -221,13 +225,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
               </button>
             )}
 
-            {/* Owner Access Requests Manager Button */}
+            {/* Owner Access Requests Manager Button (Desktop/Tablet) */}
             {isOwner && (
               <button
                 type="button"
                 id="btn-open-access-requests"
                 onClick={() => setIsRequestsModalOpen(true)}
-                className={`relative flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold border transition ${
+                className={`hidden md:flex relative items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition min-h-[44px] ${
                   pendingRequestsCount > 0
                     ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-xs animate-pulse'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -235,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                 title="Gerenciar solicitações de acesso de novos familiares e cuidadores"
               >
                 <UserPlus className="w-4 h-4 text-blue-600" />
-                <span className="hidden md:inline">Solicitações</span>
+                <span className="hidden lg:inline">Solicitações</span>
                 {pendingRequestsCount > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-extrabold">
                     {pendingRequestsCount}
@@ -252,11 +256,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                   setPatientDropdownOpen(!patientDropdownOpen);
                   setUserMenuOpen(false);
                 }}
-                className="flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-2 sm:px-3.5 sm:py-2 rounded-lg transition-all text-left group"
+                className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl transition-all text-left group min-h-[44px]"
                 aria-expanded={patientDropdownOpen}
                 aria-haspopup="true"
               >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs sm:text-sm border border-blue-200">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs sm:text-sm border border-blue-200 shrink-0">
                   {selectedPatient ? selectedPatient.name.charAt(0) : '—'}
                 </div>
                 <div className="hidden sm:block">

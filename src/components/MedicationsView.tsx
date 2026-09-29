@@ -296,13 +296,13 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg shrink-0">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl shrink-0 overflow-x-auto">
           <button
             id="filter-meds-active"
             onClick={() => setFilterActive('active')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'active'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -311,9 +311,9 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
           <button
             id="filter-meds-inactive"
             onClick={() => setFilterActive('inactive')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'inactive'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -322,9 +322,9 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
           <button
             id="filter-meds-all"
             onClick={() => setFilterActive('all')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'all'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                ? 'bg-white text-blue-700 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -355,25 +355,25 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-base text-slate-900 truncate">
+                      <span className="font-bold text-base sm:text-lg text-slate-900 truncate">
                         {med.name}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                         {med.dosage}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-600 font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-slate-700 font-medium mt-1">
                       {med.frequency}
                     </p>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions (44px touch target) */}
                   <div className="flex items-center gap-1">
                     {permissions?.canEditRecord && (
                       <button
                         id={`edit-med-${med.id}`}
                         onClick={() => handleOpenEdit(med)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                         title="Editar medicamento"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -383,7 +383,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                       <button
                         id={`delete-med-${med.id}`}
                         onClick={() => handleDelete(med.id, med.name)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                         title="Excluir medicamento (Apenas Admin)"
                       >
                         <Trash2 className="w-4 h-4" />

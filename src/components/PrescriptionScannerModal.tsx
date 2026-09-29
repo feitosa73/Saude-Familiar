@@ -259,19 +259,19 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
     !patient.name.toLowerCase().includes(patientIdentified.toLowerCase().split(' ')[0]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="relative bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+      <div className="relative bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-linear-to-r from-blue-50/70 via-indigo-50/40 to-white">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-linear-to-r from-blue-50/70 via-indigo-50/40 to-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                Leitor Inteligente de Receitas
+                Leitor de Receitas com IA
                 <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                  Gemini IA
+                  Zero Storage
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
@@ -281,14 +281,15 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+            title="Fechar"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body content based on step */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 overscroll-contain">
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-5">
