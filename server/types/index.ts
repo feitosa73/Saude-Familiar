@@ -239,6 +239,50 @@ export interface ExtractedPrescriptionResponse {
   confidenceWarning?: string;
 }
 
+export type ExamResultStatus = 'normal' | 'altered' | 'inconclusive';
+
+export interface ExtractedExamResultItem {
+  parameter: string;
+  value: string;
+  unit?: string;
+  referenceRange?: string;
+  status: ExamResultStatus;
+  notes?: string;
+}
+
+export interface ExtractedExamReportResponse {
+  examName: string;
+  laboratory?: string;
+  examDate?: string;
+  requestingDoctor?: string;
+  patientNameIdentified?: string;
+  results: ExtractedExamResultItem[];
+  clinicalSummary: string;
+  confidenceWarning?: string;
+  generalNotes?: string;
+}
+
+export type ExtractedScheduleType = 'consulta' | 'exame';
+
+export interface ExtractedScheduleItem {
+  type: ExtractedScheduleType;
+  title: string;
+  specialtyOrCategory: string;
+  professional?: string;
+  location?: string;
+  dateTime: string;
+  reason?: string;
+  notes?: string;
+  preparationInstructions?: string;
+}
+
+export interface ExtractedScheduleResponse {
+  patientNameIdentified?: string;
+  schedules: ExtractedScheduleItem[];
+  confidenceWarning?: string;
+  generalNotes?: string;
+}
+
 export type TimelineEventType =
   | 'consulta'
   | 'exame'

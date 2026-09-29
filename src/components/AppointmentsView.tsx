@@ -18,7 +18,9 @@ import {
   Search,
   MessageSquarePlus,
   BookOpen,
+  Sparkles,
 } from 'lucide-react';
+import { ScheduleScannerModal } from './ScheduleScannerModal';
 
 interface AppointmentsViewProps {
   isModalOpen: boolean;
@@ -36,6 +38,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [isScheduleAiModalOpen, setIsScheduleAiModalOpen] = useState(false);
 
   // Appointment Form
   const [editingAptId, setEditingAptId] = useState<string | null>(null);
@@ -242,14 +245,25 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           </p>
         </div>
 
-        <button
-          id="add-appointment-main-btn"
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          Agendar Consulta
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            id="appointment-scan-ai-header-btn"
+            onClick={() => setIsScheduleAiModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Ler Guia / Comprovante com IA</span>
+          </button>
+          <button
+            id="add-appointment-main-btn"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-colors"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Agendar Consulta</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters Bar */}
@@ -723,6 +737,17 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* AI Schedule Scanner Modal */}
+      {selectedPatient && (
+        <ScheduleScannerModal
+          isOpen={isScheduleAiModalOpen}
+          onClose={() => setIsScheduleAiModalOpen(false)}
+          onSuccess={fetchAppointments}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
       )}
     </div>
   );

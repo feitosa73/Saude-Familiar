@@ -20,6 +20,9 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { PrescriptionScannerModal } from './PrescriptionScannerModal';
+import { DocumentTypeSelectorModal, SelectedAiDocumentType } from './DocumentTypeSelectorModal';
+import { ExamReportScannerModal } from './ExamReportScannerModal';
+import { ScheduleScannerModal } from './ScheduleScannerModal';
 
 interface DocumentsViewProps {
   isModalOpen: boolean;
@@ -44,8 +47,22 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Preview Modal
   const [previewDoc, setPreviewDoc] = useState<MedicalDocument | null>(null);
 
-  // AI Prescription Scanner Modal
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  // AI Scanner Modals
+  const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false);
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isExamReportModalOpen, setIsExamReportModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+  const handleSelectDocumentType = (type: SelectedAiDocumentType) => {
+    setIsTypeSelectorOpen(false);
+    if (type === 'prescription') {
+      setIsPrescriptionModalOpen(true);
+    } else if (type === 'exam_report') {
+      setIsExamReportModalOpen(true);
+    } else if (type === 'schedule') {
+      setIsScheduleModalOpen(true);
+    }
+  };
 
   // Document Form State
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
@@ -227,7 +244,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           <button
             type="button"
             id="doc-scan-ai-header-btn"
-            onClick={() => setIsAiModalOpen(true)}
+            onClick={() => setIsTypeSelectorOpen(true)}
             className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4" />
@@ -417,7 +434,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <button
               id="empty-doc-scan-ai-btn"
-              onClick={() => setIsAiModalOpen(true)}
+              onClick={() => setIsTypeSelectorOpen(true)}
               className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-600 via-purple-600 to-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-[0.98]"
             >
               <Sparkles className="w-4 h-4" />
@@ -649,11 +666,43 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
       )}
 
+      {/* Modal Seletor de Tipo de Documento */}
+      {selectedPatient && (
+        <DocumentTypeSelectorModal
+          isOpen={isTypeSelectorOpen}
+          onClose={() => setIsTypeSelectorOpen(false)}
+          onSelectType={handleSelectDocumentType}
+          patientName={selectedPatient.name}
+        />
+      )}
+
       {/* AI Prescription Scanner Modal */}
       {selectedPatient && (
         <PrescriptionScannerModal
-          isOpen={isAiModalOpen}
-          onClose={() => setIsAiModalOpen(false)}
+          isOpen={isPrescriptionModalOpen}
+          onClose={() => setIsPrescriptionModalOpen(false)}
+          onSuccess={fetchDocsAndExams}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
+      )}
+
+      {/* AI Exam Report Scanner Modal */}
+      {selectedPatient && (
+        <ExamReportScannerModal
+          isOpen={isExamReportModalOpen}
+          onClose={() => setIsExamReportModalOpen(false)}
+          onSuccess={fetchDocsAndExams}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
+      )}
+
+      {/* AI Schedule Scanner Modal */}
+      {selectedPatient && (
+        <ScheduleScannerModal
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
           onSuccess={fetchDocsAndExams}
           patient={selectedPatient}
           showToast={showToast}

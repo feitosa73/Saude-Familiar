@@ -15,7 +15,9 @@ import {
   Search,
   Paperclip,
   ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
+import { ExamReportScannerModal } from './ExamReportScannerModal';
 
 interface ExamsViewProps {
   isModalOpen: boolean;
@@ -36,6 +38,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [isExamAiModalOpen, setIsExamAiModalOpen] = useState(false);
 
   // Exam Form
   const [editingExamId, setEditingExamId] = useState<string | null>(null);
@@ -194,14 +197,25 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           </p>
         </div>
 
-        <button
-          id="add-exam-main-btn"
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          Registrar Pedido de Exame
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            id="exam-scan-ai-header-btn"
+            onClick={() => setIsExamAiModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Ler Laudo com IA</span>
+          </button>
+          <button
+            id="add-exam-main-btn"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-colors"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Registrar Pedido de Exame</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search */}
@@ -551,6 +565,17 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* AI Exam Report Scanner Modal */}
+      {selectedPatient && (
+        <ExamReportScannerModal
+          isOpen={isExamAiModalOpen}
+          onClose={() => setIsExamAiModalOpen(false)}
+          onSuccess={fetchExamsAndDocs}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
       )}
     </div>
   );

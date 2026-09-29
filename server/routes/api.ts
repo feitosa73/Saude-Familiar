@@ -8,6 +8,8 @@ import { FirestoreFamilyRepository } from '../repositories/FirestoreFamilyReposi
 import { TimelineEventType, PatientRole, UserMeResponse } from '../types';
 import { ServerAuthorizationService } from '../services/authorizationService';
 import { prescriptionAiService } from '../services/prescriptionAiService';
+import { examAiService } from '../services/examAiService';
+import { scheduleAiService } from '../services/scheduleAiService';
 import { requireAuth, AuthenticatedRequest } from '../middlewares/requireAuth';
 import {
   requireActiveMembership,
@@ -1525,6 +1527,102 @@ export function createApiRouter(
         console.error('[API] Erro ao extrair receita médica via Gemini IA:', error);
         res.status(500).json({
           error: error.message || 'Falha ao processar receita médica com Inteligência Artificial.',
+        });
+      }
+    }
+  );
+
+  // 7.2 AI Exam Report Extraction (In-memory, Zero Storage)
+  router.post(
+    '/patients/:patientId/ai/extract-exam-report',
+    requireAuth,
+    requireActiveMembership,
+    upload.single('file'),
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
+        if (!canCreate && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Visualizadores não possuem permissão para extrair laudos de exame com IA',
+          });
+        }
+
+        if (!req.file || !req.file.buffer) {
+          return res.status(400).json({ error: 'Nenhum arquivo enviado para processamento' });
+        }
+
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (!allowedMimes.includes(req.file.mimetype)) {
+          return res.status(400).json({
+            error: 'Formato inválido. Envie um arquivo PDF ou imagem (JPEG, PNG, WEBP).',
+          });
+        }
+
+        const result = await examAiService.extractFromBuffer(
+          req.file.buffer,
+          req.file.mimetype
+        );
+
+        // Descarte explícito do buffer da memória imediatamente após uso (Zero Storage)
+        (req.file as any).buffer = null;
+
+        res.json(result);
+      } catch (error: any) {
+        console.error('[API] Erro ao extrair laudo de exame via Gemini IA:', error);
+        res.status(500).json({
+          error: error.message || 'Falha ao processar laudo de exame com Inteligência Artificial.',
+        });
+      }
+    }
+  );
+
+  // 7.3 AI Schedule Extraction (In-memory, Zero Storage)
+  router.post(
+    '/patients/:patientId/ai/extract-schedule',
+    requireAuth,
+    requireActiveMembership,
+    upload.single('file'),
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
+        if (!canCreate && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Visualizadores não possuem permissão para extrair agendamentos com IA',
+          });
+        }
+
+        if (!req.file || !req.file.buffer) {
+          return res.status(400).json({ error: 'Nenhum arquivo enviado para processamento' });
+        }
+
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (!allowedMimes.includes(req.file.mimetype)) {
+          return res.status(400).json({
+            error: 'Formato inválido. Envie um arquivo PDF ou imagem (JPEG, PNG, WEBP).',
+          });
+        }
+
+        const result = await scheduleAiService.extractFromBuffer(
+          req.file.buffer,
+          req.file.mimetype
+        );
+
+        // Descarte explícito do buffer da memória imediatamente após uso (Zero Storage)
+        (req.file as any).buffer = null;
+
+        res.json(result);
+      } catch (error: any) {
+        console.error('[API] Erro ao extrair comprovante/guia de agendamento via Gemini IA:', error);
+        res.status(500).json({
+          error: error.message || 'Falha ao processar comprovante de agendamento com Inteligência Artificial.',
         });
       }
     }
