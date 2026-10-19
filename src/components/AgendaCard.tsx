@@ -30,17 +30,51 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
   onShare,
   onViewDocument,
 }) => {
-  const isPendente = item.ehAlertaPendente;
   const isConsulta = item.tipo === 'consulta';
+  const isRealizado = item.status === 'realizado';
+  const isPendente = item.ehAlertaPendente;
+
+  // Determinação da cor do Card com base no prazo conforme solicitado pelo usuário
+  const prazo = item.prazoStatus || (
+    item.ehAlertaPendente
+      ? 'chegando'
+      : item.dataHora
+      ? (() => {
+          const diffDays = Math.round(
+            (new Date(item.dataHora).getTime() - new Date().setHours(0, 0, 0, 0)) /
+              (1000 * 60 * 60 * 24)
+          );
+          if (diffDays < 0) return 'atrasado';
+          if (diffDays <= 3) return 'chegando';
+          return 'no_prazo';
+        })()
+      : 'chegando'
+  );
+
+  let cardStyle = 'bg-white border-slate-200/90 hover:border-slate-300 text-slate-900 shadow-2xs hover:shadow-xs';
+  let badgePrazoStyle = 'bg-slate-100 text-slate-700 border-slate-200';
+
+  if (isRealizado) {
+    cardStyle = 'bg-slate-50/80 border-slate-200 text-slate-700 opacity-90';
+    badgePrazoStyle = 'bg-slate-200/70 text-slate-700 border-slate-300';
+  } else if (prazo === 'atrasado') {
+    // Vermelho claro se já passou da data
+    cardStyle = 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-xs ring-1 ring-rose-200/60';
+    badgePrazoStyle = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+  } else if (prazo === 'chegando') {
+    // Amarelo se estiver chegando a data ou pendente
+    cardStyle = 'bg-amber-50/90 border-amber-300 text-amber-950 shadow-xs ring-1 ring-amber-200/70';
+    badgePrazoStyle = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+  } else if (prazo === 'no_prazo') {
+    // Verde claro se estiver no prazo
+    cardStyle = 'bg-emerald-50/80 border-emerald-300/90 text-emerald-950 shadow-xs ring-1 ring-emerald-200/60';
+    badgePrazoStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold';
+  }
 
   return (
     <article
       id={`agenda-card-${item.id}`}
-      className={`rounded-2xl border transition-all p-4 sm:p-5 relative ${
-        isPendente
-          ? 'bg-amber-50/90 border-amber-300/90 text-amber-950 shadow-xs ring-1 ring-amber-200/50'
-          : 'bg-white border-slate-200/90 hover:border-slate-300 text-slate-900 shadow-2xs hover:shadow-xs'
-      }`}
+      className={`rounded-2xl border transition-all p-4 sm:p-5 relative ${cardStyle}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         {/* Cabeçalho e Informações Principais */}
@@ -64,13 +98,17 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
               )}
             </span>
             <span className="text-slate-300" aria-hidden="true">·</span>
-            <span
-              className={`font-semibold text-xs ${
-                isPendente ? 'text-amber-800' : 'text-slate-600'
-              }`}
-            >
+            <span className="font-semibold text-xs text-slate-700">
               {item.statusRotulo}
             </span>
+            {item.prazoRotulo && !isRealizado && (
+              <>
+                <span className="text-slate-300" aria-hidden="true">·</span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgePrazoStyle}`}>
+                  {item.prazoRotulo}
+                </span>
+              </>
+            )}
             {item.categoriaOuEspecialidade && (
               <>
                 <span className="text-slate-300" aria-hidden="true">·</span>
@@ -92,14 +130,14 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         {/* Bloco de Data e Horário em Destaque */}
         <div className="sm:text-right shrink-0 flex items-center sm:items-end justify-between sm:justify-start gap-2">
           {item.possuiDataDefinida && item.dataHora ? (
-            <div className="inline-flex sm:flex-col items-center sm:items-end gap-1.5 bg-slate-50 border border-slate-200/90 px-3 py-1.5 rounded-xl">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <div className={`inline-flex sm:flex-col items-center sm:items-end gap-1.5 px-3 py-1.5 rounded-xl border ${badgePrazoStyle}`}>
+              <div className="flex items-center gap-1.5 text-xs font-bold">
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
                 <span>{item.dataExibicao || item.dataHora.split('T')[0]}</span>
               </div>
               {item.dataHora.includes('T') && (
-                <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 font-mono">
-                  <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                <div className="flex items-center gap-1 text-[11px] font-semibold font-mono">
+                  <Clock className="w-3 h-3 shrink-0" />
                   <span>{item.horarioExibicao || item.dataHora.split('T')[1].slice(0, 5)}</span>
                 </div>
               )}

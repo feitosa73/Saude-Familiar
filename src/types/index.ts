@@ -327,6 +327,8 @@ export type StatusAgenda =
   | 'realizado'
   | 'cancelado';
 
+export type StatusPrazoItem = 'atrasado' | 'chegando' | 'no_prazo';
+
 export interface ItemAgenda {
   id: string;
   patientId: string;
@@ -349,6 +351,9 @@ export interface ItemAgenda {
   documentoId?: string;
   nomeDocumento?: string;
   referenciaOrigemId: string;
+  prazoStatus?: StatusPrazoItem;
+  diasParaData?: number;
+  prazoRotulo?: string;
 }
 
 export interface AgendaUnificadaResponse {

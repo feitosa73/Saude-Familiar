@@ -1,5 +1,71 @@
 import { IHealthRepository } from '../repositories/IRepository';
-import { Appointment, Exam, ItemAgenda, AgendaUnificadaResponse } from '../types';
+import { Appointment, Exam, ItemAgenda, AgendaUnificadaResponse, StatusAgenda, StatusPrazoItem } from '../types';
+
+function calcularPrazo(
+  dataHoraIso?: string,
+  ehPendente?: boolean,
+  status?: StatusAgenda
+): {
+  prazoStatus: StatusPrazoItem;
+  diasParaData?: number;
+  prazoRotulo: string;
+} {
+  if (status === 'realizado') {
+    return {
+      prazoStatus: 'no_prazo',
+      prazoRotulo: 'Realizado',
+    };
+  }
+
+  if (ehPendente || !dataHoraIso) {
+    return {
+      prazoStatus: 'chegando', // Alerta amarelo para pendência de liberação/agendamento
+      diasParaData: 0,
+      prazoRotulo: 'Aguardando agendamento',
+    };
+  }
+
+  const d = new Date(dataHoraIso);
+  if (isNaN(d.getTime())) {
+    return {
+      prazoStatus: 'chegando',
+      prazoRotulo: 'Data a definir',
+    };
+  }
+
+  const now = new Date();
+  const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dataAlvo = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((dataAlvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    const atraso = Math.abs(diffDays);
+    return {
+      prazoStatus: 'atrasado',
+      diasParaData: diffDays,
+      prazoRotulo: atraso === 1 ? 'Passou ontem' : `Passou há ${atraso} dias`,
+    };
+  }
+
+  if (diffDays <= 3) {
+    let rotulo = 'Chegando a data';
+    if (diffDays === 0) rotulo = 'Hoje';
+    else if (diffDays === 1) rotulo = 'Amanhã';
+    else rotulo = `Em ${diffDays} dias`;
+
+    return {
+      prazoStatus: 'chegando',
+      diasParaData: diffDays,
+      prazoRotulo: rotulo,
+    };
+  }
+
+  return {
+    prazoStatus: 'no_prazo',
+    diasParaData: diffDays,
+    prazoRotulo: `Em ${diffDays} dias (no prazo)`,
+  };
+}
 
 export class AgendaService {
   constructor(private repository: IHealthRepository) {}
@@ -39,7 +105,19 @@ export class AgendaService {
         }
       }
 
-      const ehPendente = !temData || apt.status !== 'agendada';
+      const statusNormalizado: StatusAgenda =
+        apt.status === 'agendada'
+          ? 'agendado'
+          : apt.status === 'realizada'
+          ? 'realizado'
+          : 'cancelado';
+
+      const ehPendente = !temData && statusNormalizado === 'agendado';
+      const prazo = calcularPrazo(
+        temData ? apt.dateTime : undefined,
+        ehPendente,
+        statusNormalizado
+      );
 
       return {
         id: `consulta-${apt.id}`,
@@ -54,24 +132,22 @@ export class AgendaService {
         dataExibicao,
         horarioExibicao,
         possuiDataDefinida: temData,
-        status:
-          apt.status === 'agendada'
-            ? 'agendado'
-            : apt.status === 'realizada'
-            ? 'realizado'
-            : 'cancelado',
+        status: statusNormalizado,
         statusRotulo:
-          apt.status === 'agendada'
+          statusNormalizado === 'agendado'
             ? temData
               ? 'Consulta Agendada'
               : 'Retorno a Agendar'
-            : apt.status === 'realizada'
+            : statusNormalizado === 'realizado'
             ? 'Consulta Realizada'
             : 'Cancelada',
-        ehAlertaPendente: !temData,
-        motivoAlerta: !temData ? 'Retorno ou consulta sem data confirmada' : undefined,
+        ehAlertaPendente: ehPendente,
+        motivoAlerta: ehPendente ? 'Retorno ou consulta sem data confirmada' : undefined,
         motivo: apt.reason,
         observacoes: apt.notes,
+        prazoStatus: prazo.prazoStatus,
+        diasParaData: prazo.diasParaData,
+        prazoRotulo: prazo.prazoRotulo,
       };
     });
 
@@ -101,8 +177,23 @@ export class AgendaService {
         }
       }
 
-      // Exame solicitado ou sem data de realização confirmada é pendência (Alerta Amarelo)
-      const ehPendente = exam.status === 'solicitado' || !temData;
+      const statusNormalizado: StatusAgenda =
+        exam.status === 'solicitado'
+          ? 'pendente_agendamento'
+          : exam.status === 'agendado'
+          ? 'agendado'
+          : 'realizado';
+
+      // Exame solicitado ou agendado sem data de realização confirmada é pendência (Alerta Amarelo)
+      const ehPendente =
+        statusNormalizado !== 'realizado' &&
+        (exam.status === 'solicitado' || !temData);
+
+      const prazo = calcularPrazo(
+        temData ? dataHoraExame : undefined,
+        ehPendente,
+        statusNormalizado
+      );
 
       return {
         id: `exame-${exam.id}`,
@@ -116,20 +207,13 @@ export class AgendaService {
         dataExibicao,
         horarioExibicao,
         possuiDataDefinida: temData,
-        status:
-          exam.status === 'solicitado'
-            ? 'pendente_agendamento'
-            : exam.status === 'agendado'
-            ? 'agendado'
-            : 'realizado',
+        status: statusNormalizado,
         statusRotulo:
-          exam.status === 'solicitado'
+          statusNormalizado === 'pendente_agendamento'
             ? 'Aguardando Liberação / Agendamento'
-            : exam.status === 'agendado'
+            : statusNormalizado === 'agendado'
             ? 'Exame Agendado'
-            : exam.status === 'realizado'
-            ? 'Exame Realizado (Aguardando Laudo)'
-            : 'Resultado Disponível',
+            : 'Exame Realizado',
         ehAlertaPendente: ehPendente,
         motivoAlerta: ehPendente
           ? 'Aguardando agendamento ou liberação de guia pelo SUS/Convênio'
@@ -137,26 +221,36 @@ export class AgendaService {
         observacoes: exam.notes,
         documentoId: exam.documentId,
         nomeDocumento: exam.documentId ? docsMap.get(exam.documentId) : undefined,
+        prazoStatus: prazo.prazoStatus,
+        diasParaData: prazo.diasParaData,
+        prazoRotulo: prazo.prazoRotulo,
       };
     });
 
     // 4. Agrupamento e Ordenação
     const todos = [...itensConsultas, ...itensExames];
 
-    // Pendências flutuam para o topo
-    const itensPendentes = todos.filter((item) => item.ehAlertaPendente);
+    // Pendências ativas sem data que necessitam de ação (NUNCA já realizadas ou canceladas)
+    const itensPendentes = todos.filter(
+      (item) => item.ehAlertaPendente && item.status !== 'realizado' && item.status !== 'cancelado'
+    );
 
-    // Itens confirmados com data são ordenados cronologicamente (do mais próximo para o futuro)
+    // Itens confirmados agendados (NUNCA já realizados ou cancelados!)
     const itensConfirmados = todos
-      .filter((item) => !item.ehAlertaPendente && item.dataHora)
+      .filter((item) => !item.ehAlertaPendente && item.dataHora && item.status === 'agendado')
       .sort((a, b) => (a.dataHora!).localeCompare(b.dataHora!));
+
+    // Itens já realizados ou passados
+    const itensHistorico = todos.filter(
+      (item) => item.status === 'realizado' || item.status === 'cancelado'
+    );
 
     return {
       totalItens: todos.length,
       totalPendenciasSemData: itensPendentes.length,
       itensPendentes,
       itensConfirmados,
-      linhaDoTempoGeral: [...itensPendentes, ...itensConfirmados],
+      linhaDoTempoGeral: [...itensPendentes, ...itensConfirmados, ...itensHistorico],
     };
   }
 }
