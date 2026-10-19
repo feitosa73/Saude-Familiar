@@ -371,141 +371,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </section>
 
-      {/* Main Grid: Upcoming Meds & Next Appointment */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Próximos Medicamentos do Dia */}
-        <section
-          id="dashboard-medications-card"
-          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
-        >
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <button
-                type="button"
-                onClick={() => setActiveTab('medicamentos')}
-                className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
-                aria-label="Ir para página de Medicamentos"
-              >
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <Pill className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
-                    Medicamentos Ativos
-                  </h2>
-                  <p className="text-xs text-slate-500">Horários e administração diária</p>
-                </div>
-              </button>
-              <button
-                type="button"
-                id="view-all-meds-btn"
-                onClick={() => setActiveTab('medicamentos')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
-                aria-label="Ver todos os medicamentos ativos"
-              >
-                Ver todos ({data?.activeMedicationsCount || 0})
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {data?.activeMedications && data.activeMedications.length > 0 ? (
-              <div className="space-y-3">
-                {data.activeMedications.slice(0, 4).map((med) => (
-                  <div
-                    key={med.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setActiveTab('medicamentos')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setActiveTab('medicamentos');
-                      }
-                    }}
-                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
-                    aria-label={`Medicamento ${med.name} ${med.dosage}. Toque para ver detalhes.`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="font-semibold text-sm text-slate-900 truncate">
-                          {med.name}
-                        </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
-                          {med.dosage}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-200/70 text-slate-700 rounded uppercase">
-                          Contínuo
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1 truncate">
-                        {med.frequency}
-                      </div>
-
-                      {/* Horários pills */}
-                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {med.times.map((time) => {
-                          const isTaken = takenDoses[`${med.id}-${time}`];
-                          return (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleDose(med.id, time);
-                              }}
-                              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer touch-manipulation min-h-[28px] ${
-                                isTaken
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 line-through'
-                                  : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-500 active:bg-blue-50'
-                              } ${!permissions?.canEditRecord ? 'cursor-default' : ''}`}
-                              title={
-                                !permissions?.canEditRecord
-                                  ? 'Somente leitura (registro restrito a cuidadores e administradores)'
-                                  : isTaken
-                                  ? 'Dose tomada (clique para desfazer)'
-                                  : 'Clique para marcar como tomada'
-                              }
-                            >
-                              <span>{time}</span>
-                              {isTaken && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                <Pill className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-600">Nenhum medicamento ativo</p>
-                {permissions?.canCreateRecord ? (
-                  <button
-                    type="button"
-                    onClick={onOpenMedicationModal}
-                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Cadastrar medicamento
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('medicamentos')}
-                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
-                  >
-                    Ver lista de medicamentos
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 2. Agenda Médica Unificada (Consultas e Exames) */}
+      {/* 1º Bloco Prioritário: 1. Consultas e Exames Agendados | 2. Exames Pendentes | 3. Medicamentos Ativos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 1. Próximas Consultas e Exames Agendados (1º Card) */}
         <section
           id="dashboard-agenda-card"
           className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
@@ -523,9 +391,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <div>
                   <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
-                    Consultas e Exames
+                    Próximas Consultas e Exames
                   </h2>
-                  <p className="text-xs text-slate-500">Próximos compromissos e pendências</p>
+                  <p className="text-xs text-slate-500">Compromissos agendados e pendências</p>
                 </div>
               </button>
               <button
@@ -658,11 +526,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
           </div>
         </section>
-      </div>
 
-      {/* Secondary Grid: Pending Exams, Recent Documents & Timeline */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 3. Exames Pendentes */}
+        {/* 2. Exames Pendentes (2º Card) */}
         <section
           id="dashboard-exams-card"
           className="bg-slate-900 text-white rounded-2xl shadow-xl p-5 sm:p-6 flex flex-col justify-between"
@@ -671,9 +536,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center justify-between mb-3.5">
               <button
                 type="button"
-                onClick={() => setActiveTab('exames')}
+                onClick={() => setActiveTab('agenda')}
                 className="flex items-center gap-2 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden rounded-lg p-1 -m-1"
-                aria-label="Ir para página de Exames"
+                aria-label="Ir para página de Consultas e Exames"
               >
                 <div className="p-1.5 rounded-lg bg-white/10 text-white group-hover:bg-white/20 transition-colors">
                   <Activity className="w-4 h-4" />
@@ -684,7 +549,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('exames')}
+                onClick={() => setActiveTab('agenda')}
                 className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 hover:bg-amber-400/30 transition-colors cursor-pointer touch-manipulation"
                 aria-label="Ver exames pendentes"
               >
@@ -699,11 +564,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     key={exam.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setActiveTab('exames')}
+                    onClick={() => setActiveTab('agenda')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setActiveTab('exames');
+                        setActiveTab('agenda');
                       }
                     }}
                     className="p-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-[0.99] border border-white/10 text-xs transition-all cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-hidden"
@@ -729,14 +594,150 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             id="view-all-exams-btn"
-            onClick={() => setActiveTab('exames')}
+            onClick={() => setActiveTab('agenda')}
             className="mt-4 w-full min-h-[44px] py-2.5 bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
-            aria-label="Ver todos os exames"
+            aria-label="Ver todos os exames na agenda"
           >
             Ver todos os exames
             <ArrowRight className="w-3 h-3" />
           </button>
         </section>
+
+        {/* 3. Medicamentos Ativos (3º Card) */}
+        <section
+          id="dashboard-medications-card"
+          className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab('medicamentos')}
+                className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                aria-label="Ir para página de Medicamentos"
+              >
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Pill className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
+                    Medicamentos Ativos
+                  </h2>
+                  <p className="text-xs text-slate-500">Horários e administração diária</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                id="view-all-meds-btn"
+                onClick={() => setActiveTab('medicamentos')}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                aria-label="Ver todos os medicamentos ativos"
+              >
+                Ver todos ({data?.activeMedicationsCount || 0})
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {data?.activeMedications && data.activeMedications.length > 0 ? (
+              <div className="space-y-3">
+                {data.activeMedications.slice(0, 4).map((med) => (
+                  <div
+                    key={med.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('medicamentos')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab('medicamentos');
+                      }
+                    }}
+                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
+                    aria-label={`Medicamento ${med.name} ${med.dosage}. Toque para ver detalhes.`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-semibold text-sm text-slate-900 truncate">
+                          {med.name}
+                        </span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                          {med.dosage}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-200/70 text-slate-700 rounded uppercase">
+                          Contínuo
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1 truncate">
+                        {med.frequency}
+                      </div>
+
+                      {/* Horários pills */}
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        {med.times.map((time) => {
+                          const isTaken = takenDoses[`${med.id}-${time}`];
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDose(med.id, time);
+                              }}
+                              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer touch-manipulation min-h-[28px] ${
+                                isTaken
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 line-through'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-500 active:bg-blue-50'
+                              } ${!permissions?.canEditRecord ? 'cursor-default' : ''}`}
+                              title={
+                                !permissions?.canEditRecord
+                                  ? 'Somente leitura (registro restrito a cuidadores e administradores)'
+                                  : isTaken
+                                  ? 'Dose tomada (clique para desfazer)'
+                                  : 'Clique para marcar como tomada'
+                              }
+                            >
+                              <span>{time}</span>
+                              {isTaken && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <Pill className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-medium text-slate-600">Nenhum medicamento ativo</p>
+                {permissions?.canCreateRecord ? (
+                  <button
+                    type="button"
+                    onClick={onOpenMedicationModal}
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Cadastrar medicamento
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('medicamentos')}
+                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
+                  >
+                    Ver lista de medicamentos
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* 2º Bloco Secundário: 4. Documentos Recentes | 5. Linha do Tempo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* 4. Documentos Recentes */}
         <section
