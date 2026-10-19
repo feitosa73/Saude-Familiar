@@ -10,6 +10,7 @@ import { Navbar } from './components/Navbar';
 import { TabNavigation } from './components/TabNavigation';
 import { DashboardView } from './components/DashboardView';
 import { MedicationsView } from './components/MedicationsView';
+import { AgendaUnifiedView } from './components/AgendaUnifiedView';
 import { AppointmentsView } from './components/AppointmentsView';
 import { ExamsView } from './components/ExamsView';
 import { DocumentsView } from './components/DocumentsView';
@@ -175,12 +176,10 @@ const MainContent: React.FC = () => {
                     setIsMedModalOpen(true);
                   }}
                   onOpenAppointmentModal={() => {
-                    setActiveTab('consultas');
-                    setIsAptModalOpen(true);
+                    setActiveTab('agenda');
                   }}
                   onOpenExamModal={() => {
-                    setActiveTab('exames');
-                    setIsExamModalOpen(true);
+                    setActiveTab('agenda');
                   }}
                   onOpenDocumentModal={() => {
                     setExamIdForDoc(null);
@@ -198,19 +197,8 @@ const MainContent: React.FC = () => {
                 />
               )}
 
-              {activeTab === 'consultas' && (
-                <AppointmentsView
-                  isModalOpen={isAptModalOpen}
-                  onOpenModal={() => setIsAptModalOpen(true)}
-                  onCloseModal={() => setIsAptModalOpen(false)}
-                />
-              )}
-
-              {activeTab === 'exames' && (
-                <ExamsView
-                  isModalOpen={isExamModalOpen}
-                  onOpenModal={() => setIsExamModalOpen(true)}
-                  onCloseModal={() => setIsExamModalOpen(false)}
+              {(activeTab === 'agenda' || activeTab === 'consultas' || activeTab === 'exames') && (
+                <AgendaUnifiedView
                   onOpenDocumentUploadWithExam={handleOpenDocFromExam}
                 />
               )}

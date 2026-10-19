@@ -304,3 +304,44 @@ export interface TimelineEvent {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type TipoItemAgenda = 'consulta' | 'exame';
+
+export type StatusAgenda =
+  | 'agendado'
+  | 'pendente_agendamento'
+  | 'realizado'
+  | 'cancelado';
+
+export interface ItemAgenda {
+  id: string;
+  patientId: string;
+  tipo: TipoItemAgenda;
+  titulo: string;
+  subtitulo: string;
+  categoriaOuEspecialidade: string;
+  local?: string;
+  dataHora?: string;
+  dataExibicao?: string;
+  horarioExibicao?: string;
+  possuiDataDefinida: boolean;
+  status: StatusAgenda;
+  statusRotulo: string;
+  ehAlertaPendente: boolean;
+  motivoAlerta?: string;
+  motivo?: string;
+  instrucoesPreparo?: string;
+  observacoes?: string;
+  documentoId?: string;
+  nomeDocumento?: string;
+  referenciaOrigemId: string;
+}
+
+export interface AgendaUnificadaResponse {
+  totalItens: number;
+  totalPendenciasSemData: number;
+  itensConfirmados: ItemAgenda[];
+  itensPendentes: ItemAgenda[];
+  linhaDoTempoGeral: ItemAgenda[];
+}
+

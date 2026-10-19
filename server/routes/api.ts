@@ -10,6 +10,7 @@ import { ServerAuthorizationService } from '../services/authorizationService';
 import { prescriptionAiService } from '../services/prescriptionAiService';
 import { examAiService } from '../services/examAiService';
 import { scheduleAiService } from '../services/scheduleAiService';
+import { AgendaService } from '../services/agendaService';
 import { requireAuth, AuthenticatedRequest } from '../middlewares/requireAuth';
 import {
   requireActiveMembership,
@@ -1338,6 +1339,10 @@ export function createApiRouter(
 
         const latestEvents = [...timeline].slice(0, 5);
 
+        // Agregação unificada de agenda para a tela inicial
+        const agendaService = new AgendaService(repository);
+        const agendaUnificada = await agendaService.getAgendaUnificada(patientId, familyId);
+
         res.json({
           patient,
           activeMedicationsCount: activeMedications.length,
@@ -1349,10 +1354,35 @@ export function createApiRouter(
           latestEvents,
           totalDocumentsCount: documents.length,
           totalAppointmentsCount: appointments.length,
+          agendaUnificada,
         });
       } catch (error) {
         console.error('Error fetching dashboard:', error);
         res.status(500).json({ error: 'Erro ao buscar dados do painel' });
+      }
+    }
+  );
+
+  // 6.1 Agenda Unificada de Consultas e Exames (Protected)
+  router.get(
+    '/patients/:patientId/agenda',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const patient = await repository.getPatientById(patientId, familyId);
+        if (!patient) {
+          return res.status(404).json({ error: 'Paciente não encontrado' });
+        }
+
+        const agendaService = new AgendaService(repository);
+        const agenda = await agendaService.getAgendaUnificada(patientId, familyId);
+        res.json(agenda);
+      } catch (error) {
+        console.error('Error fetching unified agenda:', error);
+        res.status(500).json({ error: 'Erro ao buscar agenda unificada' });
       }
     }
   );
@@ -1699,6 +1729,24 @@ export function createApiRouter(
     }
   );
 
+  router.get(
+    '/appointments/:id',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const patientId = req.query.patientId as string | undefined;
+        const appt = await repository.getAppointmentById(req.params.id, familyId, patientId);
+        if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
+        res.json(appt);
+      } catch (error) {
+        console.error('Error fetching appointment:', error);
+        res.status(500).json({ error: 'Erro ao buscar consulta' });
+      }
+    }
+  );
+
   router.put(
     '/appointments/:id',
     requireAuth,
@@ -1811,6 +1859,24 @@ export function createApiRouter(
       } catch (error) {
         console.error('Error creating exam:', error);
         res.status(500).json({ error: 'Erro ao cadastrar exame' });
+      }
+    }
+  );
+
+  router.get(
+    '/exams/:id',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const patientId = req.query.patientId as string | undefined;
+        const exam = await repository.getExamById(req.params.id, familyId, patientId);
+        if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
+        res.json(exam);
+      } catch (error) {
+        console.error('Error fetching exam:', error);
+        res.status(500).json({ error: 'Erro ao buscar exame' });
       }
     }
   );

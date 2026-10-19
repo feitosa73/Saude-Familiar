@@ -20,6 +20,8 @@ import {
   ExtractedPrescriptionResponse,
   ExtractedExamReportResponse,
   ExtractedScheduleResponse,
+  AgendaUnificadaResponse,
+  ItemAgenda,
 } from '../types';
 import { authService } from './authService';
 
@@ -374,9 +376,15 @@ export const api = {
     return response.json();
   },
 
+  // Unified Agenda (Consultas e Exames)
+  getAgenda: (patientId: string) =>
+    request<AgendaUnificadaResponse>(`/patients/${patientId}/agenda`),
+
   // Appointments
   getAppointments: (patientId: string) =>
     request<Appointment[]>(`/patients/${patientId}/appointments`),
+  getAppointmentById: (id: string, patientId?: string) =>
+    request<Appointment>(`/appointments/${id}${patientId ? `?patientId=${patientId}` : ''}`),
   createAppointment: (patientId: string, data: Omit<Appointment, 'id' | 'patientId'>) =>
     request<Appointment>(`/patients/${patientId}/appointments`, {
       method: 'POST',
@@ -395,6 +403,8 @@ export const api = {
   // Exams
   getExams: (patientId: string) =>
     request<Exam[]>(`/patients/${patientId}/exams`),
+  getExamById: (id: string, patientId?: string) =>
+    request<Exam>(`/exams/${id}${patientId ? `?patientId=${patientId}` : ''}`),
   createExam: (patientId: string, data: Omit<Exam, 'id' | 'patientId'>) =>
     request<Exam>(`/patients/${patientId}/exams`, {
       method: 'POST',

@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext';
 export type NavigationTab =
   | 'dashboard'
   | 'medicamentos'
+  | 'agenda'
   | 'consultas'
   | 'exames'
   | 'documentos'
@@ -41,7 +42,16 @@ export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { user, accessStatus } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientIdState] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [activeTab, setActiveTabState] = useState<NavigationTab>('dashboard');
+
+  const setActiveTab = useCallback((tab: NavigationTab) => {
+    // Redirecionamento transparente de abas legadas para a nova agenda unificada
+    if (tab === 'consultas' || tab === 'exames') {
+      setActiveTabState('agenda');
+    } else {
+      setActiveTabState(tab);
+    }
+  }, []);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);

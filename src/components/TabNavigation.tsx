@@ -23,8 +23,7 @@ interface TabItem {
 const DESKTOP_TABS: TabItem[] = [
   { id: 'dashboard', label: 'Dashboard', shortLabel: 'Início', icon: LayoutDashboard },
   { id: 'medicamentos', label: 'Medicamentos', shortLabel: 'Remédios', icon: Pill },
-  { id: 'consultas', label: 'Consultas', shortLabel: 'Consultas', icon: CalendarCheck2 },
-  { id: 'exames', label: 'Exames', shortLabel: 'Exames', icon: Activity },
+  { id: 'agenda', label: 'Consultas e Exames', shortLabel: 'Agenda', icon: CalendarCheck2 },
   { id: 'documentos', label: 'Documentos', shortLabel: 'Documentos', icon: FileText },
   { id: 'linha_tempo', label: 'Linha do Tempo', shortLabel: 'Linha', icon: Clock },
   { id: 'historico', label: 'Histórico', shortLabel: 'Histórico', icon: History },
@@ -33,9 +32,9 @@ const DESKTOP_TABS: TabItem[] = [
 const MOBILE_PRIMARY_TABS: TabItem[] = [
   { id: 'dashboard', label: 'Início', shortLabel: 'Início', icon: LayoutDashboard },
   { id: 'medicamentos', label: 'Medicamentos', shortLabel: 'Remédios', icon: Pill },
-  { id: 'consultas', label: 'Consultas', shortLabel: 'Consultas', icon: CalendarCheck2 },
-  { id: 'exames', label: 'Exames', shortLabel: 'Exames', icon: Activity },
+  { id: 'agenda', label: 'Agenda', shortLabel: 'Agenda', icon: CalendarCheck2 },
   { id: 'documentos', label: 'Documentos', shortLabel: 'Docs', icon: FileText },
+  { id: 'linha_tempo', label: 'Linha', shortLabel: 'Linha', icon: Clock },
 ];
 
 export const TabNavigation: React.FC = () => {

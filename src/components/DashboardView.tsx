@@ -505,103 +505,155 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
 
-        {/* 2. Próxima Consulta */}
+        {/* 2. Agenda Médica Unificada (Consultas e Exames) */}
         <section
-          id="dashboard-appointment-card"
+          id="dashboard-agenda-card"
           className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-4">
               <button
                 type="button"
-                onClick={() => setActiveTab('consultas')}
+                onClick={() => setActiveTab('agenda')}
                 className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
-                aria-label="Ir para página de Consultas"
+                aria-label="Ir para página de Consultas e Exames"
               >
                 <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <CalendarCheck2 className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
-                    Próximas Consultas
+                    Consultas e Exames
                   </h2>
-                  <p className="text-xs text-slate-500">Agendamentos e retornos médicos</p>
+                  <p className="text-xs text-slate-500">Próximos compromissos e pendências</p>
                 </div>
               </button>
               <button
                 type="button"
-                id="view-all-appointments-btn"
-                onClick={() => setActiveTab('consultas')}
+                id="view-all-agenda-btn"
+                onClick={() => setActiveTab('agenda')}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
-                aria-label="Ver todas as consultas"
+                aria-label="Ver agenda completa"
               >
-                Ver todas
+                Ver agenda
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {data?.nextAppointment ? (
+            {/* Itens da Agenda Unificada */}
+            {data?.agendaUnificada && data.agendaUnificada.totalItens > 0 ? (
               <div className="space-y-3">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setActiveTab('consultas')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveTab('consultas');
-                    }
-                  }}
-                  className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
-                  aria-label={`Consulta com ${data.nextAppointment.professional}. Toque para ver detalhes.`}
-                >
-                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex flex-col items-center justify-center font-bold text-xs shrink-0">
-                    <span className="uppercase text-[10px] leading-tight">
-                      {new Date(data.nextAppointment.dateTime).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
-                    </span>
-                    <span className="text-base leading-tight">
-                      {new Date(data.nextAppointment.dateTime).getDate()}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1">
+                {/* Alerta de Pendências sem Data (Amarelo) */}
+                {data.agendaUnificada.itensPendentes.length > 2 ? (
+                  /* Banner Condensado (> 2 pendências) */
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('agenda')}
+                    className="w-full p-3 rounded-xl bg-amber-50 border border-amber-300 text-left hover:bg-amber-100/70 transition-colors flex items-center justify-between gap-2 shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-amber-950">
+                          {data.agendaUnificada.itensPendentes.length} agendamentos aguardando liberação ou data
+                        </div>
+                        <div className="text-[11px] text-amber-800">
+                          Toque para visualizar e agendar
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-amber-700 shrink-0" />
+                  </button>
+                ) : (
+                  /* 1 ou 2 Pendências exibidas diretamente em cards amarelos */
+                  data.agendaUnificada.itensPendentes.map((item) => (
+                    <div
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab('agenda')}
+                      className="p-3 rounded-xl bg-amber-50/90 border border-amber-300 text-xs text-amber-950 flex items-start justify-between gap-2 shadow-2xs cursor-pointer hover:bg-amber-100/60 transition-colors"
+                    >
+                      <div className="space-y-0.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                          <span>{item.tipo === 'consulta' ? 'Consulta' : 'Exame'}</span>
+                          <span>·</span>
+                          <span>{item.statusRotulo}</span>
+                        </div>
+                        <div className="font-bold text-sm text-slate-900 truncate">
+                          {item.titulo}
+                        </div>
+                        <div className="text-slate-600 truncate">
+                          {item.subtitulo}
+                        </div>
+                        {item.motivoAlerta && (
+                          <div className="text-[11px] text-amber-900 font-medium pt-0.5">
+                            {item.motivoAlerta}
+                          </div>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                          Data a definir
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Próximos Confirmados */}
+                {data.agendaUnificada.itensConfirmados.slice(0, 2).map((item) => (
+                  <div
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('agenda')}
+                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 active:scale-[0.99] transition-all flex items-start gap-3.5 cursor-pointer"
+                  >
+                    <div className="w-11 h-11 bg-blue-100 text-blue-700 rounded-lg flex flex-col items-center justify-center font-bold text-xs shrink-0">
+                      <span className="uppercase text-[9px] leading-tight font-semibold">
+                        {item.dataHora ? new Date(item.dataHora).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') : ''}
+                      </span>
+                      <span className="text-sm leading-tight">
+                        {item.dataHora ? new Date(item.dataHora).getDate() : ''}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                          {item.tipo === 'consulta' ? 'Consulta' : 'Exame'}
+                        </span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-xs font-semibold text-slate-700 truncate">
+                          {item.categoriaOuEspecialidade}
+                        </span>
+                      </div>
                       <p className="font-bold text-slate-900 text-sm truncate">
-                        {data.nextAppointment.specialty} - {data.nextAppointment.professional}
+                        {item.titulo}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {item.subtitulo}
+                        {item.dataHora && item.dataHora.includes('T') && ` • às ${new Date(item.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                       </p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {data.nextAppointment.location} • {formatDateTime(data.nextAppointment.dateTime)}
-                    </p>
-                    {data.nextAppointment.reason && (
-                      <p className="text-xs text-slate-600 mt-1">
-                        <strong>Motivo:</strong> {data.nextAppointment.reason}
-                      </p>
-                    )}
                   </div>
-                </div>
+                ))}
               </div>
             ) : (
               <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 <CalendarCheck2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-600">Nenhuma consulta agendada</p>
-                {permissions?.canCreateRecord ? (
-                  <button
-                    type="button"
-                    onClick={onOpenAppointmentModal}
-                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Agendar consulta
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('consultas')}
-                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
-                  >
-                    Ver consultas
-                  </button>
-                )}
+                <p className="text-sm font-medium text-slate-600">Nenhum compromisso agendado</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('agenda')}
+                  className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer touch-manipulation"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Abrir Consultas e Exames
+                </button>
               </div>
             )}
           </div>

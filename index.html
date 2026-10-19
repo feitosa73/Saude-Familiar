@@ -3,6 +3,71 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <script>
+      // 1. Silent stub for Vite dev HMR WebSocket connection in iframe environment
+      (function() {
+        if (typeof window === 'undefined' || !window.WebSocket) return;
+        var NativeWebSocket = window.WebSocket;
+        function ViteSilentWebSocket(url, protocols) {
+          if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1))) {
+            var listeners = {};
+            return {
+              OPEN: 1,
+              CLOSED: 3,
+              CLOSING: 2,
+              CONNECTING: 0,
+              readyState: 1,
+              bufferedAmount: 0,
+              extensions: '',
+              protocol: 'vite-hmr',
+              url: url,
+              binaryType: 'blob',
+              send: function() {},
+              close: function() {},
+              addEventListener: function(type, fn) {
+                if (!listeners[type]) listeners[type] = [];
+                listeners[type].push(fn);
+              },
+              removeEventListener: function(type, fn) {
+                if (!listeners[type]) return;
+                listeners[type] = listeners[type].filter(function(cb) { return cb !== fn; });
+              },
+              dispatchEvent: function() { return true; }
+            };
+          }
+          return new NativeWebSocket(url, protocols);
+        }
+        ViteSilentWebSocket.prototype = NativeWebSocket.prototype;
+        ViteSilentWebSocket.CONNECTING = 0;
+        ViteSilentWebSocket.OPEN = 1;
+        ViteSilentWebSocket.CLOSING = 2;
+        ViteSilentWebSocket.CLOSED = 3;
+        window.WebSocket = ViteSilentWebSocket;
+      })();
+
+      // 2. Suppress benign Vite WebSocket/HMR runner errors in preview iframe environment
+      window.addEventListener('error', function(event) {
+        var msg = event && (event.message || '');
+        if (typeof msg === 'string' && (
+          msg.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
+          msg.indexOf('WebSocket') !== -1
+        )) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        var reasonMsg = event && event.reason && (event.reason.message || event.reason.stack || String(event.reason));
+        if (typeof reasonMsg === 'string' && (
+          reasonMsg.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
+          reasonMsg.indexOf('WebSocket') !== -1
+        )) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
     <meta name="theme-color" content="#1d4ed8" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
