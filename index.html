@@ -4,29 +4,55 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <script>
-      // 1. Silent stub for Vite dev HMR WebSocket connection in iframe environment
+      // 1. Silent stub for Vite dev HMR & ModuleRunner WebSocket connection in iframe environment
       (function() {
         if (typeof window === 'undefined' || !window.WebSocket) return;
         var NativeWebSocket = window.WebSocket;
         function ViteSilentWebSocket(url, protocols) {
-          if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1))) {
+          var urlStr = String(url || '');
+          var protoStr = String(protocols || '');
+          // Intercept any WebSocket connection originating from Vite client / dev server
+          var isViteWs =
+            protoStr === 'vite-hmr' ||
+            urlStr.indexOf('vite') !== -1 ||
+            urlStr.indexOf('token=') !== -1 ||
+            urlStr.indexOf('run.app') !== -1 ||
+            urlStr.indexOf('localhost') !== -1 ||
+            urlStr.indexOf('127.0.0.1') !== -1 ||
+            urlStr.indexOf(':3000') !== -1 ||
+            urlStr.indexOf(':24678') !== -1 ||
+            urlStr.indexOf(':5173') !== -1;
+
+          if (isViteWs) {
             var listeners = {};
-            return {
+            var ws = {
               OPEN: 1,
               CLOSED: 3,
               CLOSING: 2,
               CONNECTING: 0,
-              readyState: 1,
+              readyState: 1, // ReadyState OPEN prevents the reject()
               bufferedAmount: 0,
               extensions: '',
-              protocol: 'vite-hmr',
+              protocol: protocols || 'vite-hmr',
               url: url,
               binaryType: 'blob',
+              onopen: null,
+              onclose: null,
+              onerror: null,
+              onmessage: null,
               send: function() {},
               close: function() {},
               addEventListener: function(type, fn) {
                 if (!listeners[type]) listeners[type] = [];
                 listeners[type].push(fn);
+                if (type === 'open') {
+                  setTimeout(function() {
+                    try {
+                      if (typeof ws.onopen === 'function') ws.onopen({ type: 'open' });
+                      fn({ type: 'open' });
+                    } catch (_) {}
+                  }, 0);
+                }
               },
               removeEventListener: function(type, fn) {
                 if (!listeners[type]) return;
@@ -34,6 +60,12 @@
               },
               dispatchEvent: function() { return true; }
             };
+            setTimeout(function() {
+              try {
+                if (typeof ws.onopen === 'function') ws.onopen({ type: 'open' });
+              } catch (_) {}
+            }, 0);
+            return ws;
           }
           return new NativeWebSocket(url, protocols);
         }
@@ -47,26 +79,45 @@
 
       // 2. Suppress benign Vite WebSocket/HMR runner errors in preview iframe environment
       window.addEventListener('error', function(event) {
-        var msg = event && (event.message || '');
-        if (typeof msg === 'string' && (
+        var msg = String(event && (event.message || (event.error && (event.error.message || event.error.stack)) || ''));
+        var filename = String(event && event.filename || '');
+        if (
           msg.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
-          msg.indexOf('WebSocket') !== -1
-        )) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
+          msg.indexOf('WebSocket') !== -1 ||
+          msg.indexOf('@vite/client') !== -1 ||
+          filename.indexOf('@vite/client') !== -1
+        ) {
+          if (event.preventDefault) event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
           return true;
         }
       }, true);
+
       window.addEventListener('unhandledrejection', function(event) {
-        var reasonMsg = event && event.reason && (event.reason.message || event.reason.stack || String(event.reason));
-        if (typeof reasonMsg === 'string' && (
+        var reason = event && event.reason;
+        var reasonMsg = String((reason && (reason.stack || reason.message)) || reason || '');
+        if (
           reasonMsg.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
-          reasonMsg.indexOf('WebSocket') !== -1
-        )) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
+          reasonMsg.indexOf('WebSocket') !== -1 ||
+          reasonMsg.indexOf('@vite/client') !== -1
+        ) {
+          if (event.preventDefault) event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
         }
       }, true);
+
+      var prevOnError = window.onerror;
+      window.onerror = function(msg, url, line, col, error) {
+        var text = String(msg || '') + ' ' + String(url || '') + ' ' + String(error && error.stack || '');
+        if (
+          text.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
+          text.indexOf('@vite/client') !== -1 ||
+          text.indexOf('WebSocket') !== -1
+        ) {
+          return true;
+        }
+        if (prevOnError) return prevOnError.apply(this, arguments);
+      };
     </script>
     <meta name="theme-color" content="#1d4ed8" />
     <meta name="mobile-web-app-capable" content="yes" />

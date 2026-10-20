@@ -6,6 +6,16 @@
     --sab: env(safe-area-inset-bottom, 0px);
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
+
+    /* Paleta Cuidadora Acolhedora - Saúde Familiar */
+    --color-bg-app: #F5F7F5;
+    --color-surface: #FFFFFF;
+    --color-primary: #315F54;
+    --color-primary-hover: #274C43;
+    --color-soft-green: #DCEBE4;
+    --color-soft-green-text: #1E3D35;
+    --color-soft-sand: #F8E9D5;
+    --color-soft-sand-text: #6B4716;
   }
 
   html {
@@ -16,8 +26,8 @@
   }
 
   body {
-    background-color: #f8fafc;
-    color: #090d16;
+    background-color: #F5F7F5;
+    color: #1A202C;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overscroll-behavior-y: contain;
   }

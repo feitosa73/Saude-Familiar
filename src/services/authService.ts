@@ -54,6 +54,7 @@ export interface IAuthService {
   getFirebaseUser(): FirebaseUser | null;
   getIdToken(forceRefresh?: boolean): Promise<string | null>;
   login(credentials?: AuthCredentials): Promise<User>;
+  loginAsDemo(role?: 'CAREGIVER' | 'VIEWER'): Promise<User>;
   resolveMfaSignIn(resolver: MultiFactorResolver, verificationCode: string): Promise<User>;
   register(name: string, email: string, password: string): Promise<User>;
   sendPasswordReset(email: string): Promise<void>;
@@ -151,6 +152,20 @@ class AuthServiceImplementation implements IAuthService {
             this.currentUser = user;
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
           } else {
+            const previewToken = localStorage.getItem('saudefamiliar_preview_token');
+            const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+            if (previewToken && storedUser) {
+              try {
+                this.currentUser = JSON.parse(storedUser);
+                this.currentFirebaseUser = null;
+                if (!firstResolved) {
+                  firstResolved = true;
+                  resolve(null);
+                }
+                this.notifyListeners();
+                return;
+              } catch (_) {}
+            }
             this.currentUser = null;
             this.currentFirebaseUser = null;
             localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -163,6 +178,13 @@ class AuthServiceImplementation implements IAuthService {
         });
       });
     } else {
+      const previewToken = localStorage.getItem('saudefamiliar_preview_token');
+      const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (previewToken && storedUser) {
+        try {
+          this.currentUser = JSON.parse(storedUser);
+        } catch (_) {}
+      }
       this.initPromise = Promise.resolve(null);
       this.isInitialized = true;
     }
@@ -179,6 +201,15 @@ class AuthServiceImplementation implements IAuthService {
 
   getCurrentUser(): User | null {
     if (this.currentUser) return this.currentUser;
+    const previewToken = localStorage.getItem('saudefamiliar_preview_token');
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (previewToken && stored) {
+      try {
+        const u = JSON.parse(stored);
+        this.currentUser = u;
+        return u;
+      } catch (_) {}
+    }
     if (auth?.currentUser) {
       const fbUser = auth.currentUser;
       return {
@@ -193,6 +224,10 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async getIdToken(forceRefresh = false): Promise<string | null> {
+    const previewToken = localStorage.getItem('saudefamiliar_preview_token');
+    if (previewToken) {
+      return previewToken;
+    }
     if (!this.isInitialized) {
       await this.waitForInitialization();
     }
@@ -211,7 +246,24 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentFirebaseUser !== null && this.currentUser !== null;
+    return Boolean(localStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
+  }
+
+  async loginAsDemo(role: 'CAREGIVER' | 'VIEWER' = 'CAREGIVER'): Promise<User> {
+    const isCaregiver = role === 'CAREGIVER';
+    const user: User = {
+      id: isCaregiver ? 'demo-user-cuidador' : 'demo-user-familiar',
+      name: isCaregiver ? 'Carlos Silva (Cuidador Designado)' : 'Ana Silva (Familiar Apoio)',
+      email: isCaregiver ? 'cuidador.demo@saudefamiliar.com' : 'familiar.apoio@saudefamiliar.com',
+      avatarUrl: undefined,
+      patientIds: ['pat-dona-maria'],
+    };
+    this.currentUser = user;
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem('saudefamiliar_preview_token', isCaregiver ? 'preview-cuidador-token-active' : 'preview-familiar-token-active');
+    localStorage.setItem('saudefamiliar_active_family_id', 'fam-demo-123');
+    this.notifyListeners();
+    return user;
   }
 
   async login(credentials?: AuthCredentials): Promise<User> {
@@ -570,10 +622,37 @@ class AuthServiceImplementation implements IAuthService {
     this.currentFirebaseUser = null;
     this.currentUser = null;
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem('saudefamiliar_preview_token');
+    localStorage.removeItem('saudefamiliar_active_family_id');
     this.notifyListeners();
   }
 
   async getUserAccesses(userId: string): Promise<PatientAccess[]> {
+    if (userId === 'demo-user-cuidador') {
+      return [
+        {
+          id: 'acc-cuidador',
+          userId: 'demo-user-cuidador',
+          patientId: 'pat-dona-maria',
+          role: 'CAREGIVER',
+          createdAt: '2026-01-01T10:00:00Z',
+          createdBy: 'demo-user-cuidador',
+        },
+      ];
+    }
+    if (userId === 'demo-user-familiar') {
+      return [
+        {
+          id: 'acc-familiar',
+          userId: 'demo-user-familiar',
+          patientId: 'pat-dona-maria',
+          role: 'VIEWER',
+          createdAt: '2026-01-02T10:00:00Z',
+          createdBy: 'demo-user-cuidador',
+        },
+      ];
+    }
+
     const saved = localStorage.getItem(ACCESS_STORAGE_KEY);
     if (saved) {
       try {

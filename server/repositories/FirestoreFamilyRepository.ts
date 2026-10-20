@@ -391,36 +391,54 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     familyId: string,
     status?: AccessRequestStatus
   ): Promise<AccessRequest[]> {
-    let query: FirebaseFirestore.Query = this.db
-      .collection('families')
-      .doc(familyId)
-      .collection('accessRequests');
+    try {
+      let query: FirebaseFirestore.Query = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('accessRequests');
 
-    if (status) {
-      query = query.where('status', '==', status);
-    }
+      if (status) {
+        query = query.where('status', '==', status);
+      }
 
-    const snap = await query.get();
-    if (snap.empty) {
+      const snap = await query.get();
+      if (snap.empty) {
+        return [];
+      }
+
+      const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
+      return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        console.warn('[FirestoreFamilyRepository] listAccessRequestsByFamily: Permissão insuficiente. Retornando array vazio.');
+        return [];
+      }
+      console.warn('[FirestoreFamilyRepository] listAccessRequestsByFamily error:', err?.message || err);
       return [];
     }
-
-    const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
-    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async listAccessRequestsByRequester(requesterUid: string): Promise<AccessRequest[]> {
-    const snap = await this.db
-      .collectionGroup('accessRequests')
-      .where('requesterUid', '==', requesterUid)
-      .get();
+    try {
+      const snap = await this.db
+        .collectionGroup('accessRequests')
+        .where('requesterUid', '==', requesterUid)
+        .get();
 
-    if (snap.empty) {
+      if (snap.empty) {
+        return [];
+      }
+
+      const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
+      return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    } catch (err: any) {
+      if (isPermissionDeniedError(err)) {
+        console.warn('[FirestoreFamilyRepository] listAccessRequestsByRequester: Permissão insuficiente em collectionGroup. Retornando array vazio.');
+        return [];
+      }
+      console.warn('[FirestoreFamilyRepository] listAccessRequestsByRequester error:', err?.message || err);
       return [];
     }
-
-    const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as AccessRequest));
-    return list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }
 
   async approveAccessRequest(

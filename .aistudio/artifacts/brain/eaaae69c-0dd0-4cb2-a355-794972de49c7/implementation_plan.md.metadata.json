@@ -1,6 +1,6 @@
 {
-  "summary": "Plano técnico estrutural para unificação de Consultas e Exames: contratos TypeScript (ItemAgenda), Service de agregação no backend com Promise.all, layout do AgendaCard com alertas amarelos e acordeon de pendências, e plano de roteamento da navegação.",
-  "updatedAt": "2026-10-19T16:58:05.570144653Z",
+  "summary": "Revisão integral e consolidação do Plano de Implementação Evolutiva do Saúde Familiar Multiplataforma, alinhado estritamente às regras de negócio aprovadas (cuidador único designado, autonomia do paciente, permissões reais de visualizadores), saneamento do diagnóstico técnico (comportamento local de toggleDose, ordenação do próximo medicamento, ausência de testes e deploy automático) e reestruturação em fases estritamente incrementais focadas em UX/UI, separando correções funcionais de intervenções visuais sem criar código, entidades ou deploys prematuros.",
+  "updatedAt": "2026-10-19T21:02:10.651194485Z",
   "requestFeedback": true,
   "userFacing": true
 }

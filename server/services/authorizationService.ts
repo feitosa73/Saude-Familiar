@@ -95,6 +95,38 @@ export class ServerAuthorizationService {
   }
 
   /**
+   * Check if user can create or schedule appointments (all family members: ADMIN, CAREGIVER, VIEWER)
+   */
+  async canManageAppointments(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
+    return role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER';
+  }
+
+  /**
+   * Check if user can register or manage exams (all family members: ADMIN, CAREGIVER, VIEWER)
+   */
+  async canManageExams(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
+    return role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER';
+  }
+
+  /**
+   * Check if user can upload or share documents (all family members: ADMIN, CAREGIVER, VIEWER)
+   */
+  async canManageDocuments(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
+    return role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER';
+  }
+
+  /**
+   * Check if user can manage or administer medications (strictly designated caregiver or patient/admin, never VIEWER)
+   */
+  async canAdministerMedications(userId: string, patientId: string, familyId?: string): Promise<boolean> {
+    const role = await this.getUserRole(userId, patientId, familyId);
+    return role === 'ADMIN' || role === 'CAREGIVER';
+  }
+
+  /**
    * Check if user can invite/manage permissions for other users
    */
   async canManageAccess(userId: string, patientId: string, familyId?: string): Promise<boolean> {

@@ -10,6 +10,10 @@ export interface PatientPermissions {
   canEditRecord: boolean;
   canDeleteRecord: boolean;
   canManageAccess: boolean;
+  canManageAppointments: boolean;
+  canManageExams: boolean;
+  canManageDocuments: boolean;
+  canAdministerMedication: boolean;
 }
 
 export interface IAuthorizationService {
@@ -83,9 +87,9 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
       case 'ADMIN':
         return 'Administrador';
       case 'CAREGIVER':
-        return 'Cuidador(a)';
+        return 'Cuidador(a) Designado(a)';
       case 'VIEWER':
-        return 'Visualizador(a)';
+        return 'Familiar (Apoio)';
       default:
         return 'Sem acesso';
     }
@@ -96,9 +100,9 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
       case 'ADMIN':
         return 'Acesso total: gerencia dados, medicamentos, consultas, exames e permissões de usuários.';
       case 'CAREGIVER':
-        return 'Acesso operacional: cadastra e edita medicamentos, consultas, exames e histórico.';
+        return 'Cuidador(a) designado(a): administra e cadastra medicamentos, consultas, exames e histórico clínico.';
       case 'VIEWER':
-        return 'Apenas visualização: consulta informações, relatórios e linha do tempo sem permissão de edição.';
+        return 'Apoio familiar: acompanha dados do paciente, agenda consultas, exames e compartilha laudos. Administração de medicamentos reservada ao cuidador designado.';
       default:
         return 'Você não possui acesso aos registros deste paciente.';
     }
@@ -116,6 +120,10 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
       canEditRecord: role === 'ADMIN' || role === 'CAREGIVER',
       canDeleteRecord: role === 'ADMIN',
       canManageAccess: role === 'ADMIN',
+      canManageAppointments: role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER',
+      canManageExams: role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER',
+      canManageDocuments: role === 'ADMIN' || role === 'CAREGIVER' || role === 'VIEWER',
+      canAdministerMedication: role === 'ADMIN' || role === 'CAREGIVER',
     };
   }
 }

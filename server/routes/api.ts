@@ -13,17 +13,25 @@ import { scheduleAiService } from '../services/scheduleAiService';
 import { AgendaService } from '../services/agendaService';
 import { requireAuth, AuthenticatedRequest } from '../middlewares/requireAuth';
 import {
-  requireActiveMembership,
+  createRequireActiveMembership,
   AuthorizedFamilyRequest,
 } from '../middlewares/requireActiveMembership';
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
+import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
+
+const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
+const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
+
+// Detect if running in production Cloud Run with ADC credentials, or development preview
+const isCloudRun = Boolean(process.env.K_SERVICE);
 
 export function createApiRouter(
-  repository: IHealthRepository = new FirestoreHealthRepository(),
-  familyRepository: IFamilyRepository = new FirestoreFamilyRepository()
+  repository: IHealthRepository = isCloudRun ? new FirestoreHealthRepository() : sharedMemoryHealthRepo,
+  familyRepository: IFamilyRepository = isCloudRun ? new FirestoreFamilyRepository() : sharedMemoryFamilyRepo
 ): Router {
   const router = Router();
   const authzService = new ServerAuthorizationService(repository);
+  const requireActiveMembership = createRequireActiveMembership(familyRepository);
 
   // In-memory Multer for transitory AI file processing (Zero Storage / In-memory only)
   const upload = multer({
@@ -355,8 +363,18 @@ export function createApiRouter(
       }
 
       const requests = await familyRepository.listAccessRequestsByRequester(authUser.uid);
-      res.json(requests);
+      res.json(requests || []);
     } catch (error: any) {
+      const isPermDenied =
+        error?.code === 7 ||
+        error?.code === 'PERMISSION_DENIED' ||
+        error?.message?.includes('PERMISSION_DENIED') ||
+        error?.message?.includes('Missing or insufficient permissions');
+
+      if (isPermDenied) {
+        console.warn('[API] /access-requests/my: Firestore indisponível ou permissão insuficiente. Retornando [].');
+        return res.json([]);
+      }
       console.error('[API] Erro ao listar solicitações do usuário:', error);
       res.status(500).json({ error: 'Erro ao buscar solicitações' });
     }
@@ -372,8 +390,18 @@ export function createApiRouter(
       try {
         const familyId = req.params.familyId;
         const requests = await familyRepository.listAccessRequestsByFamily(familyId);
-        res.json(requests);
+        res.json(requests || []);
       } catch (error: any) {
+        const isPermDenied =
+          error?.code === 7 ||
+          error?.code === 'PERMISSION_DENIED' ||
+          error?.message?.includes('PERMISSION_DENIED') ||
+          error?.message?.includes('Missing or insufficient permissions');
+
+        if (isPermDenied) {
+          console.warn('[API] /families/:familyId/access-requests: Firestore indisponível ou permissão insuficiente. Retornando [].');
+          return res.json([]);
+        }
         console.error('[API] Erro ao listar solicitações da família:', error);
         res.status(500).json({ error: 'Erro ao listar solicitações da família' });
       }
@@ -1685,10 +1713,10 @@ export function createApiRouter(
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
-        if (!canCreate && req.membership?.role !== 'owner') {
+        const canManage = await authzService.canManageAppointments(userId, patientId, familyId);
+        if (!canManage && req.membership?.role !== 'owner') {
           return res.status(403).json({
-            error: 'Visualizadores não possuem permissão para agendar consultas',
+            error: 'Você não possui permissão para agendar consultas para este paciente',
           });
         }
 
@@ -1830,10 +1858,10 @@ export function createApiRouter(
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
-        if (!canCreate && req.membership?.role !== 'owner') {
+        const canManage = await authzService.canManageExams(userId, patientId, familyId);
+        if (!canManage && req.membership?.role !== 'owner') {
           return res.status(403).json({
-            error: 'Visualizadores não possuem permissão para cadastrar exames',
+            error: 'Você não possui permissão para cadastrar exames para este paciente',
           });
         }
 
@@ -1964,10 +1992,10 @@ export function createApiRouter(
         const { patientId } = req.params;
         const userId = getCurrentUserId(req);
 
-        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
-        if (!canCreate && req.membership?.role !== 'owner') {
+        const canManage = await authzService.canManageDocuments(userId, patientId, familyId);
+        if (!canManage && req.membership?.role !== 'owner') {
           return res.status(403).json({
-            error: 'Visualizadores não possuem permissão para adicionar documentos',
+            error: 'Você não possui permissão para adicionar documentos para este paciente',
           });
         }
 

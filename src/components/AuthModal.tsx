@@ -50,8 +50,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onSuccess={onClose}
         />
 
+        {/* Quick Demo Access for Preview Testing */}
+        <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+          <p className="text-[11px] font-semibold text-slate-500">
+            Validação no Preview sem senha:
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              id="btn-modal-demo-cuidador"
+              onClick={async () => {
+                onClose();
+                const { authService } = await import('../services/authService');
+                await authService.loginAsDemo('CAREGIVER');
+                window.location.reload();
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#DCEBE4] text-[#1E3D35] hover:bg-[#c9e1d7] border border-emerald-200 transition text-center cursor-pointer"
+            >
+              Cuidador Demo
+            </button>
+            <button
+              type="button"
+              id="btn-modal-demo-familiar"
+              onClick={async () => {
+                onClose();
+                const { authService } = await import('../services/authService');
+                await authService.loginAsDemo('VIEWER');
+                window.location.reload();
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition text-center cursor-pointer"
+            >
+              Familiar Demo
+            </button>
+          </div>
+        </div>
+
         {/* Security badge note */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
           <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
           <span>Autenticação segura via Firebase Authentication</span>
         </div>

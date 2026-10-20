@@ -35,6 +35,7 @@ interface AuthContextType {
   statusMessage: string | null;
   patientAccesses: PatientAccess[];
   login: (credentials?: AuthCredentials) => Promise<void>;
+  loginAsDemo: (role?: 'CAREGIVER' | 'VIEWER') => Promise<void>;
   loginWithMfa: (resolver: MultiFactorResolver, verificationCode: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -203,6 +204,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginAsDemo = async (role: 'CAREGIVER' | 'VIEWER' = 'CAREGIVER') => {
+    setIsLoading(true);
+    try {
+      const loggedUser = await authService.loginAsDemo(role);
+      setUser(loggedUser);
+      await loadAuthoritativeState(loggedUser);
+      await fetchAccesses(loggedUser.id);
+    } catch (err) {
+      console.error('[AuthContext] Erro ao entrar no modo demonstração:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loginWithMfa = async (resolver: MultiFactorResolver, verificationCode: string) => {
     setIsLoading(true);
     try {
@@ -271,6 +286,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           canEditRecord: false,
           canDeleteRecord: false,
           canManageAccess: false,
+          canManageAppointments: false,
+          canManageExams: false,
+          canManageDocuments: false,
+          canAdministerMedication: false,
         };
       }
 
@@ -285,6 +304,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           canEditRecord: true,
           canDeleteRecord: true,
           canManageAccess: true,
+          canManageAppointments: true,
+          canManageExams: true,
+          canManageDocuments: true,
+          canAdministerMedication: true,
         };
       }
 
@@ -316,6 +339,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         statusMessage,
         patientAccesses,
         login,
+        loginAsDemo,
         loginWithMfa,
         register,
         sendPasswordReset,

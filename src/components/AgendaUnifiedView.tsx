@@ -70,7 +70,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   const [examDocumentId, setExamDocumentId] = useState('');
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
-  const canEdit = permissions?.canEditRecord !== false;
+  const canEdit = permissions ? (permissions.canManageAppointments || permissions.canManageExams) : true;
 
   const loadData = useCallback(async () => {
     if (!selectedPatient) return;

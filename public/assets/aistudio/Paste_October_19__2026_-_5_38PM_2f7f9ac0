@@ -1,0 +1,664 @@
+# PROMPT | Plano de Implementação Evolutiva do Saúde Familiar Multiplataforma
+
+## 1. Seu papel e objetivo
+
+Atue como **Arquiteto de Software Sênior, Product Designer UX/UI, Engenheiro de Qualidade e Especialista em Segurança de Aplicações**, com experiência em React, TypeScript, Firebase, aplicações responsivas, acessibilidade e produtos digitais voltados ao cuidado familiar.
+
+Você é o responsável atual pelo desenvolvimento e deploy do aplicativo Saúde Familiar.
+
+Repositório principal:
+https://github.com/feitosa73/Saude-Familiar
+
+Quero evoluir o aplicativo para uma experiência multiplataforma mais humana, acolhedora, intuitiva, consistente e acessível, especialmente para familiares que acompanham a saúde de outras pessoas.
+
+**Sua tarefa inicial é analisar o estado atual do projeto e produzir um plano detalhado de implementação, dividido em fases pequenas, independentes quando possível, verificáveis e reversíveis.**
+
+### Restrição fundamental desta etapa
+
+**NÃO altere nenhum arquivo, NÃO escreva código no projeto, NÃO instale dependências, NÃO execute migrações, NÃO modifique configurações e NÃO faça deploy.**
+
+Neste momento, estamos apenas na etapa de análise, planejamento e definição dos critérios de aceite.
+
+O plano será revisado por outra pessoa antes de qualquer implementação. Portanto, suas conclusões precisam ser verificáveis, fundamentadas no código atual e suficientemente detalhadas para permitir uma revisão técnica independente.
+
+---
+
+## 2. Princípios que não podem ser violados
+
+Todas as propostas devem respeitar os seguintes princípios:
+
+1. **Preservação das regras de negócio:** não modificar fluxos, cálculos, validações, estados, regras clínicas ou comportamentos existentes sem justificativa, análise de impacto e aprovação explícita.
+2. **Segurança por padrão:** preservar autenticação, autorização, isolamento dos dados, regras do Firebase, permissões e proteção de informações pessoais e de saúde.
+3. **Compartilhamento familiar:** preservar os diferentes papéis e permissões dos usuários, incluindo proprietário, editor e visualizador, conforme efetivamente implementados.
+4. **Integridade dos dados:** não criar informações fictícias para preencher a interface, não confundir ausência de dados com falha de carregamento e não apresentar ações locais como se estivessem salvas no servidor.
+5. **Evolução incremental:** dividir o trabalho em fases pequenas, com resultados demonstráveis e critérios objetivos de aceite.
+6. **Compatibilidade:** evitar mudanças tecnológicas ou arquiteturais desnecessárias. Não propor migração de framework, reescrita da aplicação ou troca de backend sem demonstrar um problema concreto.
+7. **Acessibilidade:** projetar para pessoas com diferentes níveis de familiaridade tecnológica, incluindo idosos, familiares cuidadores e usuários de dispositivos móveis.
+8. **Transparência clínica:** a interface não deve inventar níveis de gravidade, urgência ou risco médico que não estejam sustentados pelos dados e pelas regras existentes.
+9. **Reversibilidade:** preferir mudanças pequenas, fáceis de testar e de reverter.
+10. **Separação entre planejamento, implementação e deploy:** nenhuma etapa de execução deve começar sem autorização explícita.
+
+Se algum requisito não puder ser confirmado no código, classifique-o como hipótese ou pendência de investigação. Não presuma que algo funciona apenas porque existe um botão ou componente visual.
+
+---
+
+## 3. Primeira tarefa: auditoria do estado atual
+
+Antes de recomendar mudanças, examine a estrutura real do repositório, as tecnologias utilizadas, os componentes existentes, os fluxos de dados e as integrações.
+
+Considere, entre outros pontos, que o projeto já foi identificado preliminarmente como uma aplicação com React 19, Vite, Express, Firebase/Firebase Admin, Tailwind CSS v4 e infraestrutura inicial de PWA. **Confirme se essas informações continuam corretas e registre eventuais divergências.**
+
+Analise pelo menos:
+
+- Estrutura de diretórios e responsabilidades dos módulos.
+- Ponto de entrada da aplicação e composição das telas.
+- Componentes da tela inicial e da navegação.
+- Estilos globais, design tokens e classes de componentes.
+- Responsividade em desktop, tablet e dispositivos móveis.
+- Autenticação e autorização.
+- Modelo de usuários, pacientes, famílias e compartilhamento.
+- Regras de leitura e escrita dos dados.
+- Integrações com Firebase e eventuais endpoints do servidor.
+- Carregamento, atualização, persistência e tratamento de erros.
+- Formulários, modais, botões e ações rápidas.
+- Estados de carregamento, ausência de dados e falhas.
+- Testes automatizados existentes e cobertura disponível.
+- Configuração de build, ambientes e processo de deploy.
+- Recursos de PWA, instalação e funcionamento em diferentes dispositivos.
+- Dependências e riscos de regressão.
+
+### Arquivos e áreas que merecem atenção especial
+
+Verifique a implementação atual, sem presumir que o código permaneceu igual, dos seguintes arquivos e componentes anteriormente identificados:
+
+- `src/components/DashboardView.tsx`
+- `src/components/TabNavigation.tsx`
+- `src/components/Navbar.tsx`
+- `src/App.tsx`
+- `src/index.css`
+
+Procure também todos os serviços, hooks, contextos, tipos, regras, endpoints e componentes relacionados às funcionalidades apresentadas na tela inicial.
+
+Não limite a auditoria aos arquivos listados. Siga o fluxo até a origem dos dados e o local em que as operações são efetivamente persistidas.
+
+### Entregável da auditoria
+
+Para cada achado relevante, informe:
+
+- Identificador do achado.
+- Arquivo, componente ou módulo.
+- Referência de linha ou símbolo, quando disponível.
+- Comportamento atual observado.
+- Evidência concreta.
+- Problema ou oportunidade identificada.
+- Impacto para o usuário.
+- Impacto técnico e risco de regressão.
+- Recomendação.
+- Grau de confiança: confirmado, provável ou pendente de investigação.
+
+Separe claramente **problemas comprovados, melhorias de experiência e hipóteses que ainda precisam ser validadas**.
+
+Se você não conseguir acessar algum arquivo, executar algum teste ou verificar o comportamento real, informe essa limitação. Não declare que realizou testes que não foram executados.
+
+---
+
+## 4. Escopo funcional e visual das melhorias
+
+Avalie as melhorias a seguir e determine quais fazem sentido para a implementação atual. Não as implemente nesta etapa.
+
+### 4.1. Identidade visual e linguagem da interface
+
+Proponha uma identidade visual coerente, acolhedora e profissional para o Saúde Familiar.
+
+Objetivos:
+
+- Reduzir a sensação de painel administrativo complexo.
+- Melhorar a leitura e a hierarquia visual.
+- Usar cores suaves e superfícies limpas, sem comprometer contraste e legibilidade.
+- Evitar excesso de cores fortes, cartões concorrentes e alertas visualmente indistinguíveis.
+- Padronizar tipografia, espaçamento, bordas, raios, ícones e estados interativos.
+- Estabelecer padrões reutilizáveis de componentes.
+- Manter consistência entre as telas existentes.
+
+Uma paleta preliminar que pode ser avaliada, mas não deve ser adotada automaticamente, é:
+
+- Fundo geral: `#F5F7F5`
+- Superfícies: `#FFFFFF`
+- Cor primária: `#315F54`
+- Verde suave: `#DCEBE4`
+- Areia suave: `#F8E9D5`
+
+Avalie contraste real, legibilidade, diferenciação de estados e acessibilidade antes de recomendar qualquer cor. Cores de texto, fundo e elementos interativos devem ser verificadas em suas combinações efetivas.
+
+Não altere indiscriminadamente o CSS global. Prefira estilos restritos aos componentes modificados, design tokens bem definidos e mudanças com baixo risco de afetar telas que não fazem parte da fase atual.
+
+### 4.2. Reorganização da tela inicial
+
+Avalie a melhor hierarquia para a tela inicial, considerando o que os usuários precisam encontrar rapidamente.
+
+Uma possível estrutura a validar:
+
+1. Identificação clara do familiar ou paciente atualmente selecionado.
+2. Alertas clínicos importantes já registrados.
+3. Próximos compromissos e pendências que exigem ação.
+4. Acessos rápidos às principais funcionalidades.
+5. Resumo de medicamentos, consultas e exames.
+6. Documentos recentes e histórico de atividades.
+
+Essa ordem é uma hipótese de design, não uma decisão definitiva. Analise os dados disponíveis, os comportamentos existentes, as prioridades dos usuários e os riscos de ocultar informações relevantes.
+
+Evite duplicar informações em diferentes cartões ou destacar como urgente um item apenas por estar próximo no calendário.
+
+### 4.3. Componentes padronizados para alertas e informações clínicas
+
+Proponha padrões reutilizáveis para os seguintes tipos de conteúdo:
+
+**A. Alerta clínico importante**
+
+Exemplos: alergias cadastradas e outras informações clínicas relevantes já disponíveis no sistema.
+
+Requisitos:
+
+- Exibir o conteúdo registrado de maneira clara.
+- Preservar o contexto e a origem da informação.
+- Não inferir gravidade médica que não esteja explicitamente sustentada.
+- Diferenciar informação clínica cadastrada de uma recomendação médica.
+- Não apresentar um cadastro incompleto como uma confirmação de ausência de risco.
+
+**B. Pendência que exige ação**
+
+Exemplos: exame pendente de agendamento, consulta a confirmar ou informação que precisa ser completada.
+
+Requisitos:
+
+- Explicar o que está pendente.
+- Indicar a ação possível, quando ela realmente existir.
+- Respeitar as permissões do usuário.
+- Não classificar automaticamente a pendência como urgência clínica.
+- Não oferecer uma ação que não seja suportada pelo backend.
+
+**C. Próximo compromisso**
+
+Exemplos: consulta, exame ou outro compromisso cadastrado.
+
+Requisitos:
+
+- Exibir data, horário e tipo de compromisso quando disponíveis.
+- Diferenciar estados reais do registro, como confirmado, pendente ou cancelado, conforme os dados existentes.
+- Tratar datas ausentes ou inválidas adequadamente.
+- Evitar afirmar que um compromisso está confirmado quando isso não puder ser verificado.
+
+**D. Informação contextual**
+
+Exemplos: documentos recentes, registros de histórico e informações complementares.
+
+Requisitos:
+
+- Ter hierarquia visual mais discreta.
+- Manter acessibilidade e possibilidade de navegação.
+- Evitar competir visualmente com alertas que precisam de atenção.
+
+**E. Aviso de acesso ou compartilhamento**
+
+Exemplos: usuário com acesso de visualização, convite pendente ou alteração de permissões.
+
+Requisitos:
+
+- Refletir as permissões efetivas.
+- Explicar limitações relevantes sem expor dados indevidos.
+- Preservar as funcionalidades de administração familiar existentes.
+- Nunca utilizar a ocultação de botões como substituto para autorização no backend.
+
+Avalie se esses padrões devem ser implementados inicialmente dentro do dashboard ou se já existem componentes que podem ser reutilizados com segurança.
+
+Considere os componentes conceituais `ClinicalAlert`, `PendingActionCard`, `UpcomingEventCard` e `DataState`, mas só recomende novos componentes se a análise comprovar que eles acrescentam valor em relação à estrutura atual.
+
+### 4.4. Estados de carregamento, vazio, erro e sucesso
+
+Analise os componentes alimentados por dados e defina um padrão consistente para quatro estados:
+
+- **Carregando:** skeletons ou indicadores adequados, sem mudanças bruscas de layout.
+- **Vazio:** mensagem compreensível quando não existem registros.
+- **Erro:** indicação de falha, com possibilidade de tentar novamente quando suportada.
+- **Dados disponíveis:** apresentação dos registros reais e das ações autorizadas.
+
+Critérios:
+
+- Erro de consulta não pode ser tratado como ausência de registros.
+- Dados desatualizados não devem ser apresentados como atuais sem a devida indicação, quando isso for relevante.
+- Botões de repetição precisam executar uma operação real.
+- Estados de erro não devem revelar detalhes técnicos sensíveis.
+- Não oferecer criação de registros quando o usuário não tem permissão.
+- Evitar mensagens genéricas ou vazias que não ajudem a pessoa a entender o que aconteceu.
+
+Mapeie os componentes que já implementam esses estados e aqueles que precisam de melhorias.
+
+### 4.5. Medicamentos e registro de doses
+
+Este ponto exige uma auditoria técnica específica antes de qualquer alteração visual.
+
+Verifique a origem dos dados usados para apresentar o próximo medicamento ou a próxima dose. Em particular, investigue se o uso de `data?.activeMedications?.[0]` representa realmente a próxima dose cronológica ou apenas o primeiro medicamento retornado.
+
+Investigue a implementação de `toggleDose(med.id, time)` e a variável `takenDoses`, verificando:
+
+- Onde o estado é armazenado.
+- Se existe persistência no servidor ou banco de dados.
+- Se o registro sobrevive a recarregamentos.
+- Se outros dispositivos recebem a atualização.
+- Se há sincronização entre usuários autorizados da família.
+- Como são tratados erros de gravação.
+- Como são tratadas duplicidades, horários e datas.
+- Se usuários com acesso somente de leitura conseguem acionar indevidamente a funcionalidade.
+- Se existe auditoria ou histórico de alterações, quando aplicável.
+
+Classifique claramente o resultado dessa investigação.
+
+**Se o registro de dose for apenas local ou não houver confirmação de persistência, não recomende apresentá-lo como uma dose efetivamente tomada.**
+
+Não modifique a lógica de medicação nesta iniciativa visual sem uma proposta específica, análise de impacto e aprovação. Caso o comportamento atual apresente risco de interpretação incorreta, registre o problema como item prioritário de investigação.
+
+### 4.6. Navegação e troca de familiar
+
+A troca entre familiares e pacientes é uma função essencial para uma aplicação de cuidado familiar.
+
+Avalie a navegação em desktop e dispositivos móveis, incluindo:
+
+- Identificação do familiar selecionado.
+- Facilidade de alternar entre familiares.
+- Visibilidade e acessibilidade do seletor.
+- Navegação principal.
+- Acessos a consultas, medicamentos, exames e documentos.
+- Convites e solicitações pendentes.
+- Administração do compartilhamento familiar.
+- Diferenças entre os papéis de proprietário, editor e visualizador.
+
+Não esconda seletores essenciais para simplificar visualmente a tela.
+
+Se houver necessidade de reorganizar funções administrativas, faça isso sem tornar a troca de familiar mais difícil nem comprometer o acesso às informações relevantes.
+
+### 4.7. Responsividade e experiência multiplataforma
+
+Analise a experiência em:
+
+- Desktop.
+- Tablet.
+- Smartphones Android.
+- Smartphones iOS.
+- Navegadores móveis.
+- PWA, instalação e comportamento offline, quando suportados.
+
+Verifique:
+
+- Layouts e quebras de linha.
+- Cartões e tabelas.
+- Tamanho de textos e controles.
+- Áreas de toque.
+- Navegação inferior e menus.
+- Modais, formulários e mensagens de erro.
+- Teclado virtual e campos de entrada.
+- Estados de carregamento.
+- Comportamento em telas pequenas.
+- Consistência visual e funcional entre plataformas.
+
+Não assuma que uma aplicação responsiva é automaticamente uma aplicação multiplataforma completa. Diferencie o que já existe, o que pode ser aprimorado na web/PWA e o que exigiria desenvolvimento nativo adicional.
+
+**Não proponha criar aplicativos Android ou iOS nativos nesta etapa sem demonstrar a necessidade e apresentar separadamente os impactos, custos, dependências e riscos.**
+
+### 4.8. Acessibilidade e facilidade de uso
+
+Avalie a interface considerando pessoas idosas, familiares cuidadores e usuários com pouca familiaridade tecnológica.
+
+Inclua:
+
+- Contraste de texto e elementos visuais.
+- Hierarquia tipográfica.
+- Navegação por teclado.
+- Foco visível.
+- Rótulos acessíveis.
+- Uso de leitores de tela.
+- Tamanho de áreas interativas.
+- Mensagens de erro compreensíveis.
+- Ícones acompanhados de texto quando necessário.
+- Estados que não dependam exclusivamente de cor.
+- Clareza das ações e confirmação de operações importantes.
+- Consistência da linguagem em português.
+
+Use WCAG 2.2 AA como referência de avaliação, quando aplicável. Registre limitações e defina critérios verificáveis de aceite.
+
+---
+
+## 5. Segurança, privacidade e compartilhamento familiar
+
+Antes de recomendar mudanças em qualquer fluxo, verifique o modelo atual de autorização e o impacto sobre os dados pessoais e clínicos.
+
+Avalie:
+
+- Autenticação e sessão.
+- Autorização no backend e nas regras de acesso aos dados.
+- Isolamento entre famílias e pacientes.
+- Permissões de leitura, criação, edição e exclusão.
+- Compartilhamento de dados entre familiares.
+- Convites, revogação de acesso e solicitações pendentes.
+- Exposição acidental de dados em logs, mensagens ou interfaces.
+- Tratamento de erros.
+- Dados em cache e eventual comportamento offline.
+- Possíveis impactos sobre a LGPD.
+- Riscos de alterações no frontend que não sejam acompanhadas das proteções necessárias no backend.
+
+Não enfraqueça regras de segurança para facilitar a implementação de componentes visuais.
+
+Não proponha alterações de permissões, regras do Firebase, autenticação ou modelo de compartilhamento como parte de uma simples melhoria visual. Se identificar um problema, documente-o separadamente e recomende uma análise de segurança específica.
+
+O aviso de beta ou de uso de dados fictícios atualmente apresentado no aplicativo também deve ser avaliado. Não o remova ou altere sem verificar o propósito, o ambiente e os requisitos associados.
+
+---
+
+## 6. Plano de implementação dividido em fases
+
+Com base na auditoria, monte um plano de implementação com fases pequenas e progressivas.
+
+Use a sequência abaixo como ponto de partida, mas ajuste-a se a arquitetura atual justificar outra organização.
+
+### Fase 0: Auditoria, inventário e linha de base
+
+Objetivo: conhecer o estado atual, identificar riscos e estabelecer uma referência para comparar os resultados.
+
+Inclua:
+
+- Inventário de componentes e funcionalidades.
+- Mapeamento dos fluxos de dados.
+- Mapeamento de permissões e papéis.
+- Identificação dos estilos globais e locais.
+- Identificação dos testes existentes.
+- Levantamento dos riscos de regressão.
+- Registro das limitações de acesso ou teste.
+- Definição dos critérios de sucesso do projeto.
+
+**Saída esperada:** diagnóstico técnico, mapa de dependências, lista priorizada de achados e critérios de aceite gerais.
+
+### Fase 1: Fundação visual e acessibilidade
+
+Objetivo: estabelecer padrões visuais seguros, sem alterar regras de negócio.
+
+Avalie:
+
+- Tokens de cores, tipografia, espaçamento e superfícies.
+- Padronização de componentes visuais.
+- Contraste e acessibilidade.
+- Escopo das alterações de CSS.
+- Reutilização de componentes existentes.
+- Estratégia para evitar regressões em telas fora do escopo.
+
+**Saída esperada:** proposta de design system incremental, lista de arquivos afetados e testes necessários.
+
+Não comece por uma reformulação global de estilos.
+
+### Fase 2: Estados de interface e componentes básicos
+
+Objetivo: padronizar os estados de carregamento, vazio, erro e dados disponíveis.
+
+Avalie os componentes candidatos, suas dependências e a melhor forma de reutilização.
+
+**Saída esperada:** especificação dos estados, componentes candidatos, contratos de dados necessários e critérios de aceite.
+
+### Fase 3: Alertas clínicos e informações da tela inicial
+
+Objetivo: organizar alertas, pendências, compromissos e informações contextuais sem inventar urgência clínica.
+
+Defina:
+
+- Tipos de componentes.
+- Hierarquia visual.
+- Conteúdo e ações permitidas.
+- Regras de exibição baseadas nos dados existentes.
+- Comportamento em cada estado.
+- Tratamento de permissões.
+- Comportamento responsivo.
+
+**Saída esperada:** especificação visual e funcional da tela inicial, com critérios objetivos para validação.
+
+### Fase 4: Reorganização do dashboard
+
+Objetivo: aplicar a hierarquia aprovada à tela inicial.
+
+Avalie a ordem dos blocos, a densidade de informação, os acessos rápidos e a adaptação para dispositivos móveis.
+
+A fase deve preservar os comportamentos existentes e não pode ocultar funcionalidades importantes sem aprovação.
+
+**Saída esperada:** plano de alteração do dashboard, arquivos afetados, testes de regressão e critérios de aceite.
+
+### Fase 5: Navegação e experiência familiar
+
+Objetivo: aprimorar a clareza da navegação e a troca entre familiares.
+
+Inclua os diferentes papéis de acesso, os convites e as funções administrativas existentes.
+
+**Saída esperada:** proposta de navegação desktop/mobile e matriz de testes por papel e permissão.
+
+### Fase 6: Responsividade, PWA e acessibilidade ampliada
+
+Objetivo: verificar a consistência da experiência em diferentes dispositivos e modos de utilização.
+
+Separe melhorias viáveis na arquitetura atual de funcionalidades que exigiriam mudanças maiores.
+
+**Saída esperada:** matriz de compatibilidade, pendências de acessibilidade, limitações da PWA e testes necessários.
+
+### Fase 7: Validação integrada, regressão e preparação para deploy
+
+Objetivo: verificar a integração das mudanças aprovadas, sem executar o deploy nesta etapa de planejamento.
+
+Inclua:
+
+- Testes unitários e de componentes.
+- Testes de integração.
+- Testes de permissões.
+- Testes de regressão.
+- Testes responsivos.
+- Verificações de acessibilidade.
+- Testes dos fluxos principais.
+- Build e validações de ambiente, quando disponíveis.
+- Estratégia de rollback.
+- Critérios para aprovação do deploy.
+- Evidências necessárias para liberar a versão.
+
+**Saída esperada:** checklist de liberação, plano de rollback e critérios de aprovação.
+
+### Regra de progressão entre fases
+
+Cada fase deve terminar com um ponto de controle explícito.
+
+Não avance automaticamente para a próxima fase. Após cada fase implementada, o resultado deve ser testado e validado antes da continuidade.
+
+Se uma fase revelar um problema de arquitetura, segurança ou negócio, interrompa a progressão e documente a descoberta antes de propor a próxima ação.
+
+---
+
+## 7. Detalhamento obrigatório de cada fase
+
+Para cada fase proposta, apresente uma seção com os seguintes itens:
+
+1. Identificador e nome.
+2. Objetivo.
+3. Problemas concretos que pretende resolver.
+4. Evidências da auditoria que justificam a fase.
+5. Escopo incluído.
+6. Itens explicitamente fora do escopo.
+7. Arquivos e componentes envolvidos.
+8. Dependências técnicas.
+9. Mudanças visuais previstas.
+10. Mudanças funcionais previstas, se houver.
+11. Alterações no backend ou nos dados, se realmente necessárias.
+12. Impactos sobre segurança e permissões.
+13. Riscos de regressão.
+14. Estratégias para mitigar os riscos.
+15. Testes necessários.
+16. Critérios objetivos de aceite.
+17. Evidências que deverão ser apresentadas na validação.
+18. Condições para interromper a implementação.
+19. Estratégia de reversão.
+20. Estimativa de esforço em horas ou dias úteis, com premissas e nível de confiança.
+21. Dependências de outras fases.
+22. Decisões que precisam da aprovação do responsável pelo produto.
+
+Não use critérios vagos como “ficou mais bonito”, “funcionou bem” ou “está responsivo”. Sempre que possível, converta-os em condições observáveis e testáveis.
+
+Para cada fase, identifique o menor conjunto de mudanças que produz um resultado útil e validável.
+
+---
+
+## 8. Matriz de regressão obrigatória
+
+Monte uma matriz de testes que cubra, no mínimo:
+
+| Área | Cenários a verificar |
+|---|---|
+| Autenticação | Acesso autorizado, sessão expirada e usuário não autenticado |
+| Papéis | Proprietário, editor e visualizador, conforme a implementação existente |
+| Família | Alternância de paciente, isolamento de dados e compartilhamento |
+| Dashboard | Carregamento, vazio, erro e dados disponíveis |
+| Alertas | Conteúdo real, ausência de dados e informações incompletas |
+| Medicamentos | Exibição, estado de dose, persistência e permissões |
+| Consultas e exames | Dados, datas, estados e ações autorizadas |
+| Documentos | Listagem, abertura e permissões |
+| Navegação | Desktop, tablet e dispositivos móveis |
+| PWA | Instalação e comportamento suportado atualmente |
+| Acessibilidade | Contraste, teclado, foco, rótulos e leitores de tela |
+| Segurança | Regras de acesso, isolamento e ausência de exposição indevida |
+| Deploy | Build, configuração de ambiente e possibilidade de rollback |
+
+Adapte a matriz aos testes e recursos realmente disponíveis. Identifique o que pode ser automatizado, o que precisa de validação manual e o que depende de ambiente externo.
+
+---
+
+## 9. Priorização e estimativas
+
+Classifique cada melhoria por:
+
+- **Prioridade:** P0, P1, P2 ou P3.
+- **Valor para o usuário:** alto, médio ou baixo.
+- **Risco técnico:** alto, médio ou baixo.
+- **Risco para a integridade dos dados:** alto, médio ou baixo.
+- **Esforço estimado:** pequeno, médio ou grande, além de uma estimativa numérica quando houver evidência suficiente.
+- **Dependências:** quais fases ou decisões são necessárias.
+- **Confiança:** alta, média ou baixa.
+
+Utilize esta convenção:
+
+- P0: risco de segurança, integridade de dados ou comportamento potencialmente enganoso que exige investigação prioritária.
+- P1: melhoria essencial para uma experiência segura e consistente.
+- P2: melhoria relevante, mas não bloqueadora.
+- P3: refinamento opcional.
+
+Não classifique automaticamente uma questão como P0 apenas porque envolve saúde. Justifique a prioridade pelo risco concreto observado.
+
+Apresente também:
+
+- Uma sequência recomendada de execução.
+- Quais fases podem ser validadas de forma independente.
+- Quais dependências impedem paralelismo.
+- O que deve ser adiado para evitar ampliar o escopo.
+- Uma estimativa global, explicitando as incertezas.
+
+Não prometa prazos precisos quando o tamanho real das alterações ainda não for conhecido.
+
+---
+
+## 10. Estratégia para o responsável pelo deploy
+
+Como o Google AI Studio é atualmente o responsável pelo desenvolvimento e deploy, documente explicitamente como o plano deverá respeitar esse fluxo de trabalho.
+
+Antes de recomendar qualquer comando ou procedimento de publicação, identifique o processo atual de build, validação e deploy.
+
+O plano deverá distinguir:
+
+1. Alteração local ou no ambiente de desenvolvimento.
+2. Revisão do diff.
+3. Execução de testes.
+4. Validação manual.
+5. Aprovação da fase.
+6. Preparação do release.
+7. Deploy autorizado.
+8. Verificação pós-deploy.
+9. Rollback, se necessário.
+
+Não suponha que o Google AI Studio publica diretamente no ambiente de produção. Confirme qual serviço, integração, branch, pipeline ou mecanismo realmente executa o deploy.
+
+Não altere segredos, variáveis de ambiente, configurações de produção, regras do Firebase ou pipelines durante a etapa de análise.
+
+---
+
+## 11. Formato obrigatório da resposta
+
+Organize sua resposta nas seguintes seções:
+
+### A. Resumo executivo
+Explique o estado geral do projeto, os principais problemas encontrados e a estratégia recomendada.
+
+### B. Escopo analisado e limitações
+Liste o que foi efetivamente examinado e o que não pôde ser confirmado.
+
+### C. Diagnóstico técnico
+Apresente os achados, com evidências e referências aos arquivos.
+
+### D. Inventário de melhorias
+Monte uma tabela com prioridade, impacto, risco, esforço e justificativa.
+
+### E. Arquitetura visual proposta
+Descreva os padrões de interface, componentes reutilizáveis, estados e diretrizes de acessibilidade.
+
+### F. Plano por fases
+Detalhe cada fase conforme os 22 itens exigidos na seção 7.
+
+### G. Matriz de regressão
+Inclua os cenários de testes e o método de validação.
+
+### H. Dependências e decisões pendentes
+Liste as decisões que precisam ser tomadas antes da implementação.
+
+### I. Estimativa de esforço
+Apresente estimativas por fase e total, incluindo premissas e incertezas.
+
+### J. Critérios de aprovação
+Defina o que deverá ser demonstrado para considerar o plano tecnicamente consistente e pronto para execução.
+
+### K. Primeiro passo recomendado
+Indique a primeira fase que deveria ser implementada depois da aprovação do plano e explique por quê.
+
+### L. Resumo para revisão externa
+Finalize com uma síntese curta contendo:
+- Decisões principais.
+- Riscos mais importantes.
+- Fases propostas.
+- Questões ainda não resolvidas.
+- Arquivos críticos.
+- Testes essenciais.
+- O que não deve ser modificado sem autorização.
+
+---
+
+## 12. Condições para considerar o plano aprovado
+
+O plano somente estará pronto para aprovação quando:
+
+- As recomendações estiverem vinculadas a evidências da auditoria.
+- As hipóteses estiverem separadas dos fatos confirmados.
+- Cada fase tiver escopo delimitado e critérios de aceite.
+- As permissões e o compartilhamento familiar estiverem protegidos.
+- Os estados de carregamento, vazio e erro tiverem tratamento definido.
+- A persistência do registro de doses tiver sido investigada.
+- A navegação entre familiares estiver preservada.
+- A estratégia de acessibilidade estiver definida.
+- As alterações globais estiverem limitadas e justificadas.
+- Houver estratégia de testes e reversão.
+- O processo de deploy estiver descrito sem suposições não verificadas.
+- Nenhuma implementação ou publicação tiver sido iniciada.
+
+## 13. Instrução final
+
+**Entregue agora somente a auditoria e o plano de implementação. Não execute nenhuma mudança.**
+
+Não comece a primeira fase, não crie arquivos, não aplique patches, não instale dependências e não publique uma nova versão.
+
+Ao concluir, aguarde a revisão e a autorização explícita do responsável pelo produto.
+
+O objetivo é construir uma evolução segura e gradual do Saúde Familiar, preservando o que já funciona e melhorando a experiência sem introduzir regressões, comprometer os dados familiares ou criar falsas expectativas sobre informações clínicas.

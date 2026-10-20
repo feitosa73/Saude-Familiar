@@ -1,3 +1,5 @@
+delete (globalThis as any).__dirname;
+process.env.DISABLE_HMR = 'true';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
@@ -44,6 +46,18 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Serve transformed index.html for all non-API GET requests in dev
+    app.get('*', async (req, res, next) => {
+      try {
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        next(e);
+      }
+    });
   } else {
     const distPath = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
       ? path.join(process.cwd(), 'dist')
