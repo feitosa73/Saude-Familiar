@@ -114,12 +114,14 @@ export function createApiRouter(
 
       // Calculate pending requests count if owner
       const pendingRequestsCount = await familyRepository.countPendingRequestsForOwner(authUser.uid);
+      const userDoc = await familyRepository.getUser(authUser.uid);
 
       const response: UserMeResponse = {
         uid: authUser.uid,
         email: authUser.email || null,
         displayName: (authUser as any).name || null,
         photoURL: (authUser as any).picture || null,
+        cpfMasked: userDoc?.cpfMasked || undefined,
         family: activeFamily,
         membership: activeMembership,
         families: userFamiliesList,
@@ -147,6 +149,49 @@ export function createApiRouter(
         error: 'Não foi possível acessar os dados da família neste momento. Tente novamente.',
         code: 'FIRESTORE_ERROR',
       });
+    }
+  // 2.0 Update Current User Profile (Display Name, CPF)
+  router.put('/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
+      }
+
+      const { displayName, cpf } = req.body;
+      const userDoc = await familyRepository.getUser(authUser.uid);
+
+      await familyRepository.saveUser({
+        id: authUser.uid,
+        email: authUser.email || userDoc?.email || '',
+        displayName: displayName !== undefined ? displayName : userDoc?.displayName,
+        familyId: userDoc?.familyId,
+        cpf: cpf !== undefined ? cpf : undefined,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const updated = await familyRepository.getUser(authUser.uid);
+      res.json(updated);
+    } catch (error: any) {
+      if (
+        error instanceof CpfDuplicateError ||
+        error?.name === 'CpfDuplicateError' ||
+        error?.code === 'CPF_ALREADY_EXISTS'
+      ) {
+        return res.status(409).json({
+          error: error.message || 'Este CPF já está associado a outro usuário no sistema.',
+          code: 'CPF_ALREADY_EXISTS',
+          duplicateEntity: 'user',
+        });
+      }
+      if (error?.message && error.message.toLowerCase().includes('cpf')) {
+        return res.status(400).json({
+          error: error.message,
+          code: 'INVALID_CPF',
+        });
+      }
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ error: 'Erro ao atualizar dados do usuário' });
     }
   });
 
@@ -1256,8 +1301,11 @@ export function createApiRouter(
           error?.code === 'CPF_ALREADY_EXISTS'
         ) {
           return res.status(409).json({
-            error: error.message || 'Este CPF já está cadastrado no sistema.',
+            error:
+              error.message ||
+              'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
             code: 'CPF_ALREADY_EXISTS',
+            duplicateEntity: error.duplicateEntity || 'patient',
           });
         }
         if (error?.message && error.message.toLowerCase().includes('cpf')) {
@@ -1301,8 +1349,11 @@ export function createApiRouter(
           error?.code === 'CPF_ALREADY_EXISTS'
         ) {
           return res.status(409).json({
-            error: error.message || 'Este CPF já está cadastrado no sistema.',
+            error:
+              error.message ||
+              'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
             code: 'CPF_ALREADY_EXISTS',
+            duplicateEntity: error.duplicateEntity || 'patient',
           });
         }
         if (error?.message && error.message.toLowerCase().includes('cpf')) {

@@ -89,12 +89,17 @@ export function hashCpf(normalizedCpf: string, salt?: string): string {
 }
 
 /**
- * Erro específico lançado quando um CPF já se encontra associado a outra entidade (usuário ou paciente).
+ * Erro específico lançado quando um CPF já se encontra associado a outra entidade do mesmo tipo (paciente ou usuário).
  */
 export class CpfDuplicateError extends Error {
   readonly code = 'CPF_ALREADY_EXISTS';
-  constructor(message = 'O CPF informado já está associado a outro cadastro no sistema.') {
+  readonly duplicateEntity?: 'user' | 'patient';
+  constructor(
+    message = 'O CPF informado já está associado a outro cadastro no sistema.',
+    duplicateEntity?: 'user' | 'patient'
+  ) {
     super(message);
     this.name = 'CpfDuplicateError';
+    this.duplicateEntity = duplicateEntity;
   }
 }

@@ -133,23 +133,12 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       const newHash = hashCpf(norm);
       const newMasked = maskCpf(norm);
 
-      const existingRecord = this.cpfRegistry.get(newHash);
-      if (existingRecord && existingRecord.entityId !== user.id) {
-        throw new CpfDuplicateError();
-      }
+      await this.registerCpf(newHash, 'user', user.id, user.familyId);
 
       const prevUser = this.users.get(user.id);
       if (prevUser?.cpfHash && prevUser.cpfHash !== newHash) {
-        this.cpfRegistry.delete(prevUser.cpfHash);
+        await this.releaseCpf(prevUser.cpfHash, 'user');
       }
-
-      this.cpfRegistry.set(newHash, {
-        id: newHash,
-        entityType: 'user',
-        entityId: user.id,
-        familyId: user.familyId,
-        createdAt: now,
-      });
 
       this.users.set(user.id, {
         ...cleanUser,
@@ -160,7 +149,13 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       return;
     }
 
-    this.users.set(user.id, { ...cleanUser, updatedAt: now });
+    const prevUser = this.users.get(user.id);
+    this.users.set(user.id, {
+      ...cleanUser,
+      cpfMasked: cleanUser.cpfMasked !== undefined ? cleanUser.cpfMasked : prevUser?.cpfMasked,
+      cpfHash: cleanUser.cpfHash !== undefined ? cleanUser.cpfHash : prevUser?.cpfHash,
+      updatedAt: now,
+    });
   }
 
   async findUserByEmail(email: string): Promise<UserDocument | null> {
@@ -470,7 +465,13 @@ export class MemoryFamilyRepository implements IFamilyRepository {
 
   async findCpfRecordByEntity(entityId: string): Promise<CpfRegistryRecord | null> {
     for (const record of this.cpfRegistry.values()) {
-      if (record.entityId === entityId) return record;
+      if (
+        record.patientId === entityId ||
+        record.userId === entityId ||
+        record.entityId === entityId
+      ) {
+        return record;
+      }
     }
     return null;
   }
@@ -482,30 +483,103 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     familyId?: string
   ): Promise<CpfRegistryRecord> {
     const existing = this.cpfRegistry.get(cpfHash);
-    if (existing && existing.entityId !== entityId) {
-      throw new CpfDuplicateError();
+    const now = new Date().toISOString();
+
+    if (entityType === 'patient') {
+      const existingPatientId =
+        existing?.patientId || (existing?.entityType === 'patient' ? existing?.entityId : null);
+      if (existingPatientId && existingPatientId !== entityId) {
+        throw new CpfDuplicateError(
+          'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
+          'patient'
+        );
+      }
+
+      const updatedRecord: CpfRegistryRecord = {
+        id: cpfHash,
+        ...existing,
+        patientId: entityId,
+        patientFamilyId: familyId || existing?.patientFamilyId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      this.cpfRegistry.set(cpfHash, updatedRecord);
+      return updatedRecord;
+    } else {
+      // entityType === 'user'
+      const existingUserId =
+        existing?.userId || (existing?.entityType === 'user' ? existing?.entityId : null);
+      if (existingUserId && existingUserId !== entityId) {
+        throw new CpfDuplicateError(
+          'Este CPF já está associado a outro usuário no sistema.',
+          'user'
+        );
+      }
+
+      const updatedRecord: CpfRegistryRecord = {
+        id: cpfHash,
+        ...existing,
+        userId: entityId,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+      this.cpfRegistry.set(cpfHash, updatedRecord);
+      return updatedRecord;
     }
-    const record: CpfRegistryRecord = {
-      id: cpfHash,
-      entityType,
-      entityId,
-      familyId,
-      createdAt: new Date().toISOString(),
-    };
-    this.cpfRegistry.set(cpfHash, record);
-    return record;
   }
 
-  async releaseCpf(cpfHash: string): Promise<boolean> {
-    return this.cpfRegistry.delete(cpfHash);
+  async releaseCpf(cpfHash: string, entityType?: 'user' | 'patient'): Promise<boolean> {
+    const existing = this.cpfRegistry.get(cpfHash);
+    if (!existing) return false;
+
+    if (!entityType) {
+      return this.cpfRegistry.delete(cpfHash);
+    }
+
+    if (entityType === 'patient') {
+      delete existing.patientId;
+      delete existing.patientFamilyId;
+      if (existing.entityType === 'patient') {
+        delete existing.entityType;
+        delete existing.entityId;
+      }
+    } else if (entityType === 'user') {
+      delete existing.userId;
+      if (existing.entityType === 'user') {
+        delete existing.entityType;
+        delete existing.entityId;
+      }
+    }
+
+    const hasAny = Boolean(existing.patientId || existing.userId || existing.entityId);
+    if (!hasAny) {
+      return this.cpfRegistry.delete(cpfHash);
+    } else {
+      this.cpfRegistry.set(cpfHash, existing);
+      return true;
+    }
   }
 
   async releaseCpfByEntity(entityId: string): Promise<boolean> {
     for (const [hash, record] of this.cpfRegistry.entries()) {
-      if (record.entityId === entityId) {
-        this.cpfRegistry.delete(hash);
-        return true;
+      if (record.patientId === entityId) {
+        delete record.patientId;
+        delete record.patientFamilyId;
       }
+      if (record.userId === entityId) {
+        delete record.userId;
+      }
+      if (record.entityId === entityId) {
+        delete record.entityId;
+        delete record.entityType;
+      }
+      const hasAny = Boolean(record.patientId || record.userId || record.entityId);
+      if (!hasAny) {
+        this.cpfRegistry.delete(hash);
+      } else {
+        this.cpfRegistry.set(hash, record);
+      }
+      return true;
     }
     return false;
   }
@@ -803,7 +877,7 @@ export class MemoryHealthRepository implements IHealthRepository {
         if (p.cpfHash !== newHash) {
           await this.familyRepo.registerCpf(newHash, 'patient', id, familyId);
           if (p.cpfHash) {
-            await this.familyRepo.releaseCpf(p.cpfHash);
+            await this.familyRepo.releaseCpf(p.cpfHash, 'patient');
           }
         }
         cpfHash = newHash;
@@ -825,7 +899,7 @@ export class MemoryHealthRepository implements IHealthRepository {
     const p = this.patients.get(id);
     if (p) {
       if (p.cpfHash) {
-        await this.familyRepo.releaseCpf(p.cpfHash);
+        await this.familyRepo.releaseCpf(p.cpfHash, 'patient');
       }
       return this.patients.delete(id);
     }

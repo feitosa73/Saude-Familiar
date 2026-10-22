@@ -272,8 +272,13 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
         if (regDoc.exists) {
           const regData = regDoc.data() as CpfRegistryRecord;
-          if (regData.entityId !== patientId) {
-            throw new CpfDuplicateError();
+          const existingPatientId =
+            regData.patientId || (regData.entityType === 'patient' ? regData.entityId : null);
+          if (existingPatientId && existingPatientId !== patientId) {
+            throw new CpfDuplicateError(
+              'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
+              'patient'
+            );
           }
         }
 
@@ -288,13 +293,14 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
         const regRecord: CpfRegistryRecord = {
           id: cpfHash!,
-          entityType: 'patient',
-          entityId: patientId,
-          familyId,
-          createdAt: now,
+          ...(regDoc.exists ? (regDoc.data() as CpfRegistryRecord) : {}),
+          patientId,
+          patientFamilyId: familyId,
+          createdAt: regDoc.exists ? regDoc.data()?.createdAt || now : now,
+          updatedAt: now,
         };
 
-        transaction.set(regRef, regRecord);
+        transaction.set(regRef, regRecord, { merge: true });
         transaction.set(pRef, patient);
       });
     } else {
@@ -364,23 +370,43 @@ export class FirestoreHealthRepository implements IHealthRepository {
             const regDoc = await transaction.get(regRef);
             if (regDoc.exists) {
               const regData = regDoc.data() as CpfRegistryRecord;
-              if (regData.entityId !== id) {
-                throw new CpfDuplicateError();
+              const existingPatientId =
+                regData.patientId || (regData.entityType === 'patient' ? regData.entityId : null);
+              if (existingPatientId && existingPatientId !== id) {
+                throw new CpfDuplicateError(
+                  'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
+                  'patient'
+                );
               }
             }
 
             if (prev.cpfHash) {
-              transaction.delete(this.db.collection('cpf_registry').doc(prev.cpfHash));
+              const oldRegRef = this.db.collection('cpf_registry').doc(prev.cpfHash);
+              const oldRegDoc = await transaction.get(oldRegRef);
+              if (oldRegDoc.exists) {
+                const oldData = oldRegDoc.data() as CpfRegistryRecord;
+                const hasUser = Boolean(oldData.userId || oldData.entityType === 'user');
+                if (!hasUser) {
+                  transaction.delete(oldRegRef);
+                } else {
+                  transaction.update(oldRegRef, {
+                    patientId: null,
+                    patientFamilyId: null,
+                    entityType: 'user',
+                  });
+                }
+              }
             }
 
             const regRecord: CpfRegistryRecord = {
               id: newHash,
-              entityType: 'patient',
-              entityId: id,
-              familyId,
-              createdAt: now,
+              ...(regDoc.exists ? (regDoc.data() as CpfRegistryRecord) : {}),
+              patientId: id,
+              patientFamilyId: familyId,
+              createdAt: regDoc.exists ? regDoc.data()?.createdAt || now : now,
+              updatedAt: now,
             };
-            transaction.set(regRef, regRecord);
+            transaction.set(regRef, regRecord, { merge: true });
           }
 
           const patch = {
@@ -419,7 +445,20 @@ export class FirestoreHealthRepository implements IHealthRepository {
       const data = doc.data() as Patient;
       if (data.cpfHash) {
         const regRef = this.db.collection('cpf_registry').doc(data.cpfHash);
-        transaction.delete(regRef);
+        const regDoc = await transaction.get(regRef);
+        if (regDoc.exists) {
+          const regData = regDoc.data() as CpfRegistryRecord;
+          const hasUser = Boolean(regData.userId || regData.entityType === 'user');
+          if (!hasUser) {
+            transaction.delete(regRef);
+          } else {
+            transaction.update(regRef, {
+              patientId: null,
+              patientFamilyId: null,
+              entityType: 'user',
+            });
+          }
+        }
       }
       transaction.delete(pRef);
       return true;

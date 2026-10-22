@@ -111,6 +111,11 @@ export const api = {
 
   // Authoritative Current User Profile & Family Membership
   getCurrentUser: () => request<UserMeResponse>('/user/me'),
+  updateUserProfile: (data: { displayName?: string; cpf?: string }) =>
+    request<{ id: string; email: string; displayName?: string; cpfMasked?: string }>('/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Create Family Onboarding
   createFamily: (data: { name: string }) =>
@@ -240,12 +245,12 @@ export const api = {
   // Patients
   getPatients: () => request<Patient[]>('/patients'),
   getPatientById: (id: string) => request<Patient>(`/patients/${id}`),
-  createPatient: (data: Omit<Patient, 'id'>) =>
+  createPatient: (data: Omit<Patient, 'id'> & { cpf?: string }) =>
     request<Patient>('/patients', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  updatePatient: (id: string, data: Partial<Patient>) =>
+  updatePatient: (id: string, data: Partial<Patient> & { cpf?: string }) =>
     request<Patient>(`/patients/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

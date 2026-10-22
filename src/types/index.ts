@@ -73,6 +73,7 @@ export interface UserMeResponse {
   email: string | null;
   displayName?: string | null;
   photoURL?: string | null;
+  cpfMasked?: string;
   family: Family | null;
   membership: FamilyMembership | null;
   families?: Array<{ family: Family; membership: FamilyMembership }>;

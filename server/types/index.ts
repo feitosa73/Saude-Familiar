@@ -2,11 +2,15 @@ export type MembershipRole = 'owner' | 'member';
 export type MembershipStatus = 'active' | 'pending' | 'disabled';
 
 export interface CpfRegistryRecord {
-  id: string; // cpfHash
-  entityType: 'user' | 'patient';
-  entityId: string;
+  id: string; // cpfHash determinístico
+  entityType?: 'user' | 'patient'; // Compatibilidade legado
+  entityId?: string; // Compatibilidade legado
+  patientId?: string | null;
+  patientFamilyId?: string | null;
+  userId?: string | null;
   familyId?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Family {
@@ -81,6 +85,7 @@ export interface UserMeResponse {
   email: string | null;
   displayName?: string | null;
   photoURL?: string | null;
+  cpfMasked?: string;
   family: Family | null;
   membership: FamilyMembership | null;
   families?: Array<{ family: Family; membership: FamilyMembership }>;

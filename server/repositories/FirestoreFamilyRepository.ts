@@ -75,25 +75,42 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
         if (regDoc.exists) {
           const regData = regDoc.data() as CpfRegistryRecord;
-          if (regData.entityId !== user.id) {
-            throw new CpfDuplicateError();
+          const existingUserId =
+            regData.userId || (regData.entityType === 'user' ? regData.entityId : null);
+          if (existingUserId && existingUserId !== user.id) {
+            throw new CpfDuplicateError(
+              'Este CPF já está associado a outro usuário no sistema.',
+              'user'
+            );
           }
         }
 
         const userDoc = await transaction.get(userRef);
         const prevCpfHash = userDoc.exists ? userDoc.data()?.cpfHash : null;
         if (prevCpfHash && prevCpfHash !== cpfHash) {
-          transaction.delete(this.db.collection('cpf_registry').doc(prevCpfHash));
+          const prevRegRef = this.db.collection('cpf_registry').doc(prevCpfHash);
+          const prevRegDoc = await transaction.get(prevRegRef);
+          if (prevRegDoc.exists) {
+            const prevData = prevRegDoc.data() as CpfRegistryRecord;
+            const hasOther = Boolean(
+              prevData.patientId ||
+                (prevData.entityType === 'patient' && prevData.entityId !== user.id)
+            );
+            if (!hasOther) {
+              transaction.delete(prevRegRef);
+            } else {
+              transaction.update(prevRegRef, { userId: null });
+            }
+          }
         }
 
         transaction.set(
           regRef,
           {
             id: cpfHash,
-            entityType: 'user',
-            entityId: user.id,
-            familyId: user.familyId,
-            createdAt: now,
+            userId: user.id,
+            createdAt: regDoc.exists ? regDoc.data()?.createdAt || now : now,
+            updatedAt: now,
           },
           { merge: true }
         );
@@ -1218,13 +1235,34 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
   }
 
   async findCpfRecordByEntity(entityId: string): Promise<CpfRegistryRecord | null> {
-    const snap = await this.db
+    const snapPatient = await this.db
+      .collection('cpf_registry')
+      .where('patientId', '==', entityId)
+      .limit(1)
+      .get();
+    if (!snapPatient.empty) {
+      return { id: snapPatient.docs[0].id, ...snapPatient.docs[0].data() } as CpfRegistryRecord;
+    }
+
+    const snapUser = await this.db
+      .collection('cpf_registry')
+      .where('userId', '==', entityId)
+      .limit(1)
+      .get();
+    if (!snapUser.empty) {
+      return { id: snapUser.docs[0].id, ...snapUser.docs[0].data() } as CpfRegistryRecord;
+    }
+
+    const snapLegacy = await this.db
       .collection('cpf_registry')
       .where('entityId', '==', entityId)
       .limit(1)
       .get();
-    if (snap.empty) return null;
-    return { id: snap.docs[0].id, ...snap.docs[0].data() } as CpfRegistryRecord;
+    if (!snapLegacy.empty) {
+      return { id: snapLegacy.docs[0].id, ...snapLegacy.docs[0].data() } as CpfRegistryRecord;
+    }
+
+    return null;
   }
 
   async registerCpf(
@@ -1240,18 +1278,54 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       const doc = await transaction.get(registryRef);
       if (doc.exists) {
         const existingData = doc.data() as CpfRegistryRecord;
-        if (existingData.entityId !== entityId) {
-          throw new CpfDuplicateError();
+        if (entityType === 'patient') {
+          const existingPatientId =
+            existingData.patientId ||
+            (existingData.entityType === 'patient' ? existingData.entityId : null);
+          if (existingPatientId && existingPatientId !== entityId) {
+            throw new CpfDuplicateError(
+              'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.',
+              'patient'
+            );
+          }
+          const record: CpfRegistryRecord = {
+            id: cpfHash,
+            ...existingData,
+            patientId: entityId,
+            patientFamilyId: familyId || existingData.patientFamilyId,
+            updatedAt: now,
+          };
+          transaction.set(registryRef, record, { merge: true });
+          return record;
+        } else {
+          // entityType === 'user'
+          const existingUserId =
+            existingData.userId ||
+            (existingData.entityType === 'user' ? existingData.entityId : null);
+          if (existingUserId && existingUserId !== entityId) {
+            throw new CpfDuplicateError(
+              'Este CPF já está associado a outro usuário no sistema.',
+              'user'
+            );
+          }
+          const record: CpfRegistryRecord = {
+            id: cpfHash,
+            ...existingData,
+            userId: entityId,
+            updatedAt: now,
+          };
+          transaction.set(registryRef, record, { merge: true });
+          return record;
         }
-        return existingData;
       }
 
       const record: CpfRegistryRecord = {
         id: cpfHash,
-        entityType,
-        entityId,
-        familyId,
+        patientId: entityType === 'patient' ? entityId : null,
+        patientFamilyId: entityType === 'patient' ? familyId : null,
+        userId: entityType === 'user' ? entityId : null,
         createdAt: now,
+        updatedAt: now,
       };
 
       transaction.set(registryRef, record);
@@ -1259,23 +1333,67 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     });
   }
 
-  async releaseCpf(cpfHash: string): Promise<boolean> {
+  async releaseCpf(cpfHash: string, entityType?: 'user' | 'patient'): Promise<boolean> {
     const ref = this.db.collection('cpf_registry').doc(cpfHash);
-    await ref.delete();
-    return true;
+    if (!entityType) {
+      await ref.delete();
+      return true;
+    }
+
+    return await this.db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(ref);
+      if (!doc.exists) return false;
+      const data = doc.data() as CpfRegistryRecord;
+      if (entityType === 'patient') {
+        const hasUser = Boolean(data.userId || data.entityType === 'user');
+        if (!hasUser) {
+          transaction.delete(ref);
+        } else {
+          transaction.update(ref, { patientId: null, patientFamilyId: null, entityType: 'user' });
+        }
+      } else if (entityType === 'user') {
+        const hasPatient = Boolean(data.patientId || data.entityType === 'patient');
+        if (!hasPatient) {
+          transaction.delete(ref);
+        } else {
+          transaction.update(ref, { userId: null, entityType: 'patient' });
+        }
+      }
+      return true;
+    });
   }
 
   async releaseCpfByEntity(entityId: string): Promise<boolean> {
-    const snap = await this.db
-      .collection('cpf_registry')
-      .where('entityId', '==', entityId)
-      .get();
-    if (snap.empty) return false;
-    const batch = this.db.batch();
-    for (const doc of snap.docs) {
-      batch.delete(doc.ref);
+    const snaps = await Promise.all([
+      this.db.collection('cpf_registry').where('patientId', '==', entityId).get(),
+      this.db.collection('cpf_registry').where('userId', '==', entityId).get(),
+      this.db.collection('cpf_registry').where('entityId', '==', entityId).get(),
+    ]);
+
+    let modified = false;
+    for (const snap of snaps) {
+      for (const doc of snap.docs) {
+        const data = doc.data() as CpfRegistryRecord;
+        if (data.patientId === entityId) {
+          data.patientId = null;
+          data.patientFamilyId = null;
+        }
+        if (data.userId === entityId) {
+          data.userId = null;
+        }
+        if (data.entityId === entityId) {
+          data.entityId = undefined;
+          data.entityType = undefined;
+        }
+        const hasRemaining = Boolean(data.patientId || data.userId || data.entityId);
+        if (!hasRemaining) {
+          await doc.ref.delete();
+        } else {
+          await doc.ref.set(data);
+        }
+        modified = true;
+      }
     }
-    await batch.commit();
-    return true;
+    return modified;
   }
 }

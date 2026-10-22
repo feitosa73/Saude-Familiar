@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { EmergencyContact } from '../types';
 import { InviteMemberModal } from './InviteMemberModal';
+import { formatCpf, validateCpf, normalizeCpf } from '../utils/cpf';
 import {
   User,
   Phone,
@@ -16,6 +17,7 @@ import {
   PhoneCall,
   Calendar,
   Send,
+  Info,
 } from 'lucide-react';
 
 export const PatientProfileModal: React.FC = () => {
@@ -32,6 +34,9 @@ export const PatientProfileModal: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [duplicateConflict, setDuplicateConflict] = useState<string | null>(null);
   const [bloodType, setBloodType] = useState('O+');
   const [allergiesInput, setAllergiesInput] = useState('');
   const [primaryDoctor, setPrimaryDoctor] = useState('');
@@ -45,6 +50,9 @@ export const PatientProfileModal: React.FC = () => {
     if (selectedPatient) {
       setName(selectedPatient.name || '');
       setBirthDate(selectedPatient.birthDate || '');
+      setCpf(selectedPatient.cpfMasked || '');
+      setCpfError(null);
+      setDuplicateConflict(null);
       setBloodType(selectedPatient.bloodType || 'O+');
       setAllergiesInput(selectedPatient.allergies?.join(', ') || '');
       setPrimaryDoctor(selectedPatient.primaryDoctor || '');
@@ -57,6 +65,37 @@ export const PatientProfileModal: React.FC = () => {
   }, [selectedPatient, openPatientProfile]);
 
   if (!openPatientProfile || !selectedPatient) return null;
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formatted = formatCpf(rawValue);
+    setCpf(formatted);
+    setDuplicateConflict(null);
+
+    const clean = normalizeCpf(formatted);
+    if (clean.length === 11) {
+      if (!validateCpf(clean)) {
+        setCpfError('CPF inválido. Verifique os números informados.');
+      } else {
+        setCpfError(null);
+      }
+    } else {
+      setCpfError(null);
+    }
+  };
+
+  const handleCpfBlur = () => {
+    const clean = normalizeCpf(cpf);
+    if (clean && clean.length > 0) {
+      if (!validateCpf(clean)) {
+        setCpfError('CPF inválido. Verifique os números informados.');
+      } else {
+        setCpfError(null);
+      }
+    } else {
+      setCpfError(null);
+    }
+  };
 
   const handleAddEmergencyContact = () => {
     setEmergencyContacts([
@@ -81,9 +120,20 @@ export const PatientProfileModal: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicateConflict(null);
+
     if (!name.trim()) {
       showToast('O nome do paciente é obrigatório', 'error');
       return;
+    }
+
+    const cleanCpf = normalizeCpf(cpf);
+    if (cleanCpf && cleanCpf.length > 0) {
+      if (!validateCpf(cleanCpf)) {
+        setCpfError('O CPF informado é inválido. Corrija para continuar.');
+        showToast('CPF inválido', 'error');
+        return;
+      }
     }
 
     try {
@@ -96,6 +146,7 @@ export const PatientProfileModal: React.FC = () => {
       await api.updatePatient(selectedPatient.id, {
         name,
         birthDate,
+        cpf: cleanCpf || undefined,
         bloodType,
         allergies: allergiesList,
         primaryDoctor,
@@ -109,7 +160,14 @@ export const PatientProfileModal: React.FC = () => {
       setIsEditing(false);
       await refreshPatients();
     } catch (err: any) {
-      showToast(err.message || 'Erro ao atualizar dados', 'error');
+      if (err?.code === 'CPF_ALREADY_EXISTS' || err?.message?.toLowerCase().includes('cpf')) {
+        setDuplicateConflict(
+          err.message ||
+            'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.'
+        );
+      } else {
+        showToast(err.message || 'Erro ao atualizar dados', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -132,6 +132,6 @@ export interface IFamilyRepository {
     entityId: string,
     familyId?: string
   ): Promise<CpfRegistryRecord>;
-  releaseCpf(cpfHash: string): Promise<boolean>;
+  releaseCpf(cpfHash: string, entityType?: 'user' | 'patient'): Promise<boolean>;
   releaseCpfByEntity(entityId: string): Promise<boolean>;
 }

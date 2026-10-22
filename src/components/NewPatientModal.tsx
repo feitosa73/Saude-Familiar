@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { usePatient } from '../context/PatientContext';
 import { api } from '../services/api';
-import { UserPlus, Heart, Shield, Plus, Trash2 } from 'lucide-react';
+import { UserPlus, Heart, Shield, Plus, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { EmergencyContact } from '../types';
+import { formatCpf, validateCpf, normalizeCpf } from '../utils/cpf';
 
 interface NewPatientModalProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
   const { refreshPatients, setSelectedPatientId, showToast } = usePatient();
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [duplicateConflict, setDuplicateConflict] = useState<string | null>(null);
   const [bloodType, setBloodType] = useState('O+');
   const [allergiesInput, setAllergiesInput] = useState('');
   const [primaryDoctor, setPrimaryDoctor] = useState('');
@@ -25,6 +29,37 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formatted = formatCpf(rawValue);
+    setCpf(formatted);
+    setDuplicateConflict(null);
+
+    const clean = normalizeCpf(formatted);
+    if (clean.length === 11) {
+      if (!validateCpf(clean)) {
+        setCpfError('CPF inválido. Verifique os números informados.');
+      } else {
+        setCpfError(null);
+      }
+    } else {
+      setCpfError(null);
+    }
+  };
+
+  const handleCpfBlur = () => {
+    const clean = normalizeCpf(cpf);
+    if (clean && clean.length > 0) {
+      if (!validateCpf(clean)) {
+        setCpfError('CPF inválido. Verifique os números informados.');
+      } else {
+        setCpfError(null);
+      }
+    } else {
+      setCpfError(null);
+    }
+  };
 
   const handleAddEmergencyContact = () => {
     setEmergencyContacts([
@@ -49,9 +84,20 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicateConflict(null);
+
     if (!name.trim() || !birthDate) {
       showToast('Nome e data de nascimento são obrigatórios', 'error');
       return;
+    }
+
+    const cleanCpf = normalizeCpf(cpf);
+    if (cleanCpf && cleanCpf.length > 0) {
+      if (!validateCpf(cleanCpf)) {
+        setCpfError('O CPF informado é inválido. Corrija para continuar.');
+        showToast('CPF inválido', 'error');
+        return;
+      }
     }
 
     try {
@@ -64,6 +110,7 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
       const created = await api.createPatient({
         name,
         birthDate,
+        cpf: cleanCpf || undefined,
         bloodType,
         allergies: allergiesList,
         primaryDoctor,
@@ -78,7 +125,14 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
       setSelectedPatientId(created.id);
       onClose();
     } catch (err: any) {
-      showToast(err.message || 'Erro ao cadastrar familiar', 'error');
+      if (err?.code === 'CPF_ALREADY_EXISTS' || err?.message?.toLowerCase().includes('cpf')) {
+        setDuplicateConflict(
+          err.message ||
+            'Este CPF já está cadastrado para outro paciente no sistema. Caso este familiar já pertença a uma família, solicite acesso ao administrador responsável.'
+        );
+      } else {
+        showToast(err.message || 'Erro ao cadastrar familiar', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -105,6 +159,22 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
             ✕
           </button>
         </div>
+
+        {duplicateConflict && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-950 text-xs flex items-start gap-2.5 shadow-xs">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-amber-900">Atenção: Paciente já cadastrado com este CPF</p>
+              <p className="text-amber-800 leading-relaxed">
+                {duplicateConflict}
+              </p>
+              <div className="pt-1 flex items-center gap-1.5 text-slate-600 text-[11px]">
+                <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>Para garantir a integridade do histórico de saúde, o sistema não permite pacientes duplicados. Solicite ao administrador da família atual que compartilhe o acesso com você.</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -138,6 +208,30 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                CPF do Familiar <span className="text-slate-400 font-normal lowercase">(opcional nesta etapa)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="000.000.000-00"
+                maxLength={14}
+                value={cpf}
+                onChange={handleCpfChange}
+                onBlur={handleCpfBlur}
+                className={`w-full px-3 py-2 text-sm bg-slate-50 border ${
+                  cpfError
+                    ? 'border-red-400 focus:border-red-500'
+                    : 'border-slate-200 focus:border-teal-500'
+                } rounded-xl focus:outline-none focus:bg-white`}
+              />
+              {cpfError && (
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  {cpfError}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Tipo Sanguíneo
               </label>
               <select
@@ -156,6 +250,9 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
                 <option value="Não informado">Não informado</option>
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Médico / Especialista de Acompanhamento
@@ -168,9 +265,6 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Plano / Convênio de Saúde
@@ -183,18 +277,19 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Número da Carteirinha / CNS
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: 0054-9823-1120"
-                value={healthInsuranceNumber}
-                onChange={(e) => setHealthInsuranceNumber(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
-              />
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Número da Carteirinha / CNS
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: 0054-9823-1120"
+              value={healthInsuranceNumber}
+              onChange={(e) => setHealthInsuranceNumber(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white"
+            />
           </div>
 
           <div>
