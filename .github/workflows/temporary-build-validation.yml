@@ -1,0 +1,33 @@
+name: Temporary build validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [fix/cloud-run-build]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-build-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install from synchronized lockfile
+        run: npm ci
+      - name: Typecheck
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Production build
+        run: npm run build
