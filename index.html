@@ -9,71 +9,46 @@
         if (typeof window === 'undefined' || !window.WebSocket) return;
         var NativeWebSocket = window.WebSocket;
         function ViteSilentWebSocket(url, protocols) {
-          var urlStr = String(url || '');
-          var protoStr = String(protocols || '');
-          // Intercept any WebSocket connection originating from Vite client / dev server
-          var isViteWs =
-            protoStr === 'vite-hmr' ||
-            urlStr.indexOf('vite') !== -1 ||
-            urlStr.indexOf('token=') !== -1 ||
-            urlStr.indexOf('run.app') !== -1 ||
-            urlStr.indexOf('localhost') !== -1 ||
-            urlStr.indexOf('127.0.0.1') !== -1 ||
-            urlStr.indexOf(':3000') !== -1 ||
-            urlStr.indexOf(':24678') !== -1 ||
-            urlStr.indexOf(':5173') !== -1;
-
-          if (isViteWs) {
-            var listeners = {};
-            var ws = {
-              OPEN: 1,
-              CLOSED: 3,
-              CLOSING: 2,
-              CONNECTING: 0,
-              readyState: 1, // ReadyState OPEN prevents the reject()
-              bufferedAmount: 0,
-              extensions: '',
-              protocol: protocols || 'vite-hmr',
-              url: url,
-              binaryType: 'blob',
-              onopen: null,
-              onclose: null,
-              onerror: null,
-              onmessage: null,
-              send: function() {},
-              close: function() {},
-              addEventListener: function(type, fn) {
-                if (!listeners[type]) listeners[type] = [];
-                listeners[type].push(fn);
-                if (type === 'open') {
-                  setTimeout(function() {
-                    try {
-                      if (typeof ws.onopen === 'function') ws.onopen({ type: 'open' });
-                      fn({ type: 'open' });
-                    } catch (_) {}
-                  }, 0);
-                }
-              },
-              removeEventListener: function(type, fn) {
-                if (!listeners[type]) return;
-                listeners[type] = listeners[type].filter(function(cb) { return cb !== fn; });
-              },
-              dispatchEvent: function() { return true; }
-            };
-            setTimeout(function() {
-              try {
-                if (typeof ws.onopen === 'function') ws.onopen({ type: 'open' });
-              } catch (_) {}
-            }, 0);
-            return ws;
-          }
-          return new NativeWebSocket(url, protocols);
+          var listeners = {};
+          var ws = {
+            OPEN: 1,
+            CLOSED: 3,
+            CLOSING: 2,
+            CONNECTING: 0,
+            readyState: 1, // Always readyState OPEN
+            bufferedAmount: 0,
+            extensions: '',
+            protocol: protocols || 'vite-hmr',
+            url: url,
+            binaryType: 'blob',
+            onopen: null,
+            onclose: null,
+            onerror: null,
+            onmessage: null,
+            send: function() {},
+            close: function() {},
+            addEventListener: function(type, fn) {
+              if (!listeners[type]) listeners[type] = [];
+              listeners[type].push(fn);
+              if (type === 'open') {
+                try {
+                  fn({ type: 'open' });
+                } catch (_) {}
+              }
+            },
+            removeEventListener: function(type, fn) {
+              if (!listeners[type]) return;
+              listeners[type] = listeners[type].filter(function(cb) { return cb !== fn; });
+            },
+            dispatchEvent: function() { return true; }
+          };
+          return ws;
         }
-        ViteSilentWebSocket.prototype = NativeWebSocket.prototype;
-        ViteSilentWebSocket.CONNECTING = 0;
         ViteSilentWebSocket.OPEN = 1;
-        ViteSilentWebSocket.CLOSING = 2;
         ViteSilentWebSocket.CLOSED = 3;
+        ViteSilentWebSocket.CLOSING = 2;
+        ViteSilentWebSocket.CONNECTING = 0;
+        ViteSilentWebSocket.prototype = NativeWebSocket ? NativeWebSocket.prototype : {};
         window.WebSocket = ViteSilentWebSocket;
       })();
 

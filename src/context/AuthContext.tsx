@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStatusMessage('Status de membership inválido ou não autorizado.');
       }
     } catch (error: any) {
-      console.error('[AuthContext] Erro ao carregar /user/me:', error);
+      console.warn('[AuthContext] Falha temporária ao carregar /user/me:', error?.message || error);
       if (error instanceof ApiError) {
         if (error.status === 401) {
           setAccessStatus('unauthenticated');

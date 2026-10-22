@@ -17,6 +17,8 @@ export interface UserDocument {
   createdAt?: string;
   updatedAt?: string;
   familyId?: string;
+  cpfMasked?: string;
+  cpfHash?: string;
 }
 
 export interface IFamilyRepository {

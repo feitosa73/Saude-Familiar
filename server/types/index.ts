@@ -121,6 +121,7 @@ export interface User {
   email: string;
   avatarUrl?: string;
   patientIds: string[];
+  cpfMasked?: string;
 }
 
 export interface EmergencyContact {
@@ -142,6 +143,8 @@ export interface Patient {
   healthInsuranceNumber?: string;
   createdAt?: string;
   updatedAt?: string;
+  cpfMasked?: string;
+  cpfHash?: string;
 }
 
 export interface Medication {
