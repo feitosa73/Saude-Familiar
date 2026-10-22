@@ -1,4 +1,4 @@
-name: Temporary build validation and lockfile sync
+name: Temporary build validation
 
 on:
   pull_request:
@@ -8,32 +8,22 @@ on:
     branches: [fix/cloud-run-build]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: temporary-build-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Synchronize package lock
-        run: npm install --package-lock-only --ignore-scripts
-      - name: Commit lockfile changes on this branch only
-        run: |
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore: synchronize npm lockfile"
-            git push origin HEAD:${{ github.head_ref || github.ref_name }}
-          fi
-      - name: Install exactly from lockfile
+      - name: Install from synchronized lockfile
         run: npm ci
       - name: Typecheck
         run: npm run lint
