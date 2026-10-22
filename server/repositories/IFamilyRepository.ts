@@ -24,7 +24,7 @@ export interface UserDocument {
 
 export interface IFamilyRepository {
   getUser(uid: string): Promise<UserDocument | null>;
-  saveUser(user: UserDocument): Promise<void>;
+  saveUser(user: UserDocument & { cpf?: string }): Promise<void>;
   findUserByEmail(email: string): Promise<UserDocument | null>;
   getFamily(familyId: string): Promise<Family | null>;
   saveFamily(family: Family): Promise<void>;
