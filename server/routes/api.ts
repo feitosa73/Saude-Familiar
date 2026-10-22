@@ -150,6 +150,8 @@ export function createApiRouter(
         code: 'FIRESTORE_ERROR',
       });
     }
+  });
+
   // 2.0 Update Current User Profile (Display Name, CPF)
   router.put('/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
