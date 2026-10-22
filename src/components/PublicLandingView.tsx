@@ -10,14 +10,13 @@ import {
   AlertTriangle,
   Sparkles,
   UserPlus,
-  Eye,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './AuthModal';
 import { AuthMode } from './AuthForm';
 
 export const PublicLandingView: React.FC = () => {
-  const { login, loginAsDemo, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
@@ -62,20 +61,8 @@ export const PublicLandingView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Action: Demo, Entrar & Criar Conta */}
+          {/* Right Action: Entrar & Criar Conta */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              id="btn-nav-demo-preview"
-              onClick={() => loginAsDemo('CAREGIVER')}
-              disabled={isLoading}
-              className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#DCEBE4] hover:bg-[#c9e1d7] text-[#1E3D35] border border-[#a8ccbf] shadow-2xs transition active:scale-[0.98] disabled:opacity-50 min-h-[40px] touch-manipulation cursor-pointer"
-              title="Acesso imediato para validação no ambiente de preview"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#315F54]" />
-              <span>Modo Avaliação (Preview)</span>
-            </button>
-
             <button
               type="button"
               id="btn-nav-entrar"
@@ -170,39 +157,6 @@ export const PublicLandingView: React.FC = () => {
               </div>
             )}
 
-            {/* Quick Preview Validation Callout */}
-            <div className="w-full max-w-lg mx-auto p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/80 border-2 border-emerald-300 rounded-2xl shadow-xs text-center space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-[#315F54]" />
-                <span>Validação Imediata no Preview (1 Clique)</span>
-              </div>
-              <p className="text-xs text-slate-700 font-medium">
-                Acesse diretamente para validar os novos cards do Dashboard, a conferência de medicamentos e a agenda unificada:
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
-                <button
-                  type="button"
-                  id="btn-quick-demo-cuidador"
-                  onClick={() => loginAsDemo('CAREGIVER')}
-                  disabled={isLoading}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#315F54] hover:bg-[#23453D] text-white shadow-xs transition active:scale-[0.98] cursor-pointer"
-                >
-                  <HeartPulse className="w-4 h-4 text-emerald-200" />
-                  <span>Entrar como Cuidador Designado</span>
-                </button>
-                <button
-                  type="button"
-                  id="btn-quick-demo-familiar"
-                  onClick={() => loginAsDemo('VIEWER')}
-                  disabled={isLoading}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs transition active:scale-[0.98] cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-blue-600" />
-                  <span>Entrar como Familiar de Apoio</span>
-                </button>
-              </div>
-            </div>
-
             {/* Primary Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto">
               {/* Começar / Entrar CTA */}
@@ -211,9 +165,9 @@ export const PublicLandingView: React.FC = () => {
                 id="btn-hero-comecar-testar"
                 onClick={() => openAuth('login')}
                 disabled={isLoading}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 min-h-[44px] touch-manipulation cursor-pointer"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm sm:text-base transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 min-h-[48px] touch-manipulation cursor-pointer"
               >
-                <span>Acessar com E-mail / Senha</span>
+                <span>Acessar Plataforma</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -223,9 +177,9 @@ export const PublicLandingView: React.FC = () => {
                 id="btn-hero-google-login"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-300 text-slate-700 rounded-xl font-semibold text-sm transition-all shadow-2xs hover:shadow-xs disabled:opacity-50 min-h-[44px] touch-manipulation cursor-pointer"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 px-5 py-3.5 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-300 text-slate-700 rounded-xl font-semibold text-sm sm:text-base transition-all shadow-2xs hover:shadow-xs disabled:opacity-50 min-h-[48px] touch-manipulation cursor-pointer"
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -243,7 +197,7 @@ export const PublicLandingView: React.FC = () => {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>{isLoading ? 'Conectando...' : 'Google'}</span>
+                <span>{isLoading ? 'Conectando...' : 'Entrar com Google'}</span>
               </button>
             </div>
 
