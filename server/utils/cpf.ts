@@ -87,3 +87,14 @@ export function hashCpf(normalizedCpf: string, salt?: string): string {
   const effectiveSalt = salt || process.env.CPF_HASH_SALT || 'saude-familiar-cpf-salt-v1';
   return crypto.createHmac('sha256', effectiveSalt).update(normalizedCpf).digest('hex');
 }
+
+/**
+ * Erro específico lançado quando um CPF já se encontra associado a outra entidade (usuário ou paciente).
+ */
+export class CpfDuplicateError extends Error {
+  readonly code = 'CPF_ALREADY_EXISTS';
+  constructor(message = 'O CPF informado já está associado a outro cadastro no sistema.') {
+    super(message);
+    this.name = 'CpfDuplicateError';
+  }
+}

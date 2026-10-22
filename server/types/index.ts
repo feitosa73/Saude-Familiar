@@ -1,6 +1,14 @@
 export type MembershipRole = 'owner' | 'member';
 export type MembershipStatus = 'active' | 'pending' | 'disabled';
 
+export interface CpfRegistryRecord {
+  id: string; // cpfHash
+  entityType: 'user' | 'patient';
+  entityId: string;
+  familyId?: string;
+  createdAt: string;
+}
+
 export interface Family {
   id: string;
   name: string;

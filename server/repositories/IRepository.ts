@@ -24,8 +24,8 @@ export interface IHealthRepository {
   // Patients
   getPatients(userId?: string, familyId?: string): Promise<Patient[]>;
   getPatientById(id: string, familyId?: string): Promise<Patient | null>;
-  createPatient(data: Omit<Patient, 'id'>, createdByUserId?: string, familyId?: string): Promise<Patient>;
-  updatePatient(id: string, data: Partial<Patient>, familyId?: string): Promise<Patient | null>;
+  createPatient(data: Omit<Patient, 'id'> & { cpf?: string }, createdByUserId?: string, familyId?: string): Promise<Patient>;
+  updatePatient(id: string, data: Partial<Patient> & { cpf?: string }, familyId?: string): Promise<Patient | null>;
   deletePatient(id: string, familyId?: string): Promise<boolean>;
 
   // Medications

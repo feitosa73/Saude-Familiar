@@ -15,9 +15,17 @@ import {
   AccessRequestStatus,
   FamilyInvitation,
   FamilyMemberWithAccess,
+  CpfRegistryRecord,
 } from '../types';
 import { IHealthRepository } from './IRepository';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
+import {
+  normalizeCpf,
+  validateCpf,
+  maskCpf,
+  hashCpf,
+  CpfDuplicateError,
+} from '../utils/cpf';
 
 export class MemoryFamilyRepository implements IFamilyRepository {
   private users = new Map<string, UserDocument>();
@@ -26,6 +34,7 @@ export class MemoryFamilyRepository implements IFamilyRepository {
   private accesses = new Map<string, PatientAccess>(); // key: id
   private requests = new Map<string, AccessRequest>();
   private invitations = new Map<string, FamilyInvitation>();
+  private cpfRegistry = new Map<string, CpfRegistryRecord>(); // key: cpfHash
 
   constructor() {
     this.seedDefaultData();
@@ -112,8 +121,46 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     return this.users.get(uid) || null;
   }
 
-  async saveUser(user: UserDocument): Promise<void> {
-    this.users.set(user.id, { ...user, updatedAt: new Date().toISOString() });
+  async saveUser(user: UserDocument & { cpf?: string }): Promise<void> {
+    const now = new Date().toISOString();
+    const { cpf, ...cleanUser } = user;
+
+    if (cpf && cpf.trim() !== '') {
+      if (!validateCpf(cpf)) {
+        throw new Error('CPF informado é inválido');
+      }
+      const norm = normalizeCpf(cpf);
+      const newHash = hashCpf(norm);
+      const newMasked = maskCpf(norm);
+
+      const existingRecord = this.cpfRegistry.get(newHash);
+      if (existingRecord && existingRecord.entityId !== user.id) {
+        throw new CpfDuplicateError();
+      }
+
+      const prevUser = this.users.get(user.id);
+      if (prevUser?.cpfHash && prevUser.cpfHash !== newHash) {
+        this.cpfRegistry.delete(prevUser.cpfHash);
+      }
+
+      this.cpfRegistry.set(newHash, {
+        id: newHash,
+        entityType: 'user',
+        entityId: user.id,
+        familyId: user.familyId,
+        createdAt: now,
+      });
+
+      this.users.set(user.id, {
+        ...cleanUser,
+        cpfMasked: newMasked,
+        cpfHash: newHash,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    this.users.set(user.id, { ...cleanUser, updatedAt: now });
   }
 
   async findUserByEmail(email: string): Promise<UserDocument | null> {
@@ -416,6 +463,53 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     return true;
   }
 
+  // CPF Uniqueness Registry
+  async findCpfRecord(cpfHash: string): Promise<CpfRegistryRecord | null> {
+    return this.cpfRegistry.get(cpfHash) || null;
+  }
+
+  async findCpfRecordByEntity(entityId: string): Promise<CpfRegistryRecord | null> {
+    for (const record of this.cpfRegistry.values()) {
+      if (record.entityId === entityId) return record;
+    }
+    return null;
+  }
+
+  async registerCpf(
+    cpfHash: string,
+    entityType: 'user' | 'patient',
+    entityId: string,
+    familyId?: string
+  ): Promise<CpfRegistryRecord> {
+    const existing = this.cpfRegistry.get(cpfHash);
+    if (existing && existing.entityId !== entityId) {
+      throw new CpfDuplicateError();
+    }
+    const record: CpfRegistryRecord = {
+      id: cpfHash,
+      entityType,
+      entityId,
+      familyId,
+      createdAt: new Date().toISOString(),
+    };
+    this.cpfRegistry.set(cpfHash, record);
+    return record;
+  }
+
+  async releaseCpf(cpfHash: string): Promise<boolean> {
+    return this.cpfRegistry.delete(cpfHash);
+  }
+
+  async releaseCpfByEntity(entityId: string): Promise<boolean> {
+    for (const [hash, record] of this.cpfRegistry.entries()) {
+      if (record.entityId === entityId) {
+        this.cpfRegistry.delete(hash);
+        return true;
+      }
+    }
+    return false;
+  }
+
   getAccessMap(): Map<string, PatientAccess> {
     return this.accesses;
   }
@@ -642,9 +736,35 @@ export class MemoryHealthRepository implements IHealthRepository {
     return this.patients.get(id) || null;
   }
 
-  async createPatient(data: Omit<Patient, 'id'>, createdByUserId?: string): Promise<Patient> {
-    const id = `pat-${Date.now()}`;
-    const patient: Patient = { id, ...data };
+  async createPatient(
+    data: Omit<Patient, 'id'> & { cpf?: string },
+    createdByUserId?: string,
+    familyId?: string
+  ): Promise<Patient> {
+    const id = `pat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    let cpfMasked = data.cpfMasked;
+    let cpfHash = data.cpfHash;
+
+    const { cpf, ...cleanData } = data;
+
+    if (cpf && cpf.trim() !== '') {
+      if (!validateCpf(cpf)) {
+        throw new Error('CPF informado para o paciente é inválido.');
+      }
+      const norm = normalizeCpf(cpf);
+      cpfHash = hashCpf(norm);
+      cpfMasked = maskCpf(norm);
+
+      // Verificação e registro atômico no cpfRegistry compartilhado
+      await this.familyRepo.registerCpf(cpfHash, 'patient', id, familyId);
+    }
+
+    const patient: Patient = {
+      id,
+      ...cleanData,
+      cpfMasked,
+      cpfHash,
+    };
     this.patients.set(id, patient);
     if (createdByUserId) {
       await this.createPatientAccess({
@@ -657,16 +777,59 @@ export class MemoryHealthRepository implements IHealthRepository {
     return patient;
   }
 
-  async updatePatient(id: string, data: Partial<Patient>): Promise<Patient | null> {
+  async updatePatient(
+    id: string,
+    data: Partial<Patient> & { cpf?: string },
+    familyId?: string
+  ): Promise<Patient | null> {
     const p = this.patients.get(id);
     if (!p) return null;
-    const updated = { ...p, ...data };
+
+    let cpfMasked = p.cpfMasked;
+    let cpfHash = p.cpfHash;
+
+    const { cpf, ...cleanData } = data;
+
+    if (cpf !== undefined) {
+      const trimmed = cpf ? cpf.trim() : '';
+      if (trimmed !== '') {
+        if (!validateCpf(trimmed)) {
+          throw new Error('CPF informado para o paciente é inválido.');
+        }
+        const norm = normalizeCpf(trimmed);
+        const newHash = hashCpf(norm);
+        const newMasked = maskCpf(norm);
+
+        if (p.cpfHash !== newHash) {
+          await this.familyRepo.registerCpf(newHash, 'patient', id, familyId);
+          if (p.cpfHash) {
+            await this.familyRepo.releaseCpf(p.cpfHash);
+          }
+        }
+        cpfHash = newHash;
+        cpfMasked = newMasked;
+      }
+    }
+
+    const updated: Patient = {
+      ...p,
+      ...cleanData,
+      cpfMasked,
+      cpfHash,
+    };
     this.patients.set(id, updated);
     return updated;
   }
 
   async deletePatient(id: string): Promise<boolean> {
-    return this.patients.delete(id);
+    const p = this.patients.get(id);
+    if (p) {
+      if (p.cpfHash) {
+        await this.familyRepo.releaseCpf(p.cpfHash);
+      }
+      return this.patients.delete(id);
+    }
+    return false;
   }
 
   async getMedications(patientId: string): Promise<Medication[]> {

@@ -10,8 +10,16 @@ import {
   User,
   PatientAccess,
   PatientRole,
+  CpfRegistryRecord,
 } from '../types';
 import { IHealthRepository } from './IRepository';
+import {
+  normalizeCpf,
+  validateCpf,
+  maskCpf,
+  hashCpf,
+  CpfDuplicateError,
+} from '../utils/cpf';
 
 /**
  * FirestoreHealthRepository
@@ -235,7 +243,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
   }
 
   async createPatient(
-    data: Omit<Patient, 'id'>,
+    data: Omit<Patient, 'id'> & { cpf?: string },
     createdByUserId?: string,
     familyId?: string
   ): Promise<Patient> {
@@ -243,21 +251,66 @@ export class FirestoreHealthRepository implements IHealthRepository {
 
     const patientId = `pat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const now = new Date().toISOString();
+    const { cpf, ...cleanData } = data;
 
-    const patient: Patient = {
-      id: patientId,
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    };
+    let cpfMasked = cleanData.cpfMasked;
+    let cpfHash = cleanData.cpfHash;
 
-    const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(patient.id);
-    await pRef.set(patient);
+    const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(patientId);
+
+    if (cpf && cpf.trim() !== '') {
+      if (!validateCpf(cpf)) {
+        throw new Error('CPF informado para o paciente é inválido.');
+      }
+      const norm = normalizeCpf(cpf);
+      cpfHash = hashCpf(norm);
+      cpfMasked = maskCpf(norm);
+
+      await this.db.runTransaction(async (transaction) => {
+        const regRef = this.db.collection('cpf_registry').doc(cpfHash!);
+        const regDoc = await transaction.get(regRef);
+
+        if (regDoc.exists) {
+          const regData = regDoc.data() as CpfRegistryRecord;
+          if (regData.entityId !== patientId) {
+            throw new CpfDuplicateError();
+          }
+        }
+
+        const patient: Patient = {
+          id: patientId,
+          ...cleanData,
+          cpfMasked,
+          cpfHash,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const regRecord: CpfRegistryRecord = {
+          id: cpfHash!,
+          entityType: 'patient',
+          entityId: patientId,
+          familyId,
+          createdAt: now,
+        };
+
+        transaction.set(regRef, regRecord);
+        transaction.set(pRef, patient);
+      });
+    } else {
+      const patient: Patient = {
+        id: patientId,
+        ...cleanData,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await pRef.set(patient);
+    }
 
     if (createdByUserId) {
       await this.createPatientAccess(
         {
-          patientId: patient.id,
+          patientId,
           userId: createdByUserId,
           role: 'ADMIN',
           createdBy: createdByUserId,
@@ -266,29 +319,111 @@ export class FirestoreHealthRepository implements IHealthRepository {
       );
     }
 
-    return patient;
+    return {
+      id: patientId,
+      ...cleanData,
+      cpfMasked,
+      cpfHash,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
-  async updatePatient(id: string, data: Partial<Patient>, familyId?: string): Promise<Patient | null> {
+  async updatePatient(
+    id: string,
+    data: Partial<Patient> & { cpf?: string },
+    familyId?: string
+  ): Promise<Patient | null> {
     if (!familyId) throw new Error('familyId é obrigatório');
 
     const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(id);
+    const now = new Date().toISOString();
+    const { cpf, ...cleanData } = data;
+
+    if (cpf !== undefined) {
+      const trimmed = cpf ? cpf.trim() : '';
+      if (trimmed !== '') {
+        if (!validateCpf(trimmed)) {
+          throw new Error('CPF informado para o paciente é inválido.');
+        }
+        const norm = normalizeCpf(trimmed);
+        const newHash = hashCpf(norm);
+        const newMasked = maskCpf(norm);
+
+        let updatedPatient: Patient | null = null;
+
+        await this.db.runTransaction(async (transaction) => {
+          const doc = await transaction.get(pRef);
+          if (!doc.exists) {
+            return;
+          }
+          const prev = doc.data() as Patient;
+
+          if (prev.cpfHash !== newHash) {
+            const regRef = this.db.collection('cpf_registry').doc(newHash);
+            const regDoc = await transaction.get(regRef);
+            if (regDoc.exists) {
+              const regData = regDoc.data() as CpfRegistryRecord;
+              if (regData.entityId !== id) {
+                throw new CpfDuplicateError();
+              }
+            }
+
+            if (prev.cpfHash) {
+              transaction.delete(this.db.collection('cpf_registry').doc(prev.cpfHash));
+            }
+
+            const regRecord: CpfRegistryRecord = {
+              id: newHash,
+              entityType: 'patient',
+              entityId: id,
+              familyId,
+              createdAt: now,
+            };
+            transaction.set(regRef, regRecord);
+          }
+
+          const patch = {
+            ...cleanData,
+            cpfMasked: newMasked,
+            cpfHash: newHash,
+            updatedAt: now,
+          };
+          transaction.update(pRef, patch);
+          updatedPatient = { id, ...prev, ...patch };
+        });
+
+        return updatedPatient;
+      }
+    }
+
     const doc = await pRef.get();
     if (!doc.exists) {
       return null;
     }
 
-    const now = new Date().toISOString();
-    await pRef.update({ ...data, updatedAt: now });
-
-    return { id, ...doc.data(), ...data, updatedAt: now } as Patient;
+    await pRef.update({ ...cleanData, updatedAt: now });
+    return { id, ...doc.data(), ...cleanData, updatedAt: now } as Patient;
   }
 
   async deletePatient(id: string, familyId?: string): Promise<boolean> {
     if (!familyId) return false;
 
-    await this.db.collection('families').doc(familyId).collection('patients').doc(id).delete();
-    return true;
+    const pRef = this.db.collection('families').doc(familyId).collection('patients').doc(id);
+
+    return await this.db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(pRef);
+      if (!doc.exists) {
+        return false;
+      }
+      const data = doc.data() as Patient;
+      if (data.cpfHash) {
+        const regRef = this.db.collection('cpf_registry').doc(data.cpfHash);
+        transaction.delete(regRef);
+      }
+      transaction.delete(pRef);
+      return true;
+    });
   }
 
   // =========================================================================

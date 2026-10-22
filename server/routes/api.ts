@@ -18,6 +18,7 @@ import {
 } from '../middlewares/requireActiveMembership';
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
+import { CpfDuplicateError } from '../utils/cpf';
 
 const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
 const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
@@ -1224,6 +1225,7 @@ export function createApiRouter(
           primaryDoctor,
           healthInsurance,
           healthInsuranceNumber,
+          cpf,
         } = req.body;
 
         if (!name || !birthDate) {
@@ -1241,12 +1243,29 @@ export function createApiRouter(
             primaryDoctor: primaryDoctor || '',
             healthInsurance: healthInsurance || '',
             healthInsuranceNumber: healthInsuranceNumber || '',
+            cpf,
           },
           userId,
           familyId
         );
         res.status(201).json(newPatient);
-      } catch (error) {
+      } catch (error: any) {
+        if (
+          error instanceof CpfDuplicateError ||
+          error?.name === 'CpfDuplicateError' ||
+          error?.code === 'CPF_ALREADY_EXISTS'
+        ) {
+          return res.status(409).json({
+            error: error.message || 'Este CPF já está cadastrado no sistema.',
+            code: 'CPF_ALREADY_EXISTS',
+          });
+        }
+        if (error?.message && error.message.toLowerCase().includes('cpf')) {
+          return res.status(400).json({
+            error: error.message,
+            code: 'INVALID_CPF',
+          });
+        }
         console.error('Error creating patient:', error);
         res.status(500).json({ error: 'Erro ao cadastrar paciente' });
       }
@@ -1275,7 +1294,23 @@ export function createApiRouter(
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
         res.json(updated);
-      } catch (error) {
+      } catch (error: any) {
+        if (
+          error instanceof CpfDuplicateError ||
+          error?.name === 'CpfDuplicateError' ||
+          error?.code === 'CPF_ALREADY_EXISTS'
+        ) {
+          return res.status(409).json({
+            error: error.message || 'Este CPF já está cadastrado no sistema.',
+            code: 'CPF_ALREADY_EXISTS',
+          });
+        }
+        if (error?.message && error.message.toLowerCase().includes('cpf')) {
+          return res.status(400).json({
+            error: error.message,
+            code: 'INVALID_CPF',
+          });
+        }
         console.error('Error updating patient:', error);
         res.status(500).json({ error: 'Erro ao atualizar paciente' });
       }

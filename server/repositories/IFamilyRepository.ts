@@ -7,6 +7,7 @@ import {
   FamilyInvitation,
   InvitationStatus,
   FamilyMemberWithAccess,
+  CpfRegistryRecord,
 } from '../types';
 
 export interface UserDocument {
@@ -121,4 +122,16 @@ export interface IFamilyRepository {
     userId: string,
     removedBy: string
   ): Promise<boolean>;
+
+  // CPF Uniqueness Registry
+  findCpfRecord(cpfHash: string): Promise<CpfRegistryRecord | null>;
+  findCpfRecordByEntity(entityId: string): Promise<CpfRegistryRecord | null>;
+  registerCpf(
+    cpfHash: string,
+    entityType: 'user' | 'patient',
+    entityId: string,
+    familyId?: string
+  ): Promise<CpfRegistryRecord>;
+  releaseCpf(cpfHash: string): Promise<boolean>;
+  releaseCpfByEntity(entityId: string): Promise<boolean>;
 }

@@ -10,8 +10,16 @@ import {
   MemberPatientAccessItem,
   Patient,
   PatientRole,
+  CpfRegistryRecord,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
+import {
+  normalizeCpf,
+  validateCpf,
+  maskCpf,
+  hashCpf,
+  CpfDuplicateError,
+} from '../utils/cpf';
 
 function isPermissionDeniedError(err: any): boolean {
   return (
@@ -48,11 +56,66 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     return { id: snap.id, ...snap.data() } as UserDocument;
   }
 
-  async saveUser(user: UserDocument): Promise<void> {
-    await this.db.collection('users').doc(user.id).set(
+  async saveUser(user: UserDocument & { cpf?: string }): Promise<void> {
+    const userRef = this.db.collection('users').doc(user.id);
+    const now = new Date().toISOString();
+    const { cpf, ...cleanUser } = user;
+
+    if (cpf && cpf.trim() !== '') {
+      if (!validateCpf(cpf)) {
+        throw new Error('CPF informado é inválido');
+      }
+      const norm = normalizeCpf(cpf);
+      const cpfHash = hashCpf(norm);
+      const cpfMasked = maskCpf(norm);
+
+      await this.db.runTransaction(async (transaction) => {
+        const regRef = this.db.collection('cpf_registry').doc(cpfHash);
+        const regDoc = await transaction.get(regRef);
+
+        if (regDoc.exists) {
+          const regData = regDoc.data() as CpfRegistryRecord;
+          if (regData.entityId !== user.id) {
+            throw new CpfDuplicateError();
+          }
+        }
+
+        const userDoc = await transaction.get(userRef);
+        const prevCpfHash = userDoc.exists ? userDoc.data()?.cpfHash : null;
+        if (prevCpfHash && prevCpfHash !== cpfHash) {
+          transaction.delete(this.db.collection('cpf_registry').doc(prevCpfHash));
+        }
+
+        transaction.set(
+          regRef,
+          {
+            id: cpfHash,
+            entityType: 'user',
+            entityId: user.id,
+            familyId: user.familyId,
+            createdAt: now,
+          },
+          { merge: true }
+        );
+
+        transaction.set(
+          userRef,
+          {
+            ...cleanUser,
+            cpfMasked,
+            cpfHash,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+      });
+      return;
+    }
+
+    await userRef.set(
       {
-        ...user,
-        updatedAt: new Date().toISOString(),
+        ...cleanUser,
+        updatedAt: now,
       },
       { merge: true }
     );
@@ -1141,6 +1204,78 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     await memRef.delete();
     await this.revokeAllMemberAccesses(familyId, userId);
 
+    return true;
+  }
+
+  // =========================================================================
+  // CPF UNIQUENESS REGISTRY
+  // =========================================================================
+
+  async findCpfRecord(cpfHash: string): Promise<CpfRegistryRecord | null> {
+    const snap = await this.db.collection('cpf_registry').doc(cpfHash).get();
+    if (!snap.exists) return null;
+    return { id: snap.id, ...snap.data() } as CpfRegistryRecord;
+  }
+
+  async findCpfRecordByEntity(entityId: string): Promise<CpfRegistryRecord | null> {
+    const snap = await this.db
+      .collection('cpf_registry')
+      .where('entityId', '==', entityId)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() } as CpfRegistryRecord;
+  }
+
+  async registerCpf(
+    cpfHash: string,
+    entityType: 'user' | 'patient',
+    entityId: string,
+    familyId?: string
+  ): Promise<CpfRegistryRecord> {
+    const registryRef = this.db.collection('cpf_registry').doc(cpfHash);
+    const now = new Date().toISOString();
+
+    return await this.db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(registryRef);
+      if (doc.exists) {
+        const existingData = doc.data() as CpfRegistryRecord;
+        if (existingData.entityId !== entityId) {
+          throw new CpfDuplicateError();
+        }
+        return existingData;
+      }
+
+      const record: CpfRegistryRecord = {
+        id: cpfHash,
+        entityType,
+        entityId,
+        familyId,
+        createdAt: now,
+      };
+
+      transaction.set(registryRef, record);
+      return record;
+    });
+  }
+
+  async releaseCpf(cpfHash: string): Promise<boolean> {
+    const ref = this.db.collection('cpf_registry').doc(cpfHash);
+    await ref.delete();
+    return true;
+  }
+
+  async releaseCpfByEntity(entityId: string): Promise<boolean> {
+    const snap = await this.db
+      .collection('cpf_registry')
+      .where('entityId', '==', entityId)
+      .get();
+    if (snap.empty) return false;
+    const batch = this.db.batch();
+    for (const doc of snap.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
     return true;
   }
 }
