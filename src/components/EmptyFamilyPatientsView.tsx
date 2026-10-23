@@ -1,16 +1,19 @@
 import React from 'react';
-import { Users, UserPlus, HeartPulse, ShieldCheck } from 'lucide-react';
+import { Users, UserPlus, HeartPulse, ShieldCheck, Send, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePatient } from '../context/PatientContext';
 
 interface EmptyFamilyPatientsViewProps {
   onOpenNewPatient: () => void;
+  onOpenInvite?: (role?: 'CAREGIVER' | 'VIEWER') => void;
 }
 
 export const EmptyFamilyPatientsView: React.FC<EmptyFamilyPatientsViewProps> = ({
   onOpenNewPatient,
+  onOpenInvite,
 }) => {
-  const { family, membership } = useAuth();
-  const isOwner = membership?.role === 'owner';
+  const { family, membership, isOwner } = useAuth();
+  const { setActiveTab } = usePatient();
 
   return (
     <div
@@ -39,19 +42,53 @@ export const EmptyFamilyPatientsView: React.FC<EmptyFamilyPatientsViewProps> = (
           Nenhum familiar cadastrado ainda.
         </h2>
         <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">
-          Cadastre o primeiro familiar para começar a organizar os dados de saúde, medicamentos, consultas, exames e documentos médicos.
+          Cadastre o primeiro familiar/paciente para organizar medicamentos, consultas e exames, ou convide cuidadores e visualizadores para a equipe de apoio.
         </p>
 
-        {/* Action Button */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 flex-wrap">
           <button
             type="button"
             id="btn-empty-state-add-patient"
             onClick={onOpenNewPatient}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-sm hover:shadow transition"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs transition cursor-pointer"
           >
-            <UserPlus className="w-5 h-5" />
-            <span>+ Cadastrar Familiar</span>
+            <UserPlus className="w-4 h-4" />
+            <span>+ Cadastrar Paciente</span>
+          </button>
+
+          {onOpenInvite && (
+            <>
+              <button
+                type="button"
+                id="btn-empty-state-add-caregiver"
+                onClick={() => onOpenInvite('CAREGIVER')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>+ Cuidador</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-empty-state-add-viewer"
+                onClick={() => onOpenInvite('VIEWER')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+                <span>+ Visualizador</span>
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            id="btn-empty-state-view-people"
+            onClick={() => setActiveTab('pessoas')}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl border border-slate-200 transition cursor-pointer"
+          >
+            <Users className="w-4 h-4 text-slate-600" />
+            <span>Gerenciar Pessoas</span>
           </button>
         </div>
 

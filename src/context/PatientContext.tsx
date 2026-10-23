@@ -11,7 +11,8 @@ export type NavigationTab =
   | 'exames'
   | 'documentos'
   | 'linha_tempo'
-  | 'historico';
+  | 'historico'
+  | 'pessoas';
 
 interface ToastMessage {
   id: string;

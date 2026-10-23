@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   X,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 
 interface TabItem {
@@ -25,6 +26,7 @@ const DESKTOP_TABS: TabItem[] = [
   { id: 'medicamentos', label: 'Medicamentos', shortLabel: 'Remédios', icon: Pill },
   { id: 'agenda', label: 'Consultas e Exames', shortLabel: 'Agenda', icon: CalendarCheck2 },
   { id: 'documentos', label: 'Documentos', shortLabel: 'Documentos', icon: FileText },
+  { id: 'pessoas', label: 'Cuidadores e Familiares', shortLabel: 'Pessoas', icon: Users },
   { id: 'linha_tempo', label: 'Linha do Tempo', shortLabel: 'Linha', icon: Clock },
   { id: 'historico', label: 'Histórico', shortLabel: 'Histórico', icon: History },
 ];
@@ -33,8 +35,8 @@ const MOBILE_PRIMARY_TABS: TabItem[] = [
   { id: 'dashboard', label: 'Início', shortLabel: 'Início', icon: LayoutDashboard },
   { id: 'medicamentos', label: 'Medicamentos', shortLabel: 'Remédios', icon: Pill },
   { id: 'agenda', label: 'Agenda', shortLabel: 'Agenda', icon: CalendarCheck2 },
+  { id: 'pessoas', label: 'Pessoas', shortLabel: 'Pessoas', icon: Users },
   { id: 'documentos', label: 'Documentos', shortLabel: 'Docs', icon: FileText },
-  { id: 'linha_tempo', label: 'Linha', shortLabel: 'Linha', icon: Clock },
 ];
 
 export const TabNavigation: React.FC = () => {

@@ -18,6 +18,9 @@ import { TimelineView } from './components/TimelineView';
 import { AppHistoryView } from './components/AppHistoryView';
 import { PatientProfileModal } from './components/PatientProfileModal';
 import { NewPatientModal } from './components/NewPatientModal';
+import { PeopleManagementView } from './components/PeopleManagementView';
+import { InviteMemberModal } from './components/InviteMemberModal';
+import { AccessRequestsManagerModal } from './components/AccessRequestsManagerModal';
 import { NotificationToast } from './components/NotificationToast';
 import { InviteAcceptView } from './components/InviteAcceptView';
 import { AnimatePresence, motion } from 'motion/react';
@@ -57,6 +60,9 @@ const MainContent: React.FC = () => {
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteModalRole, setInviteModalRole] = useState<'CAREGIVER' | 'VIEWER'>('VIEWER');
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
 
   // Link between exam and document upload
   const [examIdForDoc, setExamIdForDoc] = useState<string | null>(null);
@@ -158,8 +164,14 @@ const MainContent: React.FC = () => {
 
       {/* Main View Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-28 sm:pb-16 md:pb-12">
-        {hasNoPatients ? (
-          <EmptyFamilyPatientsView onOpenNewPatient={() => setIsNewPatientModalOpen(true)} />
+        {hasNoPatients && activeTab !== 'pessoas' ? (
+          <EmptyFamilyPatientsView
+            onOpenNewPatient={() => setIsNewPatientModalOpen(true)}
+            onOpenInvite={(role) => {
+              setInviteModalRole(role || 'CAREGIVER');
+              setIsInviteModalOpen(true);
+            }}
+          />
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
@@ -185,6 +197,11 @@ const MainContent: React.FC = () => {
                     setExamIdForDoc(null);
                     setActiveTab('documentos');
                     setIsDocModalOpen(true);
+                  }}
+                  onOpenNewPatient={() => setIsNewPatientModalOpen(true)}
+                  onOpenInvite={(role) => {
+                    setInviteModalRole(role || 'CAREGIVER');
+                    setIsInviteModalOpen(true);
                   }}
                 />
               )}
@@ -227,6 +244,17 @@ const MainContent: React.FC = () => {
               )}
 
               {activeTab === 'historico' && <AppHistoryView />}
+
+              {activeTab === 'pessoas' && (
+                <PeopleManagementView
+                  onOpenNewPatient={() => setIsNewPatientModalOpen(true)}
+                  onOpenInvite={(role) => {
+                    setInviteModalRole(role || 'CAREGIVER');
+                    setIsInviteModalOpen(true);
+                  }}
+                  onOpenRequests={() => setIsRequestsModalOpen(true)}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         )}
@@ -237,6 +265,15 @@ const MainContent: React.FC = () => {
       <NewPatientModal
         isOpen={isNewPatientModalOpen}
         onClose={() => setIsNewPatientModalOpen(false)}
+      />
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        initialRole={inviteModalRole}
+      />
+      <AccessRequestsManagerModal
+        isOpen={isRequestsModalOpen}
+        onClose={() => setIsRequestsModalOpen(false)}
       />
 
       {/* Floating Feedback Toasts */}

@@ -40,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
     setSelectedPatientId,
     setOpenPatientProfile,
     refreshPatients,
+    setActiveTab,
   } = usePatient();
   const {
     user,
@@ -203,12 +204,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
               <button
                 type="button"
                 id="btn-open-family-members-nav"
-                onClick={() => setIsMembersModalOpen(true)}
+                onClick={() => setActiveTab('pessoas')}
                 className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-xs transition min-h-[44px]"
-                title="Gestão de familiares ativos e permissões por paciente"
+                title="Gestão de pacientes, cuidadores, familiares e convites"
               >
                 <Users className="w-4 h-4 text-blue-600" />
-                <span className="hidden lg:inline">Familiares e Acessos</span>
+                <span className="hidden lg:inline">Cuidadores e Familiares</span>
               </button>
             )}
 
@@ -507,12 +508,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                           id="btn-user-menu-family-members"
                           onClick={() => {
                             setUserMenuOpen(false);
-                            setIsMembersModalOpen(true);
+                            setActiveTab('pessoas');
                           }}
                           className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
                         >
                           <Users className="w-4 h-4 text-blue-600" />
-                          <span>Familiares e Acessos</span>
+                          <span>Cuidadores e Familiares</span>
                         </button>
 
                         <button

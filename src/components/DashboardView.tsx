@@ -23,6 +23,9 @@ import {
   Shield,
   Eye,
   Lock,
+  Users,
+  UserPlus,
+  Send,
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -30,6 +33,8 @@ interface DashboardViewProps {
   onOpenAppointmentModal: () => void;
   onOpenExamModal: () => void;
   onOpenDocumentModal: () => void;
+  onOpenNewPatient?: () => void;
+  onOpenInvite?: (role?: 'CAREGIVER' | 'VIEWER') => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -37,9 +42,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAppointmentModal,
   onOpenExamModal,
   onOpenDocumentModal,
+  onOpenNewPatient,
+  onOpenInvite,
 }) => {
   const { selectedPatient, setActiveTab, setOpenPatientProfile, showToast } = usePatient();
-  const { getPermissionsForPatient } = useAuth();
+  const { getPermissionsForPatient, isOwner } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [takenDoses, setTakenDoses] = useState<Record<string, boolean>>({});
@@ -255,6 +262,81 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <User className="w-3.5 h-3.5 text-slate-500" />
             <span>Ver Ficha Completa</span>
           </button>
+        </div>
+      </section>
+
+      {/* Bloco de Gestão de Cadastros e Pessoas */}
+      <section
+        id="dashboard-people-management-banner"
+        className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 transition-all"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                  Gestão da Família, Cuidadores e Pacientes
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                  Acessos & Cadastros
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Cadastre e gerencie pacientes (com validação de CPF), cuidadores designados e familiares com perfil de visualização.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {onOpenNewPatient && (
+              <button
+                type="button"
+                id="dashboard-btn-add-patient"
+                onClick={onOpenNewPatient}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition active:scale-[0.98] cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>+ Cadastrar Paciente</span>
+              </button>
+            )}
+
+            {onOpenInvite && (
+              <>
+                <button
+                  type="button"
+                  id="dashboard-btn-add-caregiver"
+                  onClick={() => onOpenInvite('CAREGIVER')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition active:scale-[0.98] cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>+ Cuidador</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="dashboard-btn-add-viewer"
+                  onClick={() => onOpenInvite('VIEWER')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition active:scale-[0.98] cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>+ Visualizador</span>
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              id="dashboard-btn-view-all-people"
+              onClick={() => setActiveTab('pessoas')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition active:scale-[0.98] cursor-pointer"
+            >
+              <span>Gerenciar Cadastros</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+            </button>
+          </div>
         </div>
       </section>
 
