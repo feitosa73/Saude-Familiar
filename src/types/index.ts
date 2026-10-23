@@ -32,6 +32,8 @@ export interface FamilyInvitation {
   patientId: string;
   patientName: string;
   invitedEmail: string;
+  invitedName?: string;
+  invitedPhone?: string;
   role: 'VIEWER' | 'CAREGIVER';
   status: InvitationStatus;
   tokenHash: string;
@@ -72,6 +74,7 @@ export interface UserMeResponse {
   uid: string;
   email: string | null;
   displayName?: string | null;
+  phone?: string | null;
   photoURL?: string | null;
   cpfMasked?: string;
   family: Family | null;
@@ -105,6 +108,7 @@ export interface FamilyMemberWithAccess {
   userId: string;
   name: string;
   email: string;
+  phone?: string;
   avatarUrl?: string;
   familyRole: MembershipRole;
   status: MembershipStatus;
@@ -120,6 +124,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   avatarUrl?: string;
   patientIds: string[];
   cpfMasked?: string;

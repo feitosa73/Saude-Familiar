@@ -120,6 +120,7 @@ export function createApiRouter(
         uid: authUser.uid,
         email: authUser.email || null,
         displayName: (authUser as any).name || null,
+        phone: userDoc?.phone || undefined,
         photoURL: (authUser as any).picture || null,
         cpfMasked: userDoc?.cpfMasked || undefined,
         family: activeFamily,
@@ -152,7 +153,7 @@ export function createApiRouter(
     }
   });
 
-  // 2.0 Update Current User Profile (Display Name, CPF)
+  // 2.0 Update Current User Profile (Display Name, Phone, CPF)
   router.put('/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
@@ -160,13 +161,14 @@ export function createApiRouter(
         return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
       }
 
-      const { displayName, cpf } = req.body;
+      const { displayName, phone, cpf } = req.body;
       const userDoc = await familyRepository.getUser(authUser.uid);
 
       await familyRepository.saveUser({
         id: authUser.uid,
         email: authUser.email || userDoc?.email || '',
         displayName: displayName !== undefined ? displayName : userDoc?.displayName,
+        phone: phone !== undefined ? phone : userDoc?.phone,
         familyId: userDoc?.familyId,
         cpf: cpf !== undefined ? cpf : undefined,
         updatedAt: new Date().toISOString(),
@@ -559,7 +561,7 @@ export function createApiRouter(
       try {
         const ownerUid = req.user!.uid;
         const familyId = req.membership!.familyId;
-        const { patientId, invitedEmail, role } = req.body;
+        const { patientId, invitedEmail, invitedName, invitedPhone, role } = req.body;
 
         if (!patientId || typeof patientId !== 'string' || !patientId.trim()) {
           return res.status(400).json({
@@ -616,6 +618,8 @@ export function createApiRouter(
           patientId,
           patientName: patient.name,
           invitedEmail: cleanEmail,
+          invitedName: invitedName ? String(invitedName).trim() : undefined,
+          invitedPhone: invitedPhone ? String(invitedPhone).trim() : undefined,
           role,
           createdBy: ownerUid,
           tokenHash,
@@ -626,7 +630,9 @@ export function createApiRouter(
         const host = req.get('host') || 'saudefamiliar.fiqueok.com.br';
         const protocol = req.protocol === 'http' && host.includes('localhost') ? 'http' : 'https';
         const inviteUrl = `${protocol}://${host}/invite/${rawToken}`;
-        const shareMessage = `Você foi convidado(a) para acessar informações de saúde compartilhadas de ${patient.name} no Saúde Familiar.\nAcesse o link abaixo e entre com o e-mail convidado (${cleanEmail}):\n${inviteUrl}`;
+        const recipientGreeting = invitedName ? `Olá, ${invitedName}!` : 'Olá!';
+        const roleLabel = role === 'CAREGIVER' ? 'Cuidador(a)' : 'Visualizador(a)';
+        const shareMessage = `${recipientGreeting}\nVocê foi convidado(a) como ${roleLabel} para acessar informações de saúde compartilhadas de ${patient.name} no Saúde Familiar.\nAcesse o link abaixo e entre com o e-mail convidado (${cleanEmail}):\n${inviteUrl}`;
 
         // Return raw token to frontend once, omit tokenHash from response
         const { tokenHash: _, ...safeInvitation } = invitation;
@@ -1105,6 +1111,65 @@ export function createApiRouter(
       } catch (error) {
         console.error('[API] Erro ao atualizar membro da família:', error);
         res.status(500).json({ error: 'Erro ao atualizar membro' });
+      }
+    }
+  );
+
+  // 3.8 Update Member Details (Name, Phone, Role) with strict CPF immutability
+  router.put(
+    '/families/:familyId/members/:userId',
+    requireAuth,
+    requireActiveMembership,
+    requireFamilyOwner,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { userId } = req.params;
+        const { name, phone, role } = req.body;
+
+        const targetMembership = await familyRepository.getMembership(familyId, userId);
+        if (!targetMembership) {
+          return res.status(404).json({
+            error: 'Membro não encontrado nesta família.',
+            code: 'MEMBER_NOT_FOUND',
+          });
+        }
+
+        // Strict CPF Immutability check: Disallow any CPF mutation via member editing
+        if ((req.body as any).cpf !== undefined) {
+          return res.status(400).json({
+            error: 'O CPF não pode ser alterado através da edição cadastral de membro.',
+            code: 'CPF_IMMUTABLE',
+          });
+        }
+
+        if (role && role !== 'owner' && role !== 'member') {
+          return res.status(400).json({
+            error: 'Papel na família inválido.',
+            code: 'INVALID_ROLE',
+          });
+        }
+
+        await familyRepository.updateFamilyMemberDetails(familyId, userId, {
+          name,
+          phone,
+          role,
+        });
+
+        const members = await familyRepository.listFamilyMembersWithAccess(familyId);
+        const updatedMember = members.find((m) => m.userId === userId);
+
+        res.json({
+          success: true,
+          message: 'Dados cadastrais do membro atualizados com sucesso.',
+          member: updatedMember,
+        });
+      } catch (error: any) {
+        console.error('[API] Erro ao atualizar dados do membro:', error);
+        res.status(500).json({
+          error: error.message || 'Erro ao atualizar dados do membro.',
+          code: 'UPDATE_MEMBER_FAILED',
+        });
       }
     }
   );

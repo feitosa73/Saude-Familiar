@@ -8,12 +8,14 @@ import {
   InvitationStatus,
   FamilyMemberWithAccess,
   CpfRegistryRecord,
+  MembershipRole,
 } from '../types';
 
 export interface UserDocument {
   id: string; // Firebase Auth UID
   email?: string | null;
   displayName?: string | null;
+  phone?: string | null;
   photoURL?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -67,6 +69,8 @@ export interface IFamilyRepository {
     patientId: string;
     patientName: string;
     invitedEmail: string;
+    invitedName?: string;
+    invitedPhone?: string;
     role: 'VIEWER' | 'CAREGIVER';
     createdBy: string;
     tokenHash: string;
@@ -96,6 +100,11 @@ export interface IFamilyRepository {
 
   // Family Members & Accesses Management (Authoritative)
   listFamilyMembersWithAccess(familyId: string): Promise<FamilyMemberWithAccess[]>;
+  updateFamilyMemberDetails(
+    familyId: string,
+    userId: string,
+    data: { name?: string; phone?: string; role?: MembershipRole }
+  ): Promise<void>;
   grantMemberPatientAccess(
     familyId: string,
     userId: string,

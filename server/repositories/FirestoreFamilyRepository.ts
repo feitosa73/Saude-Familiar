@@ -11,6 +11,7 @@ import {
   Patient,
   PatientRole,
   CpfRegistryRecord,
+  MembershipRole,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 import {
@@ -672,6 +673,8 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     patientId: string;
     patientName: string;
     invitedEmail: string;
+    invitedName?: string;
+    invitedPhone?: string;
     role: 'VIEWER' | 'CAREGIVER';
     createdBy: string;
     tokenHash: string;
@@ -687,6 +690,8 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       patientId: data.patientId,
       patientName: data.patientName,
       invitedEmail: cleanEmail,
+      invitedName: data.invitedName?.trim() || undefined,
+      invitedPhone: data.invitedPhone?.trim() || undefined,
       role: data.role,
       status: 'pending',
       tokenHash: data.tokenHash,
@@ -937,12 +942,14 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     batch.set(patientAccessRef, patientAccess, { merge: true });
 
     const userRef = this.db.collection('users').doc(uid);
+    const existingUserDoc = await this.getUser(uid);
     batch.set(
       userRef,
       {
         id: uid,
         email: userEmail,
-        displayName: user.displayName || null,
+        displayName: user.displayName || existingUserDoc?.displayName || inv.invitedName || null,
+        phone: existingUserDoc?.phone || inv.invitedPhone || null,
         updatedAt: now,
       },
       { merge: true }
@@ -1084,6 +1091,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
           userId: membership.userId,
           name: userDoc?.displayName || (isPrimaryOwner ? 'Responsável' : 'Membro'),
           email: userDoc?.email || '',
+          phone: userDoc?.phone || undefined,
           avatarUrl: userDoc?.photoURL || undefined,
           familyRole: isOwner ? 'owner' : 'member',
           status: membership.status,
@@ -1098,6 +1106,32 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     );
 
     return result;
+  }
+
+  async updateFamilyMemberDetails(
+    familyId: string,
+    userId: string,
+    data: { name?: string; phone?: string; role?: MembershipRole }
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const batch = this.db.batch();
+
+    const userRef = this.db.collection('users').doc(userId);
+    const userUpdate: any = { updatedAt: now };
+    if (data.name !== undefined) userUpdate.displayName = data.name.trim();
+    if (data.phone !== undefined) userUpdate.phone = data.phone.trim();
+    batch.set(userRef, userUpdate, { merge: true });
+
+    if (data.role) {
+      const membershipRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('memberships')
+        .doc(userId);
+      batch.set(membershipRef, { role: data.role, updatedAt: now }, { merge: true });
+    }
+
+    await batch.commit();
   }
 
   async grantMemberPatientAccess(

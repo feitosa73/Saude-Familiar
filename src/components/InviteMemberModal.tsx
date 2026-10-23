@@ -37,7 +37,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const [invitedName, setInvitedName] = useState<string>('');
   const [invitedEmail, setInvitedEmail] = useState<string>('');
+  const [invitedPhone, setInvitedPhone] = useState<string>('');
   const [role, setRole] = useState<'VIEWER' | 'CAREGIVER'>(initialRole);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,11 +109,15 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       const res = await api.createInvitation({
         patientId: selectedPatientId,
         invitedEmail: invitedEmail.trim().toLowerCase(),
+        invitedName: invitedName.trim() || undefined,
+        invitedPhone: invitedPhone.trim() || undefined,
         role,
       });
 
       setCreatedResult(res);
+      setInvitedName('');
       setInvitedEmail('');
+      setInvitedPhone('');
       loadInvitations();
     } catch (err: any) {
       setErrorMessage(err.message || 'Erro ao gerar convite. Verifique se o e-mail está correto.');
@@ -354,25 +360,58 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Guest Email */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    2. E-mail Google do Convidado
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                {/* 2. Guest Info: Name, Email and Phone */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      2. Nome do Cuidador / Visualizador <span className="text-slate-400 font-normal lowercase">(opcional)</span>
+                    </label>
                     <input
-                      type="email"
-                      id="input-invited-email"
-                      required
-                      placeholder="exemplo@gmail.com"
-                      value={invitedEmail}
-                      onChange={(e) => setInvitedEmail(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      type="text"
+                      id="input-invited-name"
+                      placeholder="Ex: Mariana Santos"
+                      value={invitedName}
+                      onChange={(e) => setInvitedName(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Por segurança, o convidado precisará fazer login com esta mesma conta Google para aceitar o convite.
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        E-mail Google do Convidado *
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <input
+                          type="email"
+                          id="input-invited-email"
+                          required
+                          placeholder="exemplo@gmail.com"
+                          value={invitedEmail}
+                          onChange={(e) => setInvitedEmail(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Telefone / WhatsApp <span className="text-slate-400 font-normal lowercase">(opcional)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        id="input-invited-phone"
+                        placeholder="(00) 00000-0000"
+                        value={invitedPhone}
+                        onChange={(e) => setInvitedPhone(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400">
+                    O convidado utilizará a conta Google com este e-mail para acessar o prontuário compartilhado com segurança.
                   </p>
                 </div>
 
@@ -493,8 +532,13 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900 truncate">
-                              {inv.invitedEmail}
+                              {inv.invitedName ? `${inv.invitedName} (${inv.invitedEmail})` : inv.invitedEmail}
                             </span>
+                            {inv.invitedPhone && (
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                • {inv.invitedPhone}
+                              </span>
+                            )}
                             {/* Status Badge */}
                             {isPending && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">

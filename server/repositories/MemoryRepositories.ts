@@ -16,6 +16,7 @@ import {
   FamilyInvitation,
   FamilyMemberWithAccess,
   CpfRegistryRecord,
+  MembershipRole,
 } from '../types';
 import { IHealthRepository } from './IRepository';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
@@ -370,7 +371,6 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     inv.status = 'accepted';
     inv.acceptedAt = new Date().toISOString();
     inv.acceptedBy = user.uid;
-    inv.acceptedAt = new Date().toISOString();
 
     const membership: FamilyMembership = {
       id: `mem-${user.uid}`,
@@ -395,6 +395,24 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     };
     this.accesses.set(patientAccess.id, patientAccess);
 
+    const existingUser = await this.getUser(user.uid);
+    if (existingUser) {
+      existingUser.displayName = user.displayName || existingUser.displayName || inv.invitedName || null;
+      if (!existingUser.phone && inv.invitedPhone) {
+        existingUser.phone = inv.invitedPhone;
+      }
+      this.users.set(user.uid, existingUser);
+    } else {
+      this.users.set(user.uid, {
+        id: user.uid,
+        email: user.email,
+        displayName: user.displayName || inv.invitedName || null,
+        phone: inv.invitedPhone || null,
+        familyId: inv.familyId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     return { invitation: inv, membership, patientAccess };
   }
 
@@ -408,6 +426,7 @@ export class MemoryFamilyRepository implements IFamilyRepository {
         userId: mem.userId,
         email: user?.email || '',
         name: user?.displayName || 'Membro da Família',
+        phone: user?.phone || undefined,
         familyRole: mem.role,
         status: mem.status,
         joinedAt: mem.joinedAt,
@@ -421,6 +440,28 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       });
     }
     return result;
+  }
+
+  async updateFamilyMemberDetails(
+    familyId: string,
+    userId: string,
+    data: { name?: string; phone?: string; role?: MembershipRole }
+  ): Promise<void> {
+    const user = await this.getUser(userId);
+    if (user) {
+      if (data.name !== undefined) user.displayName = data.name.trim();
+      if (data.phone !== undefined) user.phone = data.phone.trim();
+      user.updatedAt = new Date().toISOString();
+      this.users.set(userId, user);
+    }
+    if (data.role) {
+      const membershipKey = `${familyId}:${userId}`;
+      const mem = this.memberships.get(membershipKey);
+      if (mem) {
+        mem.role = data.role;
+        mem.updatedAt = new Date().toISOString();
+      }
+    }
   }
 
   async grantMemberPatientAccess(familyId: string, userId: string, patientId: string, role: 'VIEWER' | 'CAREGIVER'): Promise<PatientAccess> {

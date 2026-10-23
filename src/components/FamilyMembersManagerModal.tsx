@@ -22,8 +22,10 @@ import {
   AlertTriangle,
   Info,
   Building2,
+  Phone,
+  Pencil,
 } from 'lucide-react';
-import { FamilyMemberWithAccess, Patient, Family, PatientRole } from '../types';
+import { FamilyMemberWithAccess, Patient, Family, PatientRole, MembershipRole } from '../types';
 import { api } from '../services/api';
 import { JoinFamilyModal } from './JoinFamilyModal';
 
@@ -73,6 +75,17 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
     danger?: boolean;
     onConfirm: () => Promise<void>;
   } | null>(null);
+
+  // Edit member modal state
+  const [editingMember, setEditingMember] = useState<{
+    userId: string;
+    name: string;
+    phone: string;
+    email: string;
+    role: MembershipRole;
+  } | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!family?.id) return;
@@ -293,6 +306,35 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
       setErrorMessage(err.message || 'Falha ao conceder acesso ao paciente.');
     } finally {
       setActionLoadingKey(null);
+    }
+  };
+
+  // Save Member Details Edit (Name, Phone, Role)
+  const handleSaveMemberEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!family?.id || !editingMember) return;
+    if (!editingMember.name.trim()) {
+      setEditError('O nome do membro é obrigatório.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await api.updateFamilyMemberDetails(family.id, editingMember.userId, {
+        name: editingMember.name.trim(),
+        phone: editingMember.phone.trim(),
+        role: editingMember.role,
+      });
+      setSuccessMessage(`Dados cadastrais de ${editingMember.name} atualizados com sucesso.`);
+      setEditingMember(null);
+      await loadData();
+      if (onMembersUpdated) await onMembersUpdated();
+    } catch (err: any) {
+      console.error('Erro ao atualizar dados do membro:', err);
+      setEditError(err.message || 'Falha ao atualizar dados do membro.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -589,6 +631,12 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
                               <Mail className="w-3.5 h-3.5 text-slate-400" />
                               {member.email || 'E-mail não informado'}
                             </span>
+                            {member.phone ? (
+                              <span className="inline-flex items-center gap-1 text-slate-600">
+                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                {member.phone}
+                              </span>
+                            ) : null}
                             <span className="inline-flex items-center gap-1">
                               <Calendar className="w-3.5 h-3.5 text-slate-400" />
                               Entrou em: {formatDate(member.joinedAt || member.createdAt)}
@@ -597,35 +645,57 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
                         </div>
                       </div>
 
-                      {/* Member Global Actions (for non-owners) */}
-                      {!isOwner && (
-                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 pt-2 sm:pt-0">
-                          {member.patientAccesses.length > 0 && (
+                      {/* Member Global Actions */}
+                      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 pt-2 sm:pt-0">
+                        <button
+                          type="button"
+                          id={`btn-edit-member-${member.userId}`}
+                          onClick={() => {
+                            setEditError(null);
+                            setEditingMember({
+                              userId: member.userId,
+                              name: member.name,
+                              phone: member.phone || '',
+                              email: member.email,
+                              role: member.familyRole,
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-200 transition"
+                          title="Editar dados cadastrais (nome, telefone)"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Editar</span>
+                        </button>
+
+                        {!isOwner && (
+                          <>
+                            {member.patientAccesses.length > 0 && (
+                              <button
+                                type="button"
+                                id={`btn-revoke-all-${member.userId}`}
+                                onClick={() => handleRevokeAllAccesses(member)}
+                                disabled={actionLoadingKey === `revoke_all_${member.userId}`}
+                                className="text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 transition"
+                                title="Revogar todos os acessos a pacientes sem remover da família"
+                              >
+                                Revogar Acessos
+                              </button>
+                            )}
+
                             <button
                               type="button"
-                              id={`btn-revoke-all-${member.userId}`}
-                              onClick={() => handleRevokeAllAccesses(member)}
-                              disabled={actionLoadingKey === `revoke_all_${member.userId}`}
-                              className="text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 transition"
-                              title="Revogar todos os acessos a pacientes sem remover da família"
+                              id={`btn-remove-member-${member.userId}`}
+                              onClick={() => handleRemoveMember(member)}
+                              disabled={actionLoadingKey === `remove_member_${member.userId}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-800 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 transition"
+                              title="Remover membro e todos os seus acessos da família"
                             >
-                              Revogar Acessos
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Remover da Família</span>
                             </button>
-                          )}
-
-                          <button
-                            type="button"
-                            id={`btn-remove-member-${member.userId}`}
-                            onClick={() => handleRemoveMember(member)}
-                            disabled={actionLoadingKey === `remove_member_${member.userId}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-800 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 transition"
-                            title="Remover membro e todos os seus acessos da família"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                            <span>Remover da Família</span>
-                          </button>
-                        </div>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {/* Patient Access Section */}
@@ -846,6 +916,126 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
           </button>
         </div>
       </div>
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <div
+          id="edit-member-modal"
+          className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div className="bg-white max-w-lg w-full rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Editar Dados Cadastrais</h3>
+                  <p className="text-xs text-slate-500">Membro da Família</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="btn-close-edit-member"
+                onClick={() => setEditingMember(null)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveMemberEdit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nome Completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  id="input-edit-member-name"
+                  value={editingMember.name}
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, name: e.target.value })
+                  }
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Telefone / Celular
+                </label>
+                <input
+                  type="tel"
+                  id="input-edit-member-phone"
+                  placeholder="(00) 00000-0000"
+                  value={editingMember.phone}
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, phone: e.target.value })
+                  }
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  E-mail de Autenticação (Conta Google)
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={editingMember.email}
+                  className="w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-xl px-3 py-2 text-xs cursor-not-allowed select-all"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  O e-mail é vinculado à identidade Google e ao histórico de convite.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
+                <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-slate-600 leading-relaxed">
+                  <span className="font-bold text-slate-800">Proteção e Imutabilidade do CPF:</span> Por exigência de privacidade e conformidade de dados médicos, o CPF não pode ser alterado no painel administrativo familiar.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  id="btn-cancel-edit-member"
+                  onClick={() => setEditingMember(null)}
+                  disabled={isSavingEdit}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  id="btn-save-edit-member"
+                  disabled={isSavingEdit}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingEdit ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Alterações</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       {confirmDialog && confirmDialog.isOpen && (

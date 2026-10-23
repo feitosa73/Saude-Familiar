@@ -111,8 +111,8 @@ export const api = {
 
   // Authoritative Current User Profile & Family Membership
   getCurrentUser: () => request<UserMeResponse>('/user/me'),
-  updateUserProfile: (data: { displayName?: string; cpf?: string }) =>
-    request<{ id: string; email: string; displayName?: string; cpfMasked?: string }>('/user/profile', {
+  updateUserProfile: (data: { displayName?: string; phone?: string; cpf?: string }) =>
+    request<{ id: string; email: string; displayName?: string; phone?: string; cpfMasked?: string }>('/user/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -226,6 +226,18 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  updateFamilyMemberDetails: (
+    familyId: string,
+    userId: string,
+    data: { name?: string; phone?: string; role?: MembershipRole }
+  ) =>
+    request<{ success: boolean; message: string; member: FamilyMemberWithAccess }>(
+      `/families/${familyId}/members/${userId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    ),
 
   // Patient Access
   getPatientAccesses: (patientId: string) =>
@@ -479,6 +491,8 @@ export const api = {
   createInvitation: (data: {
     patientId: string;
     invitedEmail: string;
+    invitedName?: string;
+    invitedPhone?: string;
     role: 'VIEWER' | 'CAREGIVER';
   }) =>
     request<CreateInvitationResponse>('/invitations', {
