@@ -1291,6 +1291,8 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
           const record: CpfRegistryRecord = {
             id: cpfHash,
             ...existingData,
+            entityType: existingData.entityType || 'patient',
+            entityId: existingData.entityId || entityId,
             patientId: entityId,
             patientFamilyId: familyId || existingData.patientFamilyId,
             updatedAt: now,
@@ -1311,6 +1313,8 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
           const record: CpfRegistryRecord = {
             id: cpfHash,
             ...existingData,
+            entityType: existingData.entityType || 'user',
+            entityId: existingData.entityId || entityId,
             userId: entityId,
             updatedAt: now,
           };
@@ -1321,6 +1325,8 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
 
       const record: CpfRegistryRecord = {
         id: cpfHash,
+        entityType,
+        entityId,
         patientId: entityType === 'patient' ? entityId : null,
         patientFamilyId: entityType === 'patient' ? familyId : null,
         userId: entityType === 'user' ? entityId : null,

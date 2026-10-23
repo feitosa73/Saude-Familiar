@@ -65,7 +65,7 @@ describe('Entrega 2: CPF Registry & Global Uniqueness', () => {
     );
   });
 
-  it('should reject creating a patient if the CPF is already assigned to a User (cross-entity collision)', async () => {
+  it('should allow creating a patient if the CPF is already assigned to a User (same physical person as user and patient)', async () => {
     const familyRepo = new MemoryFamilyRepository();
     const healthRepo = new MemoryHealthRepository(familyRepo);
 
@@ -77,13 +77,29 @@ describe('Entrega 2: CPF Registry & Global Uniqueness', () => {
       cpf: SYNTHETIC_CPF_1,
     });
 
-    // Attempting to create a Patient with the same CPF must be rejected
+    // Creating a Patient with the same CPF must be allowed (dual entity: same person)
+    const patient = await healthRepo.createPatient({
+      name: 'Paciente com CPF do Cuidador',
+      birthDate: '1975-03-20',
+      bloodType: 'B+',
+      allergies: [],
+      emergencyContacts: [],
+      cpf: SYNTHETIC_CPF_1,
+    });
+
+    assert.ok(patient.id);
+    const regRecord = await familyRepo.findCpfRecord(patient.cpfHash!);
+    assert.ok(regRecord);
+    assert.strictEqual(regRecord.userId, 'user-cuidador-1');
+    assert.strictEqual(regRecord.patientId, patient.id);
+
+    // But creating a SECOND patient with the same CPF must be blocked
     await assert.rejects(
       async () => {
         await healthRepo.createPatient({
-          name: 'Paciente com CPF do Cuidador',
-          birthDate: '1975-03-20',
-          bloodType: 'B+',
+          name: 'Segundo Paciente Duplicado',
+          birthDate: '1976-04-10',
+          bloodType: 'O+',
           allergies: [],
           emergencyContacts: [],
           cpf: SYNTHETIC_CPF_1,
@@ -96,11 +112,11 @@ describe('Entrega 2: CPF Registry & Global Uniqueness', () => {
     );
   });
 
-  it('should reject saving a user if the CPF is already assigned to a Patient', async () => {
+  it('should allow saving a user if the CPF is already assigned to a Patient', async () => {
     const familyRepo = new MemoryFamilyRepository();
     const healthRepo = new MemoryHealthRepository(familyRepo);
 
-    await healthRepo.createPatient({
+    const patient = await healthRepo.createPatient({
       name: 'Paciente Teste 2',
       birthDate: '1982-11-15',
       bloodType: 'AB+',
@@ -109,12 +125,26 @@ describe('Entrega 2: CPF Registry & Global Uniqueness', () => {
       cpf: SYNTHETIC_CPF_2,
     });
 
+    // Saving a User with the same CPF must be allowed (same person as user and patient)
+    await familyRepo.saveUser({
+      id: 'user-visualizador-2',
+      email: 'viewer2@teste.com',
+      displayName: 'Visualizador Teste',
+      cpf: SYNTHETIC_CPF_2,
+    });
+
+    const regRecord = await familyRepo.findCpfRecord(patient.cpfHash!);
+    assert.ok(regRecord);
+    assert.strictEqual(regRecord.patientId, patient.id);
+    assert.strictEqual(regRecord.userId, 'user-visualizador-2');
+
+    // But saving a SECOND user with the same CPF must be blocked
     await assert.rejects(
       async () => {
         await familyRepo.saveUser({
-          id: 'user-visualizador-2',
-          email: 'viewer2@teste.com',
-          displayName: 'Visualizador Teste',
+          id: 'user-outro-3',
+          email: 'outro3@teste.com',
+          displayName: 'Outro Usuario Duplicado',
           cpf: SYNTHETIC_CPF_2,
         });
       },

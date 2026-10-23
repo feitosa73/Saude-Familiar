@@ -498,6 +498,8 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       const updatedRecord: CpfRegistryRecord = {
         id: cpfHash,
         ...existing,
+        entityType: existing?.entityType || 'patient',
+        entityId: existing?.entityId || entityId,
         patientId: entityId,
         patientFamilyId: familyId || existing?.patientFamilyId,
         createdAt: existing?.createdAt || now,
@@ -519,6 +521,8 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       const updatedRecord: CpfRegistryRecord = {
         id: cpfHash,
         ...existing,
+        entityType: existing?.entityType || 'user',
+        entityId: existing?.entityId || entityId,
         userId: entityId,
         createdAt: existing?.createdAt || now,
         updatedAt: now,

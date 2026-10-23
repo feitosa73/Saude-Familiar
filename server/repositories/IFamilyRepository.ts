@@ -18,6 +18,7 @@ export interface UserDocument {
   createdAt?: string;
   updatedAt?: string;
   familyId?: string;
+  cpf?: string;
   cpfMasked?: string;
   cpfHash?: string;
 }
