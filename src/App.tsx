@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { LoginView } from './components/LoginView';
@@ -21,8 +21,10 @@ import { NewPatientModal } from './components/NewPatientModal';
 import { PeopleManagementView } from './components/PeopleManagementView';
 import { InviteMemberModal } from './components/InviteMemberModal';
 import { AccessRequestsManagerModal } from './components/AccessRequestsManagerModal';
+import { CpfRegularizationModal } from './components/CpfRegularizationModal';
 import { NotificationToast } from './components/NotificationToast';
 import { InviteAcceptView } from './components/InviteAcceptView';
+import { ShieldAlert } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 const getInitialInviteToken = (): string | null => {
@@ -63,6 +65,18 @@ const MainContent: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteModalRole, setInviteModalRole] = useState<'CAREGIVER' | 'VIEWER'>('VIEWER');
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
+  const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
+  const [hasAutoOpenedRegularization, setHasAutoOpenedRegularization] = useState(false);
+
+  // Verificação em tempo real de pacientes vinculados sem CPF
+  const unregularizedPatients = patients.filter((p) => !p.cpfMasked && !p.cpfHash);
+
+  useEffect(() => {
+    if (!isInitialLoading && unregularizedPatients.length > 0 && !hasAutoOpenedRegularization) {
+      setIsRegularizationModalOpen(true);
+      setHasAutoOpenedRegularization(true);
+    }
+  }, [isInitialLoading, unregularizedPatients.length, hasAutoOpenedRegularization]);
 
   // Link between exam and document upload
   const [examIdForDoc, setExamIdForDoc] = useState<string | null>(null);
@@ -158,6 +172,29 @@ const MainContent: React.FC = () => {
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
         <span>Ambiente Beta • Utilize somente dados fictícios</span>
       </div>
+
+      {/* Faixa de Notificação de Regularização de CPF Pendente */}
+      {unregularizedPatients.length > 0 && (
+        <div
+          id="cpf-regularization-alert-strip"
+          className="bg-amber-600 text-white px-3.5 py-2 text-xs sm:text-sm font-medium flex items-center justify-between gap-3 shadow-xs border-b border-amber-700/40"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-amber-200" />
+            <span className="truncate">
+              <strong>Regularização de CPF necessária:</strong> Há {unregularizedPatients.length} paciente(s) vinculado(s) sem CPF.
+            </span>
+          </div>
+          <button
+            type="button"
+            id="btn-open-regularization-strip"
+            onClick={() => setIsRegularizationModalOpen(true)}
+            className="px-3 py-1 rounded-lg bg-white text-amber-900 font-bold hover:bg-amber-50 transition active:scale-[0.98] shrink-0 text-xs shadow-2xs cursor-pointer"
+          >
+            Regularizar Agora
+          </button>
+        </div>
+      )}
 
       {/* Navigation Tabs (Desktop Top & Mobile Bottom) */}
       <TabNavigation />
@@ -274,6 +311,12 @@ const MainContent: React.FC = () => {
       <AccessRequestsManagerModal
         isOpen={isRequestsModalOpen}
         onClose={() => setIsRequestsModalOpen(false)}
+      />
+      <CpfRegularizationModal
+        isOpen={isRegularizationModalOpen}
+        onClose={() => setIsRegularizationModalOpen(false)}
+        unregularizedPatients={unregularizedPatients}
+        userNeedsCpf={!user?.cpfMasked}
       />
 
       {/* Floating Feedback Toasts */}

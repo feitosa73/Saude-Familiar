@@ -92,12 +92,15 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
     }
 
     const cleanCpf = normalizeCpf(cpf);
-    if (cleanCpf && cleanCpf.length > 0) {
-      if (!validateCpf(cleanCpf)) {
-        setCpfError('O CPF informado é inválido. Corrija para continuar.');
-        showToast('CPF inválido', 'error');
-        return;
-      }
+    if (!cleanCpf || cleanCpf.length === 0) {
+      setCpfError('O CPF é obrigatório para cadastrar novos pacientes.');
+      showToast('O CPF é obrigatório para cadastrar um novo paciente.', 'error');
+      return;
+    }
+    if (!validateCpf(cleanCpf)) {
+      setCpfError('O CPF informado é inválido. Verifique os dígitos verificadores informados.');
+      showToast('CPF inválido', 'error');
+      return;
     }
 
     try {
@@ -208,10 +211,11 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                CPF do Familiar <span className="text-slate-400 font-normal lowercase">(opcional nesta etapa)</span>
+                CPF do Familiar * <span className="text-blue-600 font-semibold lowercase">(obrigatório)</span>
               </label>
               <input
                 type="text"
+                required
                 placeholder="000.000.000-00"
                 maxLength={14}
                 value={cpf}
@@ -223,6 +227,9 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
                     : 'border-slate-200 focus:border-teal-500'
                 } rounded-xl focus:outline-none focus:bg-white`}
               />
+              <p className="mt-1 text-[11px] text-slate-400 leading-tight">
+                Protegido como ***.***.***-XX. Imutável após o cadastro para conformidade regulatória.
+              </p>
               {cpfError && (
                 <p className="mt-1 text-xs text-red-600 flex items-center gap-1 font-medium">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />

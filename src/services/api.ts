@@ -267,6 +267,14 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  regularizePatientCpf: (patientId: string, cpf: string) =>
+    request<{ success: boolean; message: string; patient: Patient }>(
+      `/patients/${patientId}/regularize-cpf`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ cpf }),
+      }
+    ),
   deletePatient: (id: string) =>
     request<{ success: boolean }>(`/patients/${id}`, {
       method: 'DELETE',

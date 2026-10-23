@@ -1344,6 +1344,21 @@ export function createApiRouter(
           return res.status(400).json({ error: 'Nome e data de nascimento são obrigatórios' });
         }
 
+        if (!cpf || String(cpf).trim() === '') {
+          return res.status(400).json({
+            error: 'O CPF é obrigatório para cadastrar novos pacientes.',
+            code: 'CPF_REQUIRED',
+          });
+        }
+
+        const cleanCpf = normalizeCpf(String(cpf));
+        if (!validateCpf(cleanCpf)) {
+          return res.status(400).json({
+            error: 'O CPF informado para o paciente é inválido.',
+            code: 'INVALID_CPF',
+          });
+        }
+
         const newPatient = await repository.createPatient(
           {
             name,
@@ -1475,6 +1490,108 @@ export function createApiRouter(
         }
         console.error('Error updating patient:', error);
         res.status(500).json({ error: 'Erro ao atualizar paciente' });
+      }
+    }
+  );
+
+  // 4.1 Regularize Patient CPF (Para pacientes legados que ainda não possuem CPF)
+  router.post(
+    '/patients/:patientId/regularize-cpf',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+        const { cpf } = req.body;
+
+        // Verificação estrita de autorização:
+        // O usuário DEVE ter vínculo ativo autorizado com este paciente (canViewPatient) OU ser o responsável titular (owner)
+        // Isso impede que um CPF informado seja usado para obter acesso a um paciente sem vínculo autorizado.
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        const isOwner = req.membership?.role === 'owner';
+        if (!canView && !isOwner) {
+          return res.status(403).json({
+            error: 'Você não possui autorização para regularizar o cadastro deste paciente.',
+            code: 'FORBIDDEN',
+          });
+        }
+
+        const existingPatient = await repository.getPatientById(patientId, familyId);
+        if (!existingPatient) {
+          return res.status(404).json({
+            error: 'Paciente não encontrado nesta família.',
+            code: 'PATIENT_NOT_FOUND',
+          });
+        }
+
+        // Se o paciente já possui CPF cadastrado, a regra de imutabilidade proíbe alteração
+        if (existingPatient.cpfHash) {
+          return res.status(400).json({
+            error: 'O CPF deste paciente já está cadastrado e regularizado.',
+            code: 'CPF_ALREADY_REGISTERED',
+          });
+        }
+
+        if (!cpf || String(cpf).trim() === '') {
+          return res.status(400).json({
+            error: 'O CPF é obrigatório para a regularização cadastral.',
+            code: 'CPF_REQUIRED',
+          });
+        }
+
+        const cleanCpf = normalizeCpf(String(cpf));
+        if (!validateCpf(cleanCpf)) {
+          return res.status(400).json({
+            error: 'O CPF informado é inválido. Verifique os dígitos verificadores informados.',
+            code: 'INVALID_CPF',
+          });
+        }
+
+        const updated = await repository.updatePatient(
+          patientId,
+          { cpf: cleanCpf },
+          familyId
+        );
+
+        if (!updated) {
+          return res.status(500).json({
+            error: 'Não foi possível salvar a regularização do paciente.',
+            code: 'UPDATE_FAILED',
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: `Cadastro de ${updated.name} regularizado com sucesso.`,
+          patient: updated,
+        });
+      } catch (error: any) {
+        if (
+          error instanceof CpfDuplicateError ||
+          error?.name === 'CpfDuplicateError' ||
+          error?.code === 'CPF_ALREADY_EXISTS'
+        ) {
+          return res.status(409).json({
+            error:
+              error.message ||
+              'Este CPF já está cadastrado para outro paciente no sistema.',
+            code: 'CPF_ALREADY_EXISTS',
+            duplicateEntity: error.duplicateEntity || 'patient',
+          });
+        }
+        if (error?.message && error.message.toLowerCase().includes('cpf')) {
+          return res.status(400).json({
+            error: error.message,
+            code: 'INVALID_CPF',
+          });
+        }
+        console.error('[API] Erro ao regularizar CPF do paciente:', error);
+        return res.status(500).json({
+          error: error.message || 'Erro ao regularizar CPF do paciente.',
+          code: 'REGULARIZE_FAILED',
+        });
       }
     }
   );
