@@ -299,11 +299,21 @@ class AuthServiceImplementation implements IAuthService {
         this.notifyListeners();
         return user;
       } catch (error: any) {
-        console.error('[Auth] Erro ao autenticar com e-mail e senha:', error);
         if (error?.code === 'auth/multi-factor-auth-required') {
-          const resolver = getMultiFactorResolver(auth, error);
-          throw new MultiFactorAuthRequiredError(resolver);
+          console.info('[Auth] Autenticação requer segundo fator (MFA). Redirecionando para TOTP...');
+          let resolver = error.resolver;
+          if (!resolver && auth) {
+            try {
+              resolver = getMultiFactorResolver(auth, error);
+            } catch (resolverErr) {
+              console.warn('[Auth] Falha ao extrair resolver de MFA:', resolverErr);
+            }
+          }
+          if (resolver) {
+            throw new MultiFactorAuthRequiredError(resolver);
+          }
         }
+        console.error('[Auth] Erro ao autenticar com e-mail e senha:', error);
         throw new Error(formatFirebaseAuthError(error, 'Não foi possível entrar. Verifique seu e-mail e senha.'));
       }
     }
@@ -326,11 +336,21 @@ class AuthServiceImplementation implements IAuthService {
         this.notifyListeners();
         return user;
       } catch (error: any) {
-        console.error('[Auth] Erro durante o Google Sign-In via Firebase Auth:', error);
         if (error?.code === 'auth/multi-factor-auth-required') {
-          const resolver = getMultiFactorResolver(auth, error);
-          throw new MultiFactorAuthRequiredError(resolver);
+          console.info('[Auth] Google Sign-In requer segundo fator (MFA). Redirecionando para TOTP...');
+          let resolver = error.resolver;
+          if (!resolver && auth) {
+            try {
+              resolver = getMultiFactorResolver(auth, error);
+            } catch (resolverErr) {
+              console.warn('[Auth] Falha ao extrair resolver de MFA:', resolverErr);
+            }
+          }
+          if (resolver) {
+            throw new MultiFactorAuthRequiredError(resolver);
+          }
         }
+        console.error('[Auth] Erro durante o Google Sign-In via Firebase Auth:', error);
         throw new Error(formatFirebaseAuthError(error, 'Não foi possível concluir o login com Google. Tente novamente.'));
       }
     }
@@ -339,16 +359,26 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async resolveMfaSignIn(resolver: MultiFactorResolver, verificationCode: string): Promise<User> {
-    const totpHint = resolver.hints.find(
-      (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID
-    );
-    if (!totpHint) {
-      throw new Error('Nenhum método de autenticação TOTP configurado para esta conta.');
+    if (!resolver || !Array.isArray(resolver.hints) || resolver.hints.length === 0) {
+      throw new Error('Sessão de autenticação em duas etapas expirada ou inválida. Por favor, faça login novamente.');
     }
+
+    const totpHint =
+      resolver.hints.find(
+        (hint) =>
+          (hint.factorId as string) === TotpMultiFactorGenerator.FACTOR_ID ||
+          (hint.factorId as string) === 'totp'
+      ) || resolver.hints[0];
+
+    if (!totpHint || !totpHint.uid) {
+      throw new Error('Nenhum método de autenticação secundária (MFA) encontrado para esta conta.');
+    }
+
     const cleanCode = verificationCode.trim().replace(/\D/g, '');
     if (!cleanCode || cleanCode.length !== 6) {
       throw new Error('Informe o código de 6 dígitos gerado pelo seu aplicativo autenticador.');
     }
+
     try {
       const assertion = TotpMultiFactorGenerator.assertionForSignIn(
         totpHint.uid,
@@ -371,9 +401,15 @@ class AuthServiceImplementation implements IAuthService {
     } catch (error: any) {
       console.error('[Auth] Erro ao resolver segundo fator:', error);
       if (error?.code === 'auth/invalid-verification-code') {
-        throw new Error('Código do autenticador incorreto ou expirado. Digite o código atual exibido no app.');
+        throw new Error('Código do autenticador incorreto ou expirado. Digite o código atual de 6 dígitos exibido no seu aplicativo autenticador.');
       }
-      throw new Error('Não foi possível verificar o código do autenticador. Tente novamente.');
+      if (error?.code === 'auth/code-expired') {
+        throw new Error('O código de verificação expirou. Aguarde um novo ciclo de 30 segundos no seu app e digite o código atual.');
+      }
+      if (error?.code === 'auth/user-token-expired') {
+        throw new Error('A sessão temporária de verificação expirou. Por favor, clique em "Voltar ao login" e insira suas credenciais novamente.');
+      }
+      throw new Error(formatFirebaseAuthError(error, 'Não foi possível verificar o código do autenticador. Verifique o horário do seu dispositivo e tente novamente.'));
     }
   }
 

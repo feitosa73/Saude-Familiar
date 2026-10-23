@@ -57,6 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [familyDropdownOpen, setFamilyDropdownOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteModalRole, setInviteModalRole] = useState<'CAREGIVER' | 'VIEWER'>('VIEWER');
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAccountSecurityModalOpen, setIsAccountSecurityModalOpen] = useState(false);
@@ -625,7 +626,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
         onClose={() => setIsMembersModalOpen(false)}
         family={family}
         currentUserId={user?.id}
-        onOpenInviteModal={() => setIsInviteModalOpen(true)}
+        onOpenInviteModal={(role) => {
+          setInviteModalRole(role || 'VIEWER');
+          setIsInviteModalOpen(true);
+        }}
+        onOpenNewPatientModal={onOpenNewPatient}
         onOpenRequestsModal={() => setIsRequestsModalOpen(true)}
         pendingRequestsCount={pendingRequestsCount}
         onMembersUpdated={async () => {
@@ -638,6 +643,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
       <InviteMemberModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
+        initialRole={inviteModalRole}
       />
 
       {/* Access Requests Manager Modal for Owners */}

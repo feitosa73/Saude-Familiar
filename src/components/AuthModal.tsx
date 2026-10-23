@@ -1,17 +1,20 @@
 import React from 'react';
 import { X, HeartPulse, ShieldCheck } from 'lucide-react';
 import { AuthForm, AuthMode } from './AuthForm';
+import type { MultiFactorResolver } from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode?: AuthMode;
+  initialResolver?: MultiFactorResolver | null;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   initialMode = 'login',
+  initialResolver = null,
 }) => {
   if (!isOpen) return null;
 
@@ -47,6 +50,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Embedded Auth Form */}
         <AuthForm
           initialMode={initialMode}
+          initialResolver={initialResolver}
           onSuccess={onClose}
         />
 

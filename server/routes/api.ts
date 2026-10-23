@@ -18,7 +18,7 @@ import {
 } from '../middlewares/requireActiveMembership';
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
-import { CpfDuplicateError } from '../utils/cpf';
+import { CpfDuplicateError, validateCpf, normalizeCpf, hashCpf } from '../utils/cpf';
 
 const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
 const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
@@ -1339,7 +1339,51 @@ export function createApiRouter(
           });
         }
 
-        const updated = await repository.updatePatient(patientId, req.body, familyId);
+        const existingPatient = await repository.getPatientById(patientId, familyId);
+        if (!existingPatient) {
+          return res.status(404).json({ error: 'Paciente não encontrado' });
+        }
+
+        // Regra de Imutabilidade do CPF: Uma vez cadastrado, o CPF do paciente é estritamente imutável
+        // Pacientes legados sem CPF podem ter o CPF informado uma única vez.
+        const updatePayload = { ...req.body };
+        if (req.body.cpf !== undefined && req.body.cpf !== null) {
+          const rawCpf = String(req.body.cpf).trim();
+          if (rawCpf !== '') {
+            const cleanCpf = normalizeCpf(rawCpf);
+            if (!validateCpf(cleanCpf)) {
+              return res.status(400).json({
+                error: 'O CPF informado para o paciente é inválido.',
+                code: 'INVALID_CPF',
+              });
+            }
+            const incomingHash = hashCpf(cleanCpf);
+            if (existingPatient.cpfHash) {
+              if (existingPatient.cpfHash !== incomingHash) {
+                return res.status(400).json({
+                  error: 'O CPF do paciente é imutável após o cadastro inicial por exigência de integridade médica e conformidade regulatória.',
+                  code: 'CPF_IMMUTABLE',
+                });
+              }
+              // Se o CPF enviado for o mesmo já existente, removemos do payload para não disparar re-registro
+              delete updatePayload.cpf;
+            } else {
+              // Paciente legado recebendo CPF pela primeira vez
+              updatePayload.cpf = cleanCpf;
+            }
+          } else {
+            // Tentativa de limpar CPF já existente
+            if (existingPatient.cpfHash) {
+              return res.status(400).json({
+                error: 'Não é permitido remover ou alterar o CPF de um paciente já registrado.',
+                code: 'CPF_IMMUTABLE',
+              });
+            }
+            delete updatePayload.cpf;
+          }
+        }
+
+        const updated = await repository.updatePatient(patientId, updatePayload, familyId);
         if (!updated) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }

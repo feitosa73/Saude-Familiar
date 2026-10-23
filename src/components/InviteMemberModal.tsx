@@ -24,11 +24,13 @@ import {
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialRole?: 'CAREGIVER' | 'VIEWER';
 }
 
 export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   isOpen,
   onClose,
+  initialRole = 'VIEWER',
 }) => {
   const { patients, selectedPatient } = usePatient();
   const { user, family, isOwner, refreshUserMe } = useAuth();
@@ -36,7 +38,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [invitedEmail, setInvitedEmail] = useState<string>('');
-  const [role, setRole] = useState<'VIEWER' | 'CAREGIVER'>('VIEWER');
+  const [role, setRole] = useState<'VIEWER' | 'CAREGIVER'>(initialRole);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,6 +59,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (initialRole) {
+        setRole(initialRole);
+      }
       if (selectedPatient) {
         setSelectedPatientId(selectedPatient.id);
       } else if (patients.length > 0) {
@@ -66,7 +71,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setCreatedResult(null);
       loadInvitations();
     }
-  }, [isOpen, selectedPatient, patients]);
+  }, [isOpen, selectedPatient, patients, initialRole]);
 
   const loadInvitations = async () => {
     if (!isOwner) return;

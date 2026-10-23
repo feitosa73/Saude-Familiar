@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Mail,
   Lock,
@@ -20,12 +20,14 @@ export type AuthMode = 'login' | 'register' | 'forgot_password' | 'mfa_totp';
 
 interface AuthFormProps {
   initialMode?: AuthMode;
+  initialResolver?: MultiFactorResolver | null;
   onSuccess?: () => void;
   onModeChange?: (mode: AuthMode) => void;
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({
   initialMode = 'login',
+  initialResolver = null,
   onSuccess,
   onModeChange,
 }) => {
@@ -40,12 +42,24 @@ export const AuthForm: React.FC<AuthFormProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // MFA TOTP State
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(initialResolver);
   const [totpCode, setTotpCode] = useState('');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode]);
+
+  useEffect(() => {
+    if (initialResolver) {
+      setMfaResolver(initialResolver);
+    }
+  }, [initialResolver]);
 
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
@@ -68,7 +82,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
       await login({ provider: 'google' });
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      if (err instanceof MultiFactorAuthRequiredError || err.code === 'auth/multi-factor-auth-required') {
+      const isMfa =
+        err instanceof MultiFactorAuthRequiredError ||
+        err?.code === 'auth/multi-factor-auth-required' ||
+        err?.name === 'MultiFactorAuthRequiredError' ||
+        Boolean(err?.resolver);
+
+      if (isMfa && err.resolver) {
         setMfaResolver(err.resolver);
         setMode('mfa_totp');
         setErrorMessage(null);
@@ -134,7 +154,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         });
         if (onSuccess) onSuccess();
       } catch (err: any) {
-        if (err instanceof MultiFactorAuthRequiredError || err.code === 'auth/multi-factor-auth-required') {
+        const isMfa =
+          err instanceof MultiFactorAuthRequiredError ||
+          err?.code === 'auth/multi-factor-auth-required' ||
+          err?.name === 'MultiFactorAuthRequiredError' ||
+          Boolean(err?.resolver);
+
+        if (isMfa && err.resolver) {
           setMfaResolver(err.resolver);
           setMode('mfa_totp');
           setErrorMessage(null);

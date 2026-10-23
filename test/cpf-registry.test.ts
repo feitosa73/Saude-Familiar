@@ -284,6 +284,38 @@ describe('Entrega 2: CPF Registry & Global Uniqueness', () => {
     assert.strictEqual(newRecord.entityId, patient.id);
   });
 
+  it('should allow legacy patient without CPF to assign CPF once and register in cpfRegistry', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+
+    // 1. Create legacy patient without CPF
+    const legacyPatient = await healthRepo.createPatient({
+      name: 'Paciente Legado A',
+      birthDate: '1965-02-20',
+      bloodType: 'O+',
+      allergies: [],
+      emergencyContacts: [],
+    });
+
+    assert.strictEqual(legacyPatient.cpfMasked, undefined);
+    assert.strictEqual(legacyPatient.cpfHash, undefined);
+
+    // 2. Assign valid CPF for the first time
+    const updated = await healthRepo.updatePatient(legacyPatient.id, {
+      cpf: SYNTHETIC_CPF_1,
+    });
+
+    assert.ok(updated);
+    assert.strictEqual(updated.cpfMasked, '***.***.***-09');
+    assert.ok(updated.cpfHash);
+
+    // Verify it is now registered in the global registry
+    const regRecord = await familyRepo.findCpfRecord(updated.cpfHash!);
+    assert.ok(regRecord);
+    assert.strictEqual(regRecord.entityType, 'patient');
+    assert.strictEqual(regRecord.entityId, legacyPatient.id);
+  });
+
   it('should reject invalid CPF format when creating patient', async () => {
     const familyRepo = new MemoryFamilyRepository();
     const healthRepo = new MemoryHealthRepository(familyRepo);

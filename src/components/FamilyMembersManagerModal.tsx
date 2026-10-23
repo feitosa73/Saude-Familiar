@@ -32,7 +32,8 @@ interface FamilyMembersManagerModalProps {
   onClose: () => void;
   family: Family | null;
   currentUserId?: string;
-  onOpenInviteModal?: () => void;
+  onOpenInviteModal?: (defaultRole?: 'CAREGIVER' | 'VIEWER') => void;
+  onOpenNewPatientModal?: () => void;
   onOpenRequestsModal?: () => void;
   pendingRequestsCount?: number;
   onMembersUpdated?: () => Promise<void>;
@@ -44,6 +45,7 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
   family,
   currentUserId,
   onOpenInviteModal,
+  onOpenNewPatientModal,
   onOpenRequestsModal,
   pendingRequestsCount = 0,
   onMembersUpdated,
@@ -378,19 +380,52 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {onOpenInviteModal && (
+              <>
+                <button
+                  type="button"
+                  id="btn-quick-register-caregiver"
+                  onClick={() => {
+                    onClose();
+                    onOpenInviteModal('CAREGIVER');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
+                  title="Cadastrar cuidador com permissões ativas de saúde"
+                >
+                  <HeartPulse className="w-3.5 h-3.5" />
+                  <span>+ Cadastrar Cuidador</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-quick-register-viewer"
+                  onClick={() => {
+                    onClose();
+                    onOpenInviteModal('VIEWER');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition"
+                  title="Cadastrar visualizador para acompanhamento do familiar"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>+ Cadastrar Visualizador</span>
+                </button>
+              </>
+            )}
+
+            {onOpenNewPatientModal && (
               <button
                 type="button"
-                id="btn-quick-invite-member"
+                id="btn-quick-register-patient"
                 onClick={() => {
                   onClose();
-                  onOpenInviteModal();
+                  onOpenNewPatientModal();
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
+                title="Cadastrar novo paciente na família"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>+ Convidar Novo Familiar</span>
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>+ Cadastrar Paciente</span>
               </button>
             )}
 

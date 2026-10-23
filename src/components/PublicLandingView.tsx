@@ -14,15 +14,19 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './AuthModal';
 import { AuthMode } from './AuthForm';
+import { MultiFactorAuthRequiredError } from '../services/authService';
+import type { MultiFactorResolver } from '../lib/firebase';
 
 export const PublicLandingView: React.FC = () => {
   const { login, isLoading } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
+  const [authModalResolver, setAuthModalResolver] = useState<MultiFactorResolver | null>(null);
 
   const openAuth = (mode: AuthMode = 'login') => {
     setAuthError(null);
+    setAuthModalResolver(null);
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
@@ -32,7 +36,19 @@ export const PublicLandingView: React.FC = () => {
     try {
       await login({ provider: 'google' });
     } catch (err: any) {
-      setAuthError(err.message || 'Erro ao autenticar com o Google. Tente novamente.');
+      const isMfa =
+        err instanceof MultiFactorAuthRequiredError ||
+        err?.code === 'auth/multi-factor-auth-required' ||
+        err?.name === 'MultiFactorAuthRequiredError' ||
+        Boolean(err?.resolver);
+
+      if (isMfa && err.resolver) {
+        setAuthModalResolver(err.resolver);
+        setAuthModalMode('mfa_totp');
+        setIsAuthModalOpen(true);
+      } else {
+        setAuthError(err.message || 'Erro ao autenticar com o Google. Tente novamente.');
+      }
     }
   };
 
@@ -336,11 +352,15 @@ export const PublicLandingView: React.FC = () => {
         </div>
       </footer>
 
-      {/* Auth Modal for Login, Register and Forgot Password */}
+      {/* Auth Modal for Login, Register, Forgot Password and MFA TOTP */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthModalResolver(null);
+        }}
         initialMode={authModalMode}
+        initialResolver={authModalResolver}
       />
     </div>
   );
