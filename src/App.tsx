@@ -48,6 +48,7 @@ const MainContent: React.FC = () => {
     membership,
     accessStatus,
     statusMessage,
+    userNeedsCpf,
     refreshUserMe,
     logout,
     isLoading: isAuthLoading,
@@ -118,7 +119,7 @@ const MainContent: React.FC = () => {
 
   // MANDATORY USER CPF GATE:
   // Every user (new or existing) must possess a validated CPF before accessing any protected feature.
-  if (user && !user.cpfMasked) {
+  if (user && (!user.cpfMasked || userNeedsCpf || accessStatus === 'cpf_required')) {
     return (
       <UserCpfRegularizationView
         user={user}

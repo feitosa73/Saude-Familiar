@@ -40,7 +40,7 @@ interface PatientContextType {
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, accessStatus } = useAuth();
+  const { user, accessStatus, userNeedsCpf } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientIdState] = useState<string>('');
   const [activeTab, setActiveTabState] = useState<NavigationTab>('dashboard');
@@ -74,7 +74,7 @@ export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const refreshPatients = useCallback(async () => {
-    if (!user || accessStatus !== 'authenticated_active') {
+    if (!user || userNeedsCpf || !user.cpfMasked || accessStatus !== 'authenticated_active') {
       setPatients([]);
       setSelectedPatientIdState('');
       setIsInitialLoading(false);
@@ -97,16 +97,18 @@ export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSelectedPatientIdState('');
       }
     } catch (err: any) {
-      console.error('Erro ao carregar dados:', err);
+      if (err?.code !== 'USER_CPF_REQUIRED') {
+        console.error('Erro ao carregar dados:', err);
+      }
       // Only show error toast if it's not a standard authz redirect/status
-      if (err.status !== 401 && err.status !== 403) {
+      if (err.status !== 401 && err.status !== 403 && err?.code !== 'USER_CPF_REQUIRED') {
         showToast(err.message || 'Erro ao carregar dados do servidor', 'error');
       }
     } finally {
       setIsLoading(false);
       setIsInitialLoading(false);
     }
-  }, [user, accessStatus, showToast]);
+  }, [user, accessStatus, userNeedsCpf, showToast]);
 
   useEffect(() => {
     refreshPatients();

@@ -15,6 +15,7 @@ import type { MultiFactorResolver } from '../lib/firebase';
 export type AuthAccessStatus =
   | 'loading'
   | 'unauthenticated'
+  | 'cpf_required'
   | 'authenticated_active'
   | 'no_membership'
   | 'pending'
@@ -114,7 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.setActiveFamilyId(meResponse.family.id);
       }
 
-      if (!meResponse.membership || !meResponse.family) {
+      if (!meResponse.cpfMasked) {
+        setAccessStatus('cpf_required');
+        setStatusMessage('Regularização de CPF do titular obrigatória.');
+      } else if (!meResponse.membership || !meResponse.family) {
         setAccessStatus('no_membership');
         setStatusMessage('Usuário autenticado, mas sem vínculo de família ativo associado.');
       } else if (meResponse.membership.status === 'active') {

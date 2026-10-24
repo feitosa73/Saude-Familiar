@@ -105,6 +105,24 @@ export class MemoryFamilyRepository implements IFamilyRepository {
           this.requests = new Map(data.requests || []);
           this.invitations = new Map(data.invitations || []);
           this.cpfRegistry = new Map(data.cpfRegistry || []);
+
+          // Garante que demo-user-cuidador possua CPF regularizado mesmo se carregado de arquivo legado
+          const cuidador = this.users.get('demo-user-cuidador');
+          if (cuidador && !cuidador.cpfMasked) {
+            const cuidadorCpf = '11144477735';
+            const cuidadorCpfHash = hashCpf(cuidadorCpf);
+            cuidador.cpfMasked = '***.***.***-35';
+            cuidador.cpfHash = cuidadorCpfHash;
+            this.cpfRegistry.set(cuidadorCpfHash, {
+              id: cuidadorCpfHash,
+              entityType: 'user',
+              entityId: cuidador.id,
+              userId: cuidador.id,
+              createdAt: '2026-01-01T10:00:00Z',
+              updatedAt: '2026-01-01T10:00:00Z',
+            });
+          }
+
           return true;
         }
       }
