@@ -12,12 +12,20 @@ const VALID_SYNTHETIC_CPF_3 = '88877766603'; // DV 03
 const INVALID_CPF_WRONG_DV = '12345678900';
 
 // Helper to launch test server with ephemeral port
-async function setupTestApp() {
+async function setupTestApp(options: { seedOwnerCpf?: boolean } = {}) {
   const familyRepo = new MemoryFamilyRepository();
   const healthRepo = new MemoryHealthRepository(familyRepo);
 
   // Seed owner user and family
   const ownerUid = 'demo-user-cuidador';
+  if (options.seedOwnerCpf === false) {
+    const existing = await familyRepo.getUser(ownerUid);
+    if (existing?.cpfHash) {
+      await familyRepo.releaseCpf(existing.cpfHash, 'user');
+    }
+    (familyRepo as any).users.delete(ownerUid);
+  }
+
   const familyData = await familyRepo.createFamilyWithOwner(
     'Família Teste Regularização',
     ownerUid,
@@ -265,6 +273,12 @@ describe('Release: Regularização de CPF nos Cadastros Existentes', () => {
     try {
       // Cria outro usuário sem acesso a este paciente
       const outsiderUid = 'demo-user-familiar';
+      await familyRepo.saveUser({
+        id: outsiderUid,
+        email: 'familiar.apoio@saudefamiliar.com',
+        displayName: 'Ana Silva',
+        cpf: '10000000019',
+      });
       await familyRepo.saveMembership({
         id: 'mem-familiar-outsider',
         familyId,
@@ -311,7 +325,7 @@ describe('Release: Regularização de CPF nos Cadastros Existentes', () => {
   });
 
   it('8. Regularização: deve permitir que a mesma pessoa física possua conta de usuário e cadastro de paciente com o mesmo CPF', async () => {
-    const { baseUrl, close, familyId, familyRepo, healthRepo, ownerUid } = await setupTestApp();
+    const { baseUrl, close, familyId, familyRepo, healthRepo, ownerUid } = await setupTestApp({ seedOwnerCpf: false });
     try {
       // Atualiza o CPF do próprio usuário
       await familyRepo.saveUser({

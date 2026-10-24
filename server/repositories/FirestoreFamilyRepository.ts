@@ -89,20 +89,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         const userDoc = await transaction.get(userRef);
         const prevCpfHash = userDoc.exists ? userDoc.data()?.cpfHash : null;
         if (prevCpfHash && prevCpfHash !== cpfHash) {
-          const prevRegRef = this.db.collection('cpf_registry').doc(prevCpfHash);
-          const prevRegDoc = await transaction.get(prevRegRef);
-          if (prevRegDoc.exists) {
-            const prevData = prevRegDoc.data() as CpfRegistryRecord;
-            const hasOther = Boolean(
-              prevData.patientId ||
-                (prevData.entityType === 'patient' && prevData.entityId !== user.id)
-            );
-            if (!hasOther) {
-              transaction.delete(prevRegRef);
-            } else {
-              transaction.update(prevRegRef, { userId: null });
-            }
-          }
+          throw new Error('O CPF do usuário já está regularizado e não pode ser alterado.');
         }
 
         transaction.set(

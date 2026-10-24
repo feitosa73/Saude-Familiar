@@ -116,6 +116,24 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
     }
   };
 
+  const handleLinkDemoFamily = async () => {
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setAccessLookupMessage(null);
+      const res = await api.linkDemoFamily();
+      if (res?.family?.id) {
+        api.setActiveFamilyId(res.family.id);
+      }
+      await onFamilyCreated();
+    } catch (err: any) {
+      console.error('Erro ao vincular à família demo:', err);
+      setErrorMessage(err.message || 'Erro ao vincular. Tente criar uma nova família.');
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAccessMyFamily = async () => {
     try {
       setIsCheckingAccess(true);
@@ -225,10 +243,65 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                       Trocar de conta
                     </button>
                   </div>
+                  <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-amber-800">
+                      Deseja vincular sua conta à Família Silva para testes imediatos?
+                    </p>
+                    <button
+                      type="button"
+                      id="btn-link-demo-from-alert"
+                      onClick={handleLinkDemoFamily}
+                      disabled={isSubmitting}
+                      className="shrink-0 px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold rounded-md shadow-xs transition disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Vinculando...' : 'Entrar com Família Demo'}
+                    </button>
+                  </div>
                 </div>
               )}
 
               <div className="space-y-3">
+                {/* Option 0: Quick Link to Demo Family for Instant Preview Testing */}
+                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-50 transition group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-semibold text-slate-900 group-hover:text-indigo-900 transition-colors">
+                          Acessar Família Demo (Família Silva)
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                          Recomendado para Testes
+                        </span>
+                      </div>
+                      <span className="block text-xs text-slate-600 mt-0.5 leading-relaxed">
+                        Vincule sua conta diretamente aos registros de teste (Dona Maria, medicamentos, exames e cuidadores).
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-link-demo-preview"
+                    onClick={handleLinkDemoFamily}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Entrando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Entrar na Família Demo</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 {/* Option 1: Create Family */}
                 <button
                   type="button"

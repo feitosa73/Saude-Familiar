@@ -5,7 +5,7 @@ import { IHealthRepository } from '../repositories/IRepository';
 import { FirestoreHealthRepository } from '../repositories/FirestoreHealthRepository';
 import { IFamilyRepository } from '../repositories/IFamilyRepository';
 import { FirestoreFamilyRepository } from '../repositories/FirestoreFamilyRepository';
-import { TimelineEventType, PatientRole, UserMeResponse } from '../types';
+import { TimelineEventType, PatientRole, UserMeResponse, FamilyMembership } from '../types';
 import { ServerAuthorizationService } from '../services/authorizationService';
 import { prescriptionAiService } from '../services/prescriptionAiService';
 import { examAiService } from '../services/examAiService';
@@ -16,23 +16,34 @@ import {
   createRequireActiveMembership,
   AuthorizedFamilyRequest,
 } from '../middlewares/requireActiveMembership';
+import { createRequireUserCpf } from '../middlewares/requireUserCpf';
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
 import { CpfDuplicateError, validateCpf, normalizeCpf, hashCpf } from '../utils/cpf';
 
 const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
 const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
+sharedMemoryFamilyRepo.setHealthRepo(sharedMemoryHealthRepo);
 
-// Detect if running in production Cloud Run with ADC credentials, or development preview
-const isCloudRun = Boolean(process.env.K_SERVICE);
+// Detect if running with real external Firestore ADC credentials or in AI Studio preview / development
+const isAiStudio = Boolean(
+  process.env.K_SERVICE?.startsWith('ais-') ||
+  process.env.AIS_APPLET_ID ||
+  process.env.STORAGE_DRIVER === 'mock' ||
+  !process.env.STORAGE_DRIVER ||
+  process.env.STORAGE_DRIVER !== 'firestore'
+);
+
+const shouldUseFirestore = !isAiStudio && process.env.STORAGE_DRIVER === 'firestore';
 
 export function createApiRouter(
-  repository: IHealthRepository = isCloudRun ? new FirestoreHealthRepository() : sharedMemoryHealthRepo,
-  familyRepository: IFamilyRepository = isCloudRun ? new FirestoreFamilyRepository() : sharedMemoryFamilyRepo
+  repository: IHealthRepository = shouldUseFirestore ? new FirestoreHealthRepository() : sharedMemoryHealthRepo,
+  familyRepository: IFamilyRepository = shouldUseFirestore ? new FirestoreFamilyRepository() : sharedMemoryFamilyRepo
 ): Router {
   const router = Router();
   const authzService = new ServerAuthorizationService(repository);
   const requireActiveMembership = createRequireActiveMembership(familyRepository);
+  const requireUserCpf = createRequireUserCpf(familyRepository);
 
   // In-memory Multer for transitory AI file processing (Zero Storage / In-memory only)
   const upload = multer({
@@ -78,6 +89,30 @@ export function createApiRouter(
         const fam = await familyRepository.getFamily(mem.familyId);
         if (fam) {
           userFamiliesList.push({ family: fam, membership: mem });
+        }
+      }
+
+      // If user has no memberships by UID, check if there is an existing user or membership matching their email
+      if (userFamiliesList.length === 0 && authUser.email) {
+        const cleanEmail = authUser.email.trim().toLowerCase();
+        const existingUser = await familyRepository.findUserByEmail(cleanEmail);
+        if (existingUser && existingUser.familyId) {
+          const fam = await familyRepository.getFamily(existingUser.familyId);
+          if (fam) {
+            const linkedMem: FamilyMembership = {
+              id: `mem-${fam.id}-${authUser.uid}`,
+              familyId: fam.id,
+              userId: authUser.uid,
+              role: (fam.primaryOwnerUid === existingUser.id || fam.createdBy === existingUser.id) ? 'owner' : 'member',
+              status: 'active',
+              joinedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              createdBy: authUser.uid,
+            };
+            await familyRepository.saveMembership(linkedMem);
+            userFamiliesList.push({ family: fam, membership: linkedMem });
+          }
         }
       }
 
@@ -153,6 +188,82 @@ export function createApiRouter(
     }
   });
 
+  // 2.0.0 Dedicated Regularization endpoint for Current User Account CPF
+  router.post('/user/regularize-cpf', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado', code: 'UNAUTHENTICATED' });
+      }
+
+      const { cpf } = req.body;
+      if (!cpf || typeof cpf !== 'string' || !cpf.trim()) {
+        return res.status(400).json({ error: 'CPF é obrigatório para regularização da conta', code: 'CPF_REQUIRED' });
+      }
+
+      const clean = normalizeCpf(cpf);
+      if (!validateCpf(clean)) {
+        return res.status(400).json({
+          error: 'CPF inválido. Verifique os dígitos informados e sequências repetidas.',
+          code: 'INVALID_CPF',
+        });
+      }
+
+      const userDoc = await familyRepository.getUser(authUser.uid);
+      const newHash = hashCpf(clean);
+
+      if (userDoc?.cpfHash && userDoc.cpfHash !== newHash) {
+        return res.status(409).json({
+          error: 'O CPF deste usuário já foi regularizado anteriormente e não pode ser alterado.',
+          code: 'CPF_ALREADY_REGISTERED',
+        });
+      }
+
+      await familyRepository.saveUser({
+        id: authUser.uid,
+        email: authUser.email || userDoc?.email || '',
+        displayName: (authUser as any).name || userDoc?.displayName || null,
+        phone: userDoc?.phone,
+        familyId: userDoc?.familyId,
+        cpf: clean,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const updated = await familyRepository.getUser(authUser.uid);
+      return res.status(200).json({
+        success: true,
+        cpfMasked: updated?.cpfMasked,
+        message: 'CPF regularizado com sucesso.',
+      });
+    } catch (error: any) {
+      if (
+        error instanceof CpfDuplicateError ||
+        error?.name === 'CpfDuplicateError' ||
+        error?.code === 'CPF_ALREADY_EXISTS'
+      ) {
+        return res.status(409).json({
+          error: error.message || 'Este CPF já está associado a outro usuário no sistema.',
+          code: 'CPF_ALREADY_EXISTS',
+          duplicateEntity: 'user',
+        });
+      }
+      if (error?.message && error.message.toLowerCase().includes('já está regularizado')) {
+        return res.status(409).json({
+          error: error.message,
+          code: 'CPF_ALREADY_REGISTERED',
+        });
+      }
+      if (error?.message && error.message.toLowerCase().includes('cpf')) {
+        return res.status(400).json({
+          error: error.message,
+          code: 'INVALID_CPF',
+        });
+      }
+      console.error('[API] Erro ao regularizar CPF do usuário:', error);
+      res.status(500).json({ error: 'Erro interno ao regularizar CPF do usuário', code: 'INTERNAL_ERROR' });
+    }
+  });
+
   // 2.0 Update Current User Profile (Display Name, Phone, CPF)
   router.put('/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -163,6 +274,25 @@ export function createApiRouter(
 
       const { displayName, phone, cpf } = req.body;
       const userDoc = await familyRepository.getUser(authUser.uid);
+
+      if (cpf !== undefined && cpf !== null && String(cpf).trim() !== '') {
+        const clean = normalizeCpf(cpf);
+        if (!validateCpf(clean)) {
+          return res.status(400).json({
+            error: 'CPF inválido. Verifique os dígitos informados e sequências repetidas.',
+            code: 'INVALID_CPF',
+          });
+        }
+        if (userDoc?.cpfHash) {
+          const newHash = hashCpf(clean);
+          if (newHash !== userDoc.cpfHash) {
+            return res.status(409).json({
+              error: 'O CPF do usuário já está regularizado e não pode ser alterado.',
+              code: 'CPF_ALREADY_REGISTERED',
+            });
+          }
+        }
+      }
 
       await familyRepository.saveUser({
         id: authUser.uid,
@@ -188,6 +318,12 @@ export function createApiRouter(
           duplicateEntity: 'user',
         });
       }
+      if (error?.message && error.message.toLowerCase().includes('já está regularizado')) {
+        return res.status(409).json({
+          error: error.message,
+          code: 'CPF_ALREADY_REGISTERED',
+        });
+      }
       if (error?.message && error.message.toLowerCase().includes('cpf')) {
         return res.status(400).json({
           error: error.message,
@@ -199,8 +335,74 @@ export function createApiRouter(
     }
   });
 
+  // 2.0.1 Link authenticated user to Demo Family (Família Silva) in Preview / Onboarding
+  router.post('/user/link-demo-family', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser?.uid) {
+        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
+      }
+
+      let targetFamily = await familyRepository.getFamily('fam-demo-123');
+      if (!targetFamily) {
+        const allFamilies = (familyRepository as any).getAllFamilies ? (familyRepository as any).getAllFamilies() : [];
+        targetFamily = allFamilies[0] || null;
+      }
+
+      if (!targetFamily) {
+        const created = await familyRepository.createFamilyWithOwner(
+          'Família Silva',
+          authUser.uid,
+          authUser.email,
+          (authUser as any).name || 'Usuário Responsável'
+        );
+        targetFamily = created.family;
+      }
+
+      await familyRepository.saveUser({
+        id: authUser.uid,
+        email: authUser.email ? authUser.email.trim().toLowerCase() : undefined,
+        displayName: (authUser as any).name || 'Usuário Administrador',
+        familyId: targetFamily.id,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const membership: FamilyMembership = {
+        id: `mem-${targetFamily.id}-${authUser.uid}`,
+        familyId: targetFamily.id,
+        userId: authUser.uid,
+        role: 'owner',
+        status: 'active',
+        joinedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: authUser.uid,
+      };
+      await familyRepository.saveMembership(membership);
+
+      const patients = await repository.getPatients(targetFamily.id);
+      for (const pat of patients) {
+        await repository.createPatientAccess({
+          userId: authUser.uid,
+          patientId: pat.id,
+          role: 'ADMIN',
+          createdBy: authUser.uid,
+        });
+      }
+
+      res.json({
+        success: true,
+        family: targetFamily,
+        membership,
+      });
+    } catch (err: any) {
+      console.error('[API] Erro ao vincular à família demo:', err);
+      res.status(500).json({ error: 'Erro ao vincular à família demo', details: err?.message });
+    }
+  });
+
   // 2.1 Create Family (Onboarding or additional family for authenticated user)
-  router.post('/families', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/families', requireAuth, requireUserCpf, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
       if (!authUser?.uid) {
@@ -252,7 +454,7 @@ export function createApiRouter(
   // =========================================================================
 
   // Solicitante envia pedido de acesso informando e-mail do owner, identificador da família ou código de convite
-  router.post('/access-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/access-requests', requireAuth, requireUserCpf, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
       if (!authUser?.uid) {
@@ -405,7 +607,7 @@ export function createApiRouter(
   });
 
   // Lista solicitações feitas pelo usuário autenticado
-  router.get('/access-requests/my', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/access-requests/my', requireAuth, requireUserCpf, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
       if (!authUser?.uid) {
@@ -784,7 +986,7 @@ export function createApiRouter(
   });
 
   // 5. Aceitar convite autenticado (Garante casamento de e-mail e operações atômicas)
-  router.post('/invitations/accept', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/invitations/accept', requireAuth, requireUserCpf, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.user;
       if (!authUser?.uid) {

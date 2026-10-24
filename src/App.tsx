@@ -24,6 +24,7 @@ import { AccessRequestsManagerModal } from './components/AccessRequestsManagerMo
 import { CpfRegularizationModal } from './components/CpfRegularizationModal';
 import { NotificationToast } from './components/NotificationToast';
 import { InviteAcceptView } from './components/InviteAcceptView';
+import { UserCpfRegularizationView } from './components/UserCpfRegularizationView';
 import { ShieldAlert } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -112,6 +113,18 @@ const MainContent: React.FC = () => {
         <h2 className="text-lg font-bold text-slate-900">Saúde Familiar</h2>
         <p className="text-sm text-slate-500 mt-1">Carregando prontuário e autorização...</p>
       </div>
+    );
+  }
+
+  // MANDATORY USER CPF GATE:
+  // Every user (new or existing) must possess a validated CPF before accessing any protected feature.
+  if (user && !user.cpfMasked) {
+    return (
+      <UserCpfRegularizationView
+        user={user}
+        onLogout={logout}
+        onRegularized={refreshUserMe}
+      />
     );
   }
 

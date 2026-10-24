@@ -27,6 +27,16 @@ import {
   hashCpf,
   CpfDuplicateError,
 } from '../utils/cpf';
+import fs from 'fs';
+import path from 'path';
+
+const isTestEnv =
+  process.env.NODE_ENV === 'test' ||
+  Boolean(process.env.TSX_TEST) ||
+  process.argv.some((a) => a.includes('test'));
+
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DB_FILE_PATH = path.join(DATA_DIR, 'local-db.json');
 
 export class MemoryFamilyRepository implements IFamilyRepository {
   private users = new Map<string, UserDocument>();
@@ -36,18 +46,89 @@ export class MemoryFamilyRepository implements IFamilyRepository {
   private requests = new Map<string, AccessRequest>();
   private invitations = new Map<string, FamilyInvitation>();
   private cpfRegistry = new Map<string, CpfRegistryRecord>(); // key: cpfHash
+  private healthRepo?: MemoryHealthRepository;
 
   constructor() {
-    this.seedDefaultData();
+    const loaded = this.loadPersistedData();
+    if (!loaded) {
+      this.seedDefaultData();
+      this.persist();
+    }
+  }
+
+  setHealthRepo(healthRepo: MemoryHealthRepository) {
+    this.healthRepo = healthRepo;
+    if (!isTestEnv && fs.existsSync(DB_FILE_PATH)) {
+      try {
+        const raw = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+        const data = JSON.parse(raw);
+        if (data?.health) {
+          this.healthRepo.loadState(data.health);
+        }
+      } catch (_) {}
+    }
+  }
+
+  persist() {
+    if (isTestEnv) return;
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      const data = {
+        users: Array.from(this.users.entries()),
+        families: Array.from(this.families.entries()),
+        memberships: Array.from(this.memberships.entries()),
+        accesses: Array.from(this.accesses.entries()),
+        requests: Array.from(this.requests.entries()),
+        invitations: Array.from(this.invitations.entries()),
+        cpfRegistry: Array.from(this.cpfRegistry.entries()),
+        health: this.healthRepo ? this.healthRepo.exportState() : null,
+      };
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[MemoryFamilyRepository] Failed to write DB_FILE_PATH:', e);
+    }
+  }
+
+  loadPersistedData(): boolean {
+    if (isTestEnv) return false;
+    try {
+      if (fs.existsSync(DB_FILE_PATH)) {
+        const raw = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+        const data = JSON.parse(raw);
+        if (data && data.families && data.families.length > 0) {
+          this.users = new Map(data.users || []);
+          this.families = new Map(data.families || []);
+          this.memberships = new Map(data.memberships || []);
+          this.accesses = new Map(data.accesses || []);
+          this.requests = new Map(data.requests || []);
+          this.invitations = new Map(data.invitations || []);
+          this.cpfRegistry = new Map(data.cpfRegistry || []);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('[MemoryFamilyRepository] Failed to read DB_FILE_PATH:', e);
+    }
+    return false;
+  }
+
+  getAllFamilies(): Family[] {
+    return Array.from(this.families.values());
   }
 
   private seedDefaultData() {
-    // 1. Seed Users
+    // 1. Seed Users (Carlos Silva regularizado com CPF sintético válido; Ana Silva pendente para validação de regularização)
+    const cuidadorCpf = '11144477735';
+    const cuidadorCpfHash = hashCpf(cuidadorCpf);
     const cuidadorUser: UserDocument = {
       id: 'demo-user-cuidador',
       email: 'cuidador.demo@saudefamiliar.com',
       displayName: 'Carlos Silva (Cuidador Designado)',
       familyId: 'fam-demo-123',
+      cpfMasked: '***.***.***-35',
+      cpfHash: cuidadorCpfHash,
       createdAt: '2026-01-01T10:00:00Z',
       updatedAt: '2026-01-01T10:00:00Z',
     };
@@ -61,6 +142,14 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     };
     this.users.set(cuidadorUser.id, cuidadorUser);
     this.users.set(familiarUser.id, familiarUser);
+    this.cpfRegistry.set(cuidadorCpfHash, {
+      id: cuidadorCpfHash,
+      entityType: 'user',
+      entityId: cuidadorUser.id,
+      userId: cuidadorUser.id,
+      createdAt: '2026-01-01T10:00:00Z',
+      updatedAt: '2026-01-01T10:00:00Z',
+    });
 
     // 2. Seed Family
     const demoFamily: Family = {
@@ -134,12 +223,12 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       const newHash = hashCpf(norm);
       const newMasked = maskCpf(norm);
 
-      await this.registerCpf(newHash, 'user', user.id, user.familyId);
-
       const prevUser = this.users.get(user.id);
       if (prevUser?.cpfHash && prevUser.cpfHash !== newHash) {
-        await this.releaseCpf(prevUser.cpfHash, 'user');
+        throw new Error('O CPF do usuário já está regularizado e não pode ser alterado.');
       }
+
+      await this.registerCpf(newHash, 'user', user.id, user.familyId);
 
       this.users.set(user.id, {
         ...cleanUser,
@@ -645,7 +734,34 @@ export class MemoryHealthRepository implements IHealthRepository {
 
   constructor(familyRepo: MemoryFamilyRepository) {
     this.familyRepo = familyRepo;
-    this.seedDefaultData();
+    this.familyRepo.setHealthRepo(this);
+    if (this.patients.size === 0) {
+      this.seedDefaultData();
+    }
+  }
+
+  exportState() {
+    return {
+      patients: Array.from(this.patients.entries()),
+      medications: Array.from(this.medications.entries()),
+      appointments: Array.from(this.appointments.entries()),
+      exams: Array.from(this.exams.entries()),
+      documents: Array.from(this.documents.entries()),
+      timeline: Array.from(this.timeline.entries()),
+    };
+  }
+
+  loadState(healthData: any): boolean {
+    if (healthData && healthData.patients && healthData.patients.length > 0) {
+      this.patients = new Map(healthData.patients || []);
+      this.medications = new Map(healthData.medications || []);
+      this.appointments = new Map(healthData.appointments || []);
+      this.exams = new Map(healthData.exams || []);
+      this.documents = new Map(healthData.documents || []);
+      this.timeline = new Map(healthData.timeline || []);
+      return true;
+    }
+    return false;
   }
 
   private seedDefaultData() {

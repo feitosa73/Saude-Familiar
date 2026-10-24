@@ -116,12 +116,23 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  regularizeUserCpf: (cpf: string) =>
+    request<{ success: boolean; cpfMasked: string; message: string }>('/user/regularize-cpf', {
+      method: 'POST',
+      body: JSON.stringify({ cpf }),
+    }),
 
   // Create Family Onboarding
   createFamily: (data: { name: string }) =>
     request<{ family: any; membership: FamilyMembership }>('/families', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  // Link authenticated user to Demo Family (Preview Testing)
+  linkDemoFamily: () =>
+    request<{ success: boolean; family: any; membership: FamilyMembership }>('/user/link-demo-family', {
+      method: 'POST',
     }),
 
   // =========================================================================

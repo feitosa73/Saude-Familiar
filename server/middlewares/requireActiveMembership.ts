@@ -30,6 +30,17 @@ export function createRequireActiveMembership(
     }
 
     try {
+      // Regra obrigatória: todo usuário deve possuir CPF regularizado para acessar rotas protegidas
+      const userDoc = await familyRepository.getUser(authUser.uid);
+      if (!userDoc || !userDoc.cpfMasked) {
+        console.warn(`[AuthZ] Access blocked: User ${authUser.uid} has pending CPF regularization`);
+        res.status(403).json({
+          error: 'Acesso bloqueado: regularização de CPF pendente na conta de usuário.',
+          code: 'USER_CPF_REQUIRED',
+          needsUserCpf: true,
+        });
+        return;
+      }
       // Check if a specific target familyId was requested via header, query or params
       const requestedFamilyId =
         (req.headers['x-family-id'] as string) ||

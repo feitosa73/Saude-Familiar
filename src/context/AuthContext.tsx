@@ -32,6 +32,7 @@ interface AuthContextType {
   isOwner: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  userNeedsCpf: boolean;
   statusMessage: string | null;
   patientAccesses: PatientAccess[];
   login: (credentials?: AuthCredentials) => Promise<void>;
@@ -97,6 +98,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMembership(meResponse.membership);
       setFamilies(meResponse.families || []);
       setPendingRequestsCount(meResponse.pendingRequestsCount || 0);
+
+      // Sync user profile fields (including mandatory cpfMasked)
+      setUser((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          name: meResponse.displayName || prev.name,
+          phone: meResponse.phone || prev.phone,
+          cpfMasked: meResponse.cpfMasked,
+        };
+      });
 
       if (meResponse.family?.id) {
         api.setActiveFamilyId(meResponse.family.id);
@@ -336,6 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isOwner,
         isAuthenticated: !!user && accessStatus === 'authenticated_active',
         isLoading,
+        userNeedsCpf: Boolean(user && !user.cpfMasked),
         statusMessage,
         patientAccesses,
         login,
