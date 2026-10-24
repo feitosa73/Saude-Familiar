@@ -290,6 +290,7 @@ const MainContent: React.FC = () => {
                     setIsInviteModalOpen(true);
                   }}
                   onOpenRequests={() => setIsRequestsModalOpen(true)}
+                  onOpenRegularization={() => setIsRegularizationModalOpen(true)}
                 />
               )}
             </motion.div>

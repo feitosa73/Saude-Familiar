@@ -39,12 +39,14 @@ interface PeopleManagementViewProps {
   onOpenNewPatient: () => void;
   onOpenInvite: (role?: 'CAREGIVER' | 'VIEWER') => void;
   onOpenRequests: () => void;
+  onOpenRegularization?: () => void;
 }
 
 export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
   onOpenNewPatient,
   onOpenInvite,
   onOpenRequests,
+  onOpenRegularization,
 }) => {
   const {
     patients,
@@ -55,7 +57,7 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
     setActiveTab,
     showToast,
   } = usePatient();
-  const { family, isOwner, user, pendingRequestsCount } = useAuth();
+  const { family, isOwner, user, pendingRequestsCount, getPermissionsForPatient } = useAuth();
 
   const [activeSubTab, setActiveSubTab] = useState<'all' | 'patients' | 'members' | 'invitations'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,11 +156,18 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
     setIsSavingMember(true);
     setMemberEditError(null);
     try {
-      await api.updateFamilyMemberDetails(family.id, editingMember.userId, {
-        name: editingMember.name.trim(),
-        phone: editingMember.phone.trim(),
-        role: editingMember.role,
-      });
+      if (isOwner) {
+        await api.updateFamilyMemberDetails(family.id, editingMember.userId, {
+          name: editingMember.name.trim(),
+          phone: editingMember.phone.trim(),
+          role: editingMember.role,
+        });
+      } else {
+        await api.updateUserProfile({
+          displayName: editingMember.name.trim(),
+          phone: editingMember.phone.trim(),
+        });
+      }
       setSuccessMessage(`Dados de ${editingMember.name} atualizados com sucesso.`);
       setEditingMember(null);
       await loadData();
@@ -499,9 +508,21 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                             <span className="text-[10px] text-slate-400 font-sans font-normal">(imutável)</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-                            CPF não cadastrado (legado)
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                              CPF não cadastrado (legado)
+                            </span>
+                            {onOpenRegularization && (
+                              <button
+                                type="button"
+                                id={`btn-regularize-patient-table-${patient.id}`}
+                                onClick={onOpenRegularization}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition cursor-pointer"
+                              >
+                                Regularizar
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -530,19 +551,25 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
 
                     {/* Actions */}
                     <div className="pt-3.5 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        id={`btn-edit-patient-${patient.id}`}
-                        onClick={() => {
-                          setSelectedPatientId(patient.id);
-                          setOpenPatientProfile(true);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
-                        title="Editar ficha cadastral e clínica do paciente"
-                      >
-                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Editar Ficha</span>
-                      </button>
+                      {(() => {
+                        const pPerm = getPermissionsForPatient(patient.id);
+                        const canEditThisPatient = isOwner || pPerm?.role === 'ADMIN' || pPerm?.role === 'CAREGIVER';
+                        return (
+                          <button
+                            type="button"
+                            id={`btn-edit-patient-${patient.id}`}
+                            onClick={() => {
+                              setSelectedPatientId(patient.id);
+                              setOpenPatientProfile(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                            title={canEditThisPatient ? 'Editar ficha cadastral e clínica do paciente' : 'Visualizar prontuário e ficha médica'}
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{canEditThisPatient ? 'Editar Ficha' : 'Ver Ficha'}</span>
+                          </button>
+                        );
+                      })()}
 
                       <button
                         type="button"
@@ -686,25 +713,27 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                         </div>
 
                         {/* Edit Button */}
-                        <button
-                          type="button"
-                          id={`btn-edit-member-people-${member.userId}`}
-                          onClick={() => {
-                            setMemberEditError(null);
-                            setEditingMember({
-                              userId: member.userId,
-                              name: member.name,
-                              phone: member.phone || '',
-                              email: member.email,
-                              role: member.familyRole,
-                            });
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-200 transition"
-                          title="Editar nome e telefone do membro"
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Editar</span>
-                        </button>
+                        {(isOwner || isSelf) && (
+                          <button
+                            type="button"
+                            id={`btn-edit-member-people-${member.userId}`}
+                            onClick={() => {
+                              setMemberEditError(null);
+                              setEditingMember({
+                                userId: member.userId,
+                                name: member.name,
+                                phone: member.phone || '',
+                                email: member.email,
+                                role: member.familyRole,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-200 transition"
+                            title="Editar nome e telefone do membro"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Editar</span>
+                          </button>
+                        )}
                       </div>
 
                       {/* Patient Access List */}

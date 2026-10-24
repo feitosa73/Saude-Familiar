@@ -74,6 +74,42 @@ export interface IAuthService {
 const AUTH_STORAGE_KEY = 'saude_familiar_auth_user';
 const ACCESS_STORAGE_KEY = 'saude_familiar_patient_accesses';
 
+const memoryStorage = new Map<string, string>();
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return memoryStorage.get(key) || null;
+      }
+    }
+    return memoryStorage.get(key) || null;
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        memoryStorage.set(key, value);
+      }
+    } else {
+      memoryStorage.set(key, value);
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        memoryStorage.delete(key);
+      }
+    } else {
+      memoryStorage.delete(key);
+    }
+  },
+};
+
 function formatFirebaseAuthError(error: any, defaultMessage: string): string {
   const code = error?.code || '';
   const msg = String(error?.message || '');
@@ -150,10 +186,10 @@ class AuthServiceImplementation implements IAuthService {
               patientIds: [],
             };
             this.currentUser = user;
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+            safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
           } else {
-            const previewToken = localStorage.getItem('saudefamiliar_preview_token');
-            const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+            const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
+            const storedUser = safeStorage.getItem(AUTH_STORAGE_KEY);
             if (previewToken && storedUser) {
               try {
                 this.currentUser = JSON.parse(storedUser);
@@ -168,7 +204,7 @@ class AuthServiceImplementation implements IAuthService {
             }
             this.currentUser = null;
             this.currentFirebaseUser = null;
-            localStorage.removeItem(AUTH_STORAGE_KEY);
+            safeStorage.removeItem(AUTH_STORAGE_KEY);
           }
           if (!firstResolved) {
             firstResolved = true;
@@ -178,8 +214,8 @@ class AuthServiceImplementation implements IAuthService {
         });
       });
     } else {
-      const previewToken = localStorage.getItem('saudefamiliar_preview_token');
-      const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+      const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
+      const storedUser = safeStorage.getItem(AUTH_STORAGE_KEY);
       if (previewToken && storedUser) {
         try {
           this.currentUser = JSON.parse(storedUser);
@@ -201,8 +237,8 @@ class AuthServiceImplementation implements IAuthService {
 
   getCurrentUser(): User | null {
     if (this.currentUser) return this.currentUser;
-    const previewToken = localStorage.getItem('saudefamiliar_preview_token');
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
+    const stored = safeStorage.getItem(AUTH_STORAGE_KEY);
     if (previewToken && stored) {
       try {
         const u = JSON.parse(stored);
@@ -224,7 +260,7 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async getIdToken(forceRefresh = false): Promise<string | null> {
-    const previewToken = localStorage.getItem('saudefamiliar_preview_token');
+    const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
     if (previewToken) {
       return previewToken;
     }
@@ -246,7 +282,7 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    return Boolean(localStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
+    return Boolean(safeStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
   }
 
   async loginAsDemo(role: 'CAREGIVER' | 'VIEWER' = 'CAREGIVER'): Promise<User> {
@@ -259,9 +295,9 @@ class AuthServiceImplementation implements IAuthService {
       patientIds: ['pat-dona-maria'],
     };
     this.currentUser = user;
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    localStorage.setItem('saudefamiliar_preview_token', isCaregiver ? 'preview-cuidador-token-active' : 'preview-familiar-token-active');
-    localStorage.setItem('saudefamiliar_active_family_id', 'fam-demo-123');
+    safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    safeStorage.setItem('saudefamiliar_preview_token', isCaregiver ? 'preview-cuidador-token-active' : 'preview-familiar-token-active');
+    safeStorage.setItem('saudefamiliar_active_family_id', 'fam-demo-123');
     this.notifyListeners();
     return user;
   }
@@ -295,7 +331,7 @@ class AuthServiceImplementation implements IAuthService {
           patientIds: [],
         };
         this.currentUser = user;
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
         this.notifyListeners();
         return user;
       } catch (error: any) {
@@ -332,7 +368,7 @@ class AuthServiceImplementation implements IAuthService {
           patientIds: [],
         };
         this.currentUser = user;
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
         this.notifyListeners();
         return user;
       } catch (error: any) {
@@ -395,7 +431,7 @@ class AuthServiceImplementation implements IAuthService {
         patientIds: [],
       };
       this.currentUser = user;
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
       this.notifyListeners();
       return user;
     } catch (error: any) {
@@ -452,7 +488,7 @@ class AuthServiceImplementation implements IAuthService {
         patientIds: [],
       };
       this.currentUser = user;
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
       this.notifyListeners();
       return user;
     } catch (error: any) {
@@ -657,9 +693,9 @@ class AuthServiceImplementation implements IAuthService {
     }
     this.currentFirebaseUser = null;
     this.currentUser = null;
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem('saudefamiliar_preview_token');
-    localStorage.removeItem('saudefamiliar_active_family_id');
+    safeStorage.removeItem(AUTH_STORAGE_KEY);
+    safeStorage.removeItem('saudefamiliar_preview_token');
+    safeStorage.removeItem('saudefamiliar_active_family_id');
     this.notifyListeners();
   }
 
@@ -689,7 +725,7 @@ class AuthServiceImplementation implements IAuthService {
       ];
     }
 
-    const saved = localStorage.getItem(ACCESS_STORAGE_KEY);
+    const saved = safeStorage.getItem(ACCESS_STORAGE_KEY);
     if (saved) {
       try {
         const accesses: PatientAccess[] = JSON.parse(saved);

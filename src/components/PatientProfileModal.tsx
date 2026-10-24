@@ -29,7 +29,9 @@ export const PatientProfileModal: React.FC = () => {
     refreshPatients,
     showToast,
   } = usePatient();
-  const { isOwner } = useAuth();
+  const { isOwner, getPermissionsForPatient } = useAuth();
+  const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
+  const canEditPatient = isOwner || permissions?.role === 'ADMIN' || permissions?.role === 'CAREGIVER';
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -228,11 +230,12 @@ export const PatientProfileModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {!isEditing && (
+            {!isEditing && canEditPatient && (
               <button
                 type="button"
+                id="btn-edit-patient-profile"
                 onClick={() => setIsEditing(true)}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
               >
                 Editar Ficha
               </button>

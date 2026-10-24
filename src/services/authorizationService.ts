@@ -25,7 +25,7 @@ export interface IAuthorizationService {
   canEditRecord(userId: string, patientId: string, accesses: PatientAccess[]): boolean;
   canDeleteRecord(userId: string, patientId: string, accesses: PatientAccess[]): boolean;
   canManageAccess(userId: string, patientId: string, accesses: PatientAccess[]): boolean;
-  getPermissions(userId: string, patientId: string, accesses: PatientAccess[]): PatientPermissions;
+  getPermissions(roleOrUserId: string | null, patientId?: string, accesses?: PatientAccess[]): PatientPermissions;
   getRoleLabel(role: PatientRole | null): string;
   getRoleDescription(role: PatientRole | null): string;
 }
@@ -108,8 +108,13 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
     }
   }
 
-  getPermissions(userId: string, patientId: string, accesses: PatientAccess[]): PatientPermissions {
-    const role = this.getUserRole(userId, patientId, accesses);
+  getPermissions(roleOrUserId: string | null, patientId?: string, accesses?: PatientAccess[]): PatientPermissions {
+    let role: PatientRole | null = null;
+    if (patientId && accesses) {
+      role = this.getUserRole(roleOrUserId || '', patientId, accesses);
+    } else if (roleOrUserId === 'ADMIN' || roleOrUserId === 'CAREGIVER' || roleOrUserId === 'VIEWER') {
+      role = roleOrUserId as PatientRole;
+    }
     return {
       role,
       roleLabel: this.getRoleLabel(role),
