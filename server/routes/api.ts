@@ -25,16 +25,10 @@ const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
 const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
 sharedMemoryFamilyRepo.setHealthRepo(sharedMemoryHealthRepo);
 
-// Detect if running with real external Firestore ADC credentials or in AI Studio preview / development
-const isAiStudio = Boolean(
-  process.env.K_SERVICE?.startsWith('ais-') ||
-  process.env.AIS_APPLET_ID ||
-  process.env.STORAGE_DRIVER === 'mock' ||
-  !process.env.STORAGE_DRIVER ||
-  process.env.STORAGE_DRIVER !== 'firestore'
-);
-
-const shouldUseFirestore = !isAiStudio && process.env.STORAGE_DRIVER === 'firestore';
+// Cloud Run is always authoritative: production must never silently fall back to demo memory data.
+// Local development may use memory repositories unless Firestore is explicitly selected.
+const isCloudRun = Boolean(process.env.K_SERVICE);
+const shouldUseFirestore = isCloudRun || process.env.STORAGE_DRIVER === 'firestore';
 
 export function createApiRouter(
   repository: IHealthRepository = shouldUseFirestore ? new FirestoreHealthRepository() : sharedMemoryHealthRepo,
@@ -116,29 +110,7 @@ export function createApiRouter(
         }
       }
 
-      // In AI Studio Preview, if user has no family membership, link to demo family (Família Silva)
-      if (userFamiliesList.length === 0 && isAiStudio) {
-        let demoFam = await familyRepository.getFamily('fam-demo-123');
-        if (!demoFam) {
-          const allFams = (familyRepository as any).getAllFamilies ? (familyRepository as any).getAllFamilies() : [];
-          demoFam = allFams[0] || null;
-        }
-        if (demoFam) {
-          const autoMem: FamilyMembership = {
-            id: `mem-${demoFam.id}-${authUser.uid}`,
-            familyId: demoFam.id,
-            userId: authUser.uid,
-            role: 'owner',
-            status: 'active',
-            joinedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            createdBy: authUser.uid,
-          };
-          await familyRepository.saveMembership(autoMem);
-          userFamiliesList.push({ family: demoFam, membership: autoMem });
-        }
-      }
+      // Never auto-link an authenticated user to demo data. Empty membership stays empty.
 
       // Selected active membership
       let activeMembership = await familyRepository.findMembershipByUserId(
