@@ -36,21 +36,37 @@ export async function requireAuth(
     return next();
   }
 
-  if (idToken.startsWith('test-user-')) {
-    req.user = {
-      uid: idToken,
-      email: `${idToken}@test.saudefamiliar.com`,
-      emailVerified: true,
-    };
-    return next();
-  }
+  const isTest = process.env.NODE_ENV === 'test';
+  const isCloudRun = Boolean(process.env.K_SERVICE);
+  const isProduction = !isTest && (isCloudRun || process.env.NODE_ENV === 'production');
 
-  // Preview & Demo Environment Fast Validation
-  if (
+  // Reject demo tokens unconditionally in production
+  const isDemoToken =
     idToken === 'preview-demo-token' ||
     idToken.startsWith('preview-cuidador') ||
-    idToken.startsWith('demo-cuidador')
-  ) {
+    idToken.startsWith('demo-cuidador') ||
+    idToken.startsWith('preview-familiar') ||
+    idToken.startsWith('demo-familiar');
+
+  if (isDemoToken) {
+    if (isProduction) {
+      res.status(401).json({
+        error: 'Unauthorized: Tokens de demonstração não são permitidos no ambiente de produção.',
+        code: 'DEMO_TOKENS_FORBIDDEN_IN_PROD',
+      });
+      return;
+    }
+
+    // Only in non-production local testing/dev
+    if (idToken.startsWith('preview-familiar') || idToken.startsWith('demo-familiar')) {
+      req.user = {
+        uid: 'demo-user-familiar',
+        email: 'familiar.apoio@saudefamiliar.com',
+        emailVerified: true,
+      };
+      return next();
+    }
+
     req.user = {
       uid: 'demo-user-cuidador',
       email: 'cuidador.demo@saudefamiliar.com',
@@ -59,10 +75,19 @@ export async function requireAuth(
     return next();
   }
 
-  if (idToken.startsWith('preview-familiar') || idToken.startsWith('demo-familiar')) {
+  // Reject test tokens in production
+  if (idToken.startsWith('test-user-')) {
+    if (isProduction) {
+      res.status(401).json({
+        error: 'Unauthorized: Tokens de teste não são permitidos no ambiente de produção.',
+        code: 'TEST_TOKENS_FORBIDDEN_IN_PROD',
+      });
+      return;
+    }
+
     req.user = {
-      uid: 'demo-user-familiar',
-      email: 'familiar.apoio@saudefamiliar.com',
+      uid: idToken,
+      email: `${idToken}@test.saudefamiliar.com`,
       emailVerified: true,
     };
     return next();

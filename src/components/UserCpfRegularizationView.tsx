@@ -84,6 +84,10 @@ export const UserCpfRegularizationView: React.FC<UserCpfRegularizationViewProps>
           setError('CPF inválido. Verifique os dígitos digitados e tente novamente.');
           return;
         }
+        if (err.code === 'FIRESTORE_PERMISSION_DENIED' || err.status === 503) {
+          setError('Serviço de dados temporariamente indisponível. Verifique as permissões de acesso ao banco de dados ou tente novamente em instantes.');
+          return;
+        }
       }
       setError(err?.message || 'Não foi possível salvar seu CPF neste momento. Verifique a conexão e tente novamente.');
     } finally {

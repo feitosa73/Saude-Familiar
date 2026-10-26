@@ -331,70 +331,12 @@ export function createApiRouter(
     }
   });
 
-  // 2.0.1 Link authenticated user to Demo Family (Família Silva) in Preview / Onboarding
+  // 2.0.1 Link authenticated user to Demo Family - Strictly disabled in production
   router.post('/user/link-demo-family', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const authUser = req.user;
-      if (!authUser?.uid) {
-        return res.status(401).json({ error: 'Unauthorized: Usuário não autenticado' });
-      }
-
-      let targetFamily = await familyRepository.getFamily('fam-demo-123');
-      if (!targetFamily) {
-        const allFamilies = (familyRepository as any).getAllFamilies ? (familyRepository as any).getAllFamilies() : [];
-        targetFamily = allFamilies[0] || null;
-      }
-
-      if (!targetFamily) {
-        const created = await familyRepository.createFamilyWithOwner(
-          'Família Silva',
-          authUser.uid,
-          authUser.email,
-          (authUser as any).name || 'Usuário Responsável'
-        );
-        targetFamily = created.family;
-      }
-
-      await familyRepository.saveUser({
-        id: authUser.uid,
-        email: authUser.email ? authUser.email.trim().toLowerCase() : undefined,
-        displayName: (authUser as any).name || 'Usuário Administrador',
-        familyId: targetFamily.id,
-        updatedAt: new Date().toISOString(),
-      });
-
-      const membership: FamilyMembership = {
-        id: `mem-${targetFamily.id}-${authUser.uid}`,
-        familyId: targetFamily.id,
-        userId: authUser.uid,
-        role: 'owner',
-        status: 'active',
-        joinedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: authUser.uid,
-      };
-      await familyRepository.saveMembership(membership);
-
-      const patients = await repository.getPatients(targetFamily.id);
-      for (const pat of patients) {
-        await repository.createPatientAccess({
-          userId: authUser.uid,
-          patientId: pat.id,
-          role: 'ADMIN',
-          createdBy: authUser.uid,
-        });
-      }
-
-      res.json({
-        success: true,
-        family: targetFamily,
-        membership,
-      });
-    } catch (err: any) {
-      console.error('[API] Erro ao vincular à família demo:', err);
-      res.status(500).json({ error: 'Erro ao vincular à família demo', details: err?.message });
-    }
+    return res.status(403).json({
+      error: 'O vínculo com famílias de demonstração foi descontinuado no ambiente oficial. Crie uma família real ou solicite acesso à sua família.',
+      code: 'DEMO_FAMILY_DISABLED',
+    });
   });
 
   // 2.1 Create Family (Onboarding or additional family for authenticated user)

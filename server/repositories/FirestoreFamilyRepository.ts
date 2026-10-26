@@ -79,10 +79,21 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
           const existingUserId =
             regData.userId || (regData.entityType === 'user' ? regData.entityId : null);
           if (existingUserId && existingUserId !== user.id) {
-            throw new CpfDuplicateError(
-              'Este CPF já está associado a outro usuário no sistema.',
-              'user'
-            );
+            const isDemoArtifact =
+              existingUserId === 'demo-user-familiar' ||
+              existingUserId === 'demo-user-cuidador' ||
+              existingUserId.startsWith('demo-user-');
+
+            if (isDemoArtifact) {
+              console.warn(
+                `[FirestoreFamilyRepository] Reconciliando registro de CPF previamente indexado sob o usuário fictício '${existingUserId}' para o usuário real '${user.id}'.`
+              );
+            } else {
+              throw new CpfDuplicateError(
+                'Este CPF já está associado a outro usuário no sistema.',
+                'user'
+              );
+            }
           }
         }
 
@@ -92,16 +103,41 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
           throw new Error('O CPF do usuário já está regularizado e não pode ser alterado.');
         }
 
+        const isReconcilingDemo =
+          regDoc.exists &&
+          Boolean(
+            (regDoc.data()?.userId && regDoc.data()?.userId.startsWith('demo-user-')) ||
+            (regDoc.data()?.entityType === 'user' && regDoc.data()?.entityId?.startsWith('demo-user-'))
+          );
+
         transaction.set(
           regRef,
           {
             id: cpfHash,
             userId: user.id,
+            entityType: 'user',
+            entityId: user.id,
             createdAt: regDoc.exists ? regDoc.data()?.createdAt || now : now,
             updatedAt: now,
           },
           { merge: true }
         );
+
+        if (isReconcilingDemo) {
+          const oldDemoUid =
+            regDoc.data()?.userId ||
+            (regDoc.data()?.entityType === 'user' ? regDoc.data()?.entityId : null);
+          if (oldDemoUid) {
+            try {
+              const demoUserRef = this.db.collection('users').doc(oldDemoUid);
+              transaction.update(demoUserRef, {
+                cpfHash: null,
+                cpfMasked: null,
+                updatedAt: now,
+              });
+            } catch (_) {}
+          }
+        }
 
         transaction.set(
           userRef,
@@ -1326,10 +1362,21 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
             existingData.userId ||
             (existingData.entityType === 'user' ? existingData.entityId : null);
           if (existingUserId && existingUserId !== entityId) {
-            throw new CpfDuplicateError(
-              'Este CPF já está associado a outro usuário no sistema.',
-              'user'
-            );
+            const isDemoArtifact =
+              existingUserId === 'demo-user-familiar' ||
+              existingUserId === 'demo-user-cuidador' ||
+              existingUserId.startsWith('demo-user-');
+
+            if (isDemoArtifact) {
+              console.warn(
+                `[FirestoreFamilyRepository] Reconciliando registro de CPF em registerCpf de '${existingUserId}' para '${entityId}'.`
+              );
+            } else {
+              throw new CpfDuplicateError(
+                'Este CPF já está associado a outro usuário no sistema.',
+                'user'
+              );
+            }
           }
           const record: CpfRegistryRecord = {
             id: cpfHash,

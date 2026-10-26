@@ -43,4 +43,45 @@ describe('Prioridade 6: Regressão de Autenticação e MFA (Authenticator)', () 
     await authService.logout();
     assert.strictEqual(authService.isAuthenticated(), false);
   });
+
+  it('3. Deve rejeitar código MFA menor que 6 dígitos com mensagem clara', async () => {
+    const { authService } = await import('../src/services/authService');
+    const mockResolver = {
+      hints: [{ factorId: 'totp', uid: 'factor-totp-123', displayName: 'Authenticator' }],
+      session: 'session-123',
+    } as any;
+
+    await assert.rejects(
+      async () => {
+        await authService.resolveMfaSignIn(mockResolver, '12345');
+      },
+      (err: any) => {
+        assert.match(err.message, /Informe o código de 6 dígitos/);
+        return true;
+      }
+    );
+  });
+
+  it('4. Deve traduzir erro de código inválido do Firebase Auth para mensagem amigável', async () => {
+    const { authService } = await import('../src/services/authService');
+    const mockResolver = {
+      hints: [{ factorId: 'totp', uid: 'factor-totp-123', displayName: 'Authenticator' }],
+      session: 'session-123',
+      resolveSignIn: async () => {
+        const error: any = new Error('INVALID_VERIFICATION_CODE');
+        error.code = 'auth/invalid-verification-code';
+        throw error;
+      },
+    } as any;
+
+    await assert.rejects(
+      async () => {
+        await authService.resolveMfaSignIn(mockResolver, '999999');
+      },
+      (err: any) => {
+        assert.match(err.message, /Código do autenticador incorreto ou expirado/);
+        return true;
+      }
+    );
+  });
 });

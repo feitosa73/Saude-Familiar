@@ -129,12 +129,6 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  // Link authenticated user to Demo Family (Preview Testing)
-  linkDemoFamily: () =>
-    request<{ success: boolean; family: any; membership: FamilyMembership }>('/user/link-demo-family', {
-      method: 'POST',
-    }),
-
   // =========================================================================
   // ACCESS REQUESTS
   // =========================================================================

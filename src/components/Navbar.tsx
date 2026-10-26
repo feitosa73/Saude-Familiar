@@ -455,51 +455,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                       </div>
                     </div>
 
-                    {/* Demo Mode Role Switcher (Preview) */}
-                    {(user?.id?.startsWith('demo-user-') || Boolean(localStorage.getItem('saudefamiliar_preview_token'))) && (
-                      <div className="px-2 py-1.5 bg-emerald-50/70 border border-emerald-200/80 rounded-lg mx-2 text-xs space-y-1.5">
-                        <div className="font-bold text-[#1E3D35] flex items-center justify-between text-[11px]">
-                          <span>Modo Validação (Preview)</span>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-semibold">Ativo</span>
-                        </div>
-                        <div className="flex gap-1.5">
-                          <button
-                            type="button"
-                            id="btn-switch-demo-cuidador"
-                            onClick={async () => {
-                              setUserMenuOpen(false);
-                              const { authService } = await import('../services/authService');
-                              await authService.loginAsDemo('CAREGIVER');
-                              window.location.reload();
-                            }}
-                            className={`flex-1 py-1 px-1.5 text-[11px] font-bold rounded border text-center transition cursor-pointer ${
-                              user?.id === 'demo-user-cuidador'
-                                ? 'bg-[#315F54] text-white border-[#315F54]'
-                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            Cuidador
-                          </button>
-                          <button
-                            type="button"
-                            id="btn-switch-demo-familiar"
-                            onClick={async () => {
-                              setUserMenuOpen(false);
-                              const { authService } = await import('../services/authService');
-                              await authService.loginAsDemo('VIEWER');
-                              window.location.reload();
-                            }}
-                            className={`flex-1 py-1 px-1.5 text-[11px] font-bold rounded border text-center transition cursor-pointer ${
-                              user?.id === 'demo-user-familiar'
-                                ? 'bg-[#315F54] text-white border-[#315F54]'
-                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            Familiar
-                          </button>
-                        </div>
-                      </div>
-                    )}
 
                     {isOwner && (
                       <div className="px-2 space-y-1">

@@ -660,10 +660,21 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       const existingUserId =
         existing?.userId || (existing?.entityType === 'user' ? existing?.entityId : null);
       if (existingUserId && existingUserId !== entityId) {
-        throw new CpfDuplicateError(
-          'Este CPF já está associado a outro usuário no sistema.',
-          'user'
-        );
+        const isDemoArtifact =
+          existingUserId === 'demo-user-familiar' ||
+          existingUserId === 'demo-user-cuidador' ||
+          existingUserId.startsWith('demo-user-');
+
+        if (isDemoArtifact) {
+          console.warn(
+            `[MemoryFamilyRepository] Reconciliando registro de CPF previamente indexado sob o usuário fictício '${existingUserId}' para o usuário real '${entityId}'.`
+          );
+        } else {
+          throw new CpfDuplicateError(
+            'Este CPF já está associado a outro usuário no sistema.',
+            'user'
+          );
+        }
       }
 
       const updatedRecord: CpfRegistryRecord = {

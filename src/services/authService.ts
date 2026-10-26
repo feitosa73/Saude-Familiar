@@ -146,6 +146,17 @@ function formatFirebaseAuthError(error: any, defaultMessage: string): string {
       return 'Por segurança, faça login novamente antes de prosseguir com esta alteração.';
     case 'auth/invalid-verification-code':
       return 'Código do autenticador incorreto ou expirado. Digite o código atual de 6 dígitos gerado pelo seu app autenticador.';
+    case 'auth/code-expired':
+      return 'O código de verificação expirou. Aguarde um novo ciclo de 30 segundos no seu app e digite o código atual.';
+    case 'auth/user-token-expired':
+    case 'auth/session-expired':
+    case 'auth/invalid-multi-factor-session':
+      return 'A sessão temporária de verificação expirou. Por favor, clique em "Voltar ao login" e insira suas credenciais novamente.';
+    case 'auth/missing-multi-factor-info':
+    case 'auth/missing-multi-factor-session':
+      return 'Informações de autenticação secundária incompletas. Faça login novamente.';
+    case 'auth/quota-exceeded':
+      return 'Limite de solicitações de verificação atingido temporariamente. Aguarde alguns instantes e tente novamente.';
     default:
       if (
         msg.toLowerCase().includes('database is closing') ||
@@ -282,10 +293,16 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    return Boolean(safeStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
+    if (!isFirebaseConfigured) {
+      return Boolean(safeStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
+    }
+    return this.currentFirebaseUser !== null && this.currentUser !== null;
   }
 
   async loginAsDemo(role: 'CAREGIVER' | 'VIEWER' = 'CAREGIVER'): Promise<User> {
+    if (isFirebaseConfigured && import.meta.env.PROD) {
+      throw new Error('O modo de demonstração foi descontinuado no ambiente oficial de produção.');
+    }
     const isCaregiver = role === 'CAREGIVER';
     const user: User = {
       id: isCaregiver ? 'demo-user-cuidador' : 'demo-user-familiar',
@@ -435,14 +452,25 @@ class AuthServiceImplementation implements IAuthService {
       this.notifyListeners();
       return user;
     } catch (error: any) {
-      console.error('[Auth] Erro ao resolver segundo fator:', error);
-      if (error?.code === 'auth/invalid-verification-code') {
+      console.warn('[Auth] Falha na verificação do segundo fator (MFA):', error?.code || error?.message || error);
+      if (
+        error?.code === 'auth/invalid-verification-code' ||
+        error?.message?.includes('INVALID_VERIFICATION_CODE')
+      ) {
         throw new Error('Código do autenticador incorreto ou expirado. Digite o código atual de 6 dígitos exibido no seu aplicativo autenticador.');
       }
-      if (error?.code === 'auth/code-expired') {
+      if (
+        error?.code === 'auth/code-expired' ||
+        error?.message?.includes('CODE_EXPIRED')
+      ) {
         throw new Error('O código de verificação expirou. Aguarde um novo ciclo de 30 segundos no seu app e digite o código atual.');
       }
-      if (error?.code === 'auth/user-token-expired') {
+      if (
+        error?.code === 'auth/user-token-expired' ||
+        error?.code === 'auth/session-expired' ||
+        error?.code === 'auth/invalid-multi-factor-session' ||
+        error?.message?.includes('EXPIRED')
+      ) {
         throw new Error('A sessão temporária de verificação expirou. Por favor, clique em "Voltar ao login" e insira suas credenciais novamente.');
       }
       throw new Error(formatFirebaseAuthError(error, 'Não foi possível verificar o código do autenticador. Verifique o horário do seu dispositivo e tente novamente.'));

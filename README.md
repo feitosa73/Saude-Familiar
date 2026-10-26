@@ -89,27 +89,46 @@ gcloud run deploy saude-familiar \
 
 ---
 
-## 📋 Decisões para as Próximas Fases (Google Cloud & Firebase)
+## 🛡️ Histórico de Integridade e Ações Corretivas
 
-Antes de conectar **Firebase Authentication**, **Google Cloud Firestore** e **Google Cloud Storage**, as seguintes decisões arquiteturais e operacionais devem ser estabelecidas:
+### Incidente Crítico e Resolução (PR #2)
 
-### 1. Firebase Authentication & Modelo de Permissões Familiares
-* **Métodos de Login**: Decidir se a família fará login via *Email/Senha*, *Google Sign-In* ou *Link Mágico (Email Passwordless)* (mais prático para parentes idosos).
-* **Níveis de Papéis (RBAC)**:
-  * `Admin / Cuidador Principal`: Permissão total para adicionar, editar e excluir registros médicos;
-  * `Familiar / Visualizador`: Permissão apenas de leitura do prontuário e acompanhamento da linha do tempo;
-  * `Profissional de Saúde Temporário`: Acesso pontual por link com expiração para consulta de laudos.
-* **Mapeamento de Família (Multi-tenancy)**: Definição se uma conta pertencerá a um `familyId` compartilhado entre múltiplos usuários autenticados.
+Durante a fase de implantação da obrigatoriedade de identificação de titulares, foi identificado um incidente em que a aplicação publicada no Cloud Run passou a exibir dados de demonstração ("Família Silva" e "Dona Maria Silva") para usuários reais autenticados, deixando de exibir seus familiares legítimos.
 
-### 2. Google Cloud Firestore (Estrutura de Coleções)
-* **Design de Schema NoSQL**:
-  * Opção A: Subcoleções aninhadas (`/patients/{patientId}/medications/{medId}`, `/patients/{patientId}/exams/{examId}`). *Vantagem: isolamento de segurança automático por regras do Firestore.*
-  * Opção B: Coleções de nível raiz com campo de referência (`/medications`, `/appointments` com `patientId`). *Vantagem: consultas agregadas mais fáceis entre múltiplos pacientes da família.*
-* **Segurança (`firestore.rules`)**:
-  * Garantir que apenas usuários pertencentes à família do paciente possam ler ou gravar nos documentos.
+A investigação de causa raiz identificou dois pontos em `server/routes/api.ts`:
+1. **Seleção de Repositório**: A condição de inicialização dependia da variável `STORAGE_DRIVER === 'firestore'`. No ambiente Cloud Run sem essa variável explicitamente populada, a aplicação operava com repositórios em memória temporários.
+2. **Associação Automática Arbitrária**: Existia uma rotina legada que vinculava usuários sem família diretamente à família de demonstração `fam-demo-123`.
 
-### 3. Google Cloud Storage (Privacidade de Documentos Médicos)
-* **Bucket Privado**: Os documentos médicos nunca devem ser públicos na internet.
-* **URLs Assinadas (Signed URLs)**: Ao visualizar ou baixar receitas e laudos, o backend gera uma URL assinada com expiração de curto prazo (ex: 15 minutos).
-* **Estrutura de Pastas no Bucket**: Organização por `gs://bucket-name/patients/{patientId}/documents/{docId}-{filename}`.
-* **Metadados e Tipos de Arquivo Permitidos**: Limite de tamanho (ex: 20MB) e validação de MIME types autorizados (`application/pdf`, `image/jpeg`, `image/png`).
+**Ação Corretiva Executada (Branch `hotfix/firestore-authoritative-storage` / PR #2):**
+* **Cloud Run Autoritativo**: O backend seleciona incondicionalmente os repositórios oficiais `FirestoreHealthRepository` e `FirestoreFamilyRepository` sempre que executado no Cloud Run (`process.env.K_SERVICE`), independentemente de `STORAGE_DRIVER`.
+* **Remoção de Vinculação Automática**: Foi removida toda associação automática de usuários a dados de demonstração. Usuários sem família legítima permanecem em estado explícito de cadastro ou onboarding (`no_membership`).
+* **Preservação de Dados**: Nenhum documento do Cloud Firestore foi apagado, sobrescrito ou migrado indevidamente. O acesso aos dados legítimos foi prontamente restaurado.
+
+---
+
+## 🔒 Regras Permanentes de Proteção e Arquitetura
+
+1. **Cloud Firestore como Fonte Oficial**: O Cloud Firestore é a única fonte autoritativa de dados em ambientes publicados (`process.env.K_SERVICE`). A aplicação nunca deve substituir silenciosamente os dados reais por repositórios em memória ou mocks.
+2. **Isolamento de Dados de Demonstração**: Usuários autenticados reais nunca devem ser vinculados a identificadores de demonstração (`fam-demo-123`, `pat-dona-maria`). Repositórios em memória são estritamente limitados a suítes de testes automatizados e sandboxes locais autorizados.
+3. **Ausência de Família Controlada**: A ausência de vínculo familiar legítimo deve resultar em estado explícito de onboarding (`FamilyOnboardingView`) ou resposta 403/404 segura, nunca em associações arbitrárias.
+4. **Imutabilidade e Não-Destrutividade**: Operações de autenticação, regularização cadastral ou migração não podem excluir documentos nem reescrever vínculos legítimos sem consentimento explícito.
+5. **Mudanças Isoladas e Reversíveis**: Qualquer evolução deve ser implementada em branches pequenas, auditadas por testes automatizados antes de publicação.
+
+---
+
+## 🆔 Obrigatoriedade de CPF para Usuários (Fase de Conformidade)
+
+Para conformidade com a LGPD e rastreabilidade no prontuário de saúde familiar, todo titular de conta deve possuir um CPF válido registrado em seu documento de usuário (`users/{uid}`):
+
+1. **Novos Usuários (Google Login)**:
+   * Ao entrar pela primeira vez, o usuário é direcionado à tela de regularização (`UserCpfRegularizationView`).
+   * Rotas protegidas da API rejeitam o acesso com status `403 Forbidden` (`code: USER_CPF_REQUIRED`) até que o CPF seja validado matematicamente (Módulo 11) e registrado.
+2. **Usuários Existentes**:
+   * Contas que já possuem CPF válido continuam acessando o sistema diretamente sem interrupções.
+   * Contas legadas sem CPF são bloqueadas em rotas de saúde e direcionadas à regularização.
+3. **Coexistência de CPFs (Titular e Paciente)**:
+   * Uma mesma pessoa física pode utilizar seu CPF tanto no cadastro de usuário da conta quanto no perfil de paciente familiar correspondente. O registro global de CPFs (`cpfRegistry`) permite a coexistência de CPFs idênticos entre entidades de tipos distintos (`user` vs `patient`).
+4. **Imutabilidade Cadastral**:
+   * Uma vez validado e registrado, o CPF do usuário torna-se imutável (`409 CPF_ALREADY_REGISTERED`) para prevenir fraudes e inconsistências de titularidade.
+5. **Preservação dos Pacientes Legados**:
+   * A rota de regularização de CPF de pacientes legados (`POST /api/patients/:id/regularize-cpf`) continua ativa e independente, garantindo que o prontuário clínico existente permaneça inalterado.
