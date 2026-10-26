@@ -199,23 +199,10 @@ class AuthServiceImplementation implements IAuthService {
             this.currentUser = user;
             safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
           } else {
-            const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
-            const storedUser = safeStorage.getItem(AUTH_STORAGE_KEY);
-            if (previewToken && storedUser) {
-              try {
-                this.currentUser = JSON.parse(storedUser);
-                this.currentFirebaseUser = null;
-                if (!firstResolved) {
-                  firstResolved = true;
-                  resolve(null);
-                }
-                this.notifyListeners();
-                return;
-              } catch (_) {}
-            }
             this.currentUser = null;
             this.currentFirebaseUser = null;
             safeStorage.removeItem(AUTH_STORAGE_KEY);
+            safeStorage.removeItem('saudefamiliar_preview_token');
           }
           if (!firstResolved) {
             firstResolved = true;
@@ -225,13 +212,6 @@ class AuthServiceImplementation implements IAuthService {
         });
       });
     } else {
-      const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
-      const storedUser = safeStorage.getItem(AUTH_STORAGE_KEY);
-      if (previewToken && storedUser) {
-        try {
-          this.currentUser = JSON.parse(storedUser);
-        } catch (_) {}
-      }
       this.initPromise = Promise.resolve(null);
       this.isInitialized = true;
     }
@@ -248,15 +228,6 @@ class AuthServiceImplementation implements IAuthService {
 
   getCurrentUser(): User | null {
     if (this.currentUser) return this.currentUser;
-    const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
-    const stored = safeStorage.getItem(AUTH_STORAGE_KEY);
-    if (previewToken && stored) {
-      try {
-        const u = JSON.parse(stored);
-        this.currentUser = u;
-        return u;
-      } catch (_) {}
-    }
     if (auth?.currentUser) {
       const fbUser = auth.currentUser;
       return {
@@ -271,10 +242,6 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async getIdToken(forceRefresh = false): Promise<string | null> {
-    const previewToken = safeStorage.getItem('saudefamiliar_preview_token');
-    if (previewToken) {
-      return previewToken;
-    }
     if (!this.isInitialized) {
       await this.waitForInitialization();
     }
@@ -293,15 +260,16 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    if (!isFirebaseConfigured) {
-      return Boolean(safeStorage.getItem('saudefamiliar_preview_token')) || (this.currentFirebaseUser !== null && this.currentUser !== null);
-    }
-    return this.currentFirebaseUser !== null && this.currentUser !== null;
+    return (
+      (this.currentFirebaseUser !== null && this.currentUser !== null) ||
+      (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test' && this.currentUser !== null)
+    );
   }
 
   async loginAsDemo(role: 'CAREGIVER' | 'VIEWER' = 'CAREGIVER'): Promise<User> {
-    if (isFirebaseConfigured && import.meta.env.PROD) {
-      throw new Error('O modo de demonstração foi descontinuado no ambiente oficial de produção.');
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    if (!isTest) {
+      throw new Error('O modo de demonstração foi definitivamente descontinuado. Utilize autenticação real com Google ou E-mail/Senha.');
     }
     const isCaregiver = role === 'CAREGIVER';
     const user: User = {
@@ -313,8 +281,6 @@ class AuthServiceImplementation implements IAuthService {
     };
     this.currentUser = user;
     safeStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    safeStorage.setItem('saudefamiliar_preview_token', isCaregiver ? 'preview-cuidador-token-active' : 'preview-familiar-token-active');
-    safeStorage.setItem('saudefamiliar_active_family_id', 'fam-demo-123');
     this.notifyListeners();
     return user;
   }
@@ -728,31 +694,6 @@ class AuthServiceImplementation implements IAuthService {
   }
 
   async getUserAccesses(userId: string): Promise<PatientAccess[]> {
-    if (userId === 'demo-user-cuidador') {
-      return [
-        {
-          id: 'acc-cuidador',
-          userId: 'demo-user-cuidador',
-          patientId: 'pat-dona-maria',
-          role: 'CAREGIVER',
-          createdAt: '2026-01-01T10:00:00Z',
-          createdBy: 'demo-user-cuidador',
-        },
-      ];
-    }
-    if (userId === 'demo-user-familiar') {
-      return [
-        {
-          id: 'acc-familiar',
-          userId: 'demo-user-familiar',
-          patientId: 'pat-dona-maria',
-          role: 'VIEWER',
-          createdAt: '2026-01-02T10:00:00Z',
-          createdBy: 'demo-user-cuidador',
-        },
-      ];
-    }
-
     const saved = safeStorage.getItem(ACCESS_STORAGE_KEY);
     if (saved) {
       try {

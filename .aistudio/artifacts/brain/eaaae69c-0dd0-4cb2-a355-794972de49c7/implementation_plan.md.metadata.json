@@ -1,6 +1,6 @@
 {
-  "summary":  "Documentação técnica consolidada da entrega das 4 fases: Gestão de pessoas (Cuidadores, Visualizadores e Pacientes), Privacidade e imutabilidade pós-cadastro do CPF, Edição segura com bloqueio do CPF e Fortalecimento do MFA com resolução robusta de fatores.",
-  "updatedAt":  "2026-10-23T16:58:00.501746189Z",
+  "summary":  "Relatório Técnico da Fase 1: Diagnóstico Obrigatório, Mapeamento de Ambientes (GCP/Firebase), Inventário Estruturado de Dados de Teste/Demonstração e Plano de Sanitização Seguro para o Saúde Familiar.",
+  "updatedAt":  "2026-10-26T19:57:56.156789968Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
