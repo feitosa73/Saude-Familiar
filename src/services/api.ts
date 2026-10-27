@@ -19,6 +19,7 @@ import {
   MemberPatientAccessItem,
   ExtractedPrescriptionResponse,
   ExtractedExamReportResponse,
+  ExtractedCollectionReceiptResponse,
   ExtractedScheduleResponse,
   AgendaUnificadaResponse,
   ItemAgenda,
@@ -369,6 +370,42 @@ export const api = {
     const isJson = (response.headers.get('content-type') || '').includes('application/json');
     if (!response.ok) {
       let errorMsg = 'Falha ao processar laudo de exame com IA';
+      if (isJson) {
+        const errorData = await response.json().catch(() => ({}));
+        errorMsg = errorData.error || errorMsg;
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    return response.json();
+  },
+
+  // AI Exam Collection Receipt Extraction (In-memory, Zero Storage)
+  extractCollectionReceiptWithAi: async (
+    patientId: string,
+    file: File
+  ): Promise<ExtractedCollectionReceiptResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (currentActiveFamilyId) {
+      headers['x-family-id'] = currentActiveFamilyId;
+    }
+    const token = await authService.getIdToken();
+    if (token && token !== 'null' && token !== 'undefined') {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-collection-receipt`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const isJson = (response.headers.get('content-type') || '').includes('application/json');
+    if (!response.ok) {
+      let errorMsg = 'Falha ao processar comprovante de coleta com IA';
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
         errorMsg = errorData.error || errorMsg;

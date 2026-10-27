@@ -17,8 +17,15 @@ import {
   ArrowUpRight,
   Sparkles,
   Share2,
+  Building2,
+  Barcode,
+  Check,
+  AlertTriangle,
+  FileText,
+  Copy,
 } from 'lucide-react';
 import { ExamReportScannerModal } from './ExamReportScannerModal';
+import { ExamCollectionReceiptScannerModal } from './ExamCollectionReceiptScannerModal';
 import { buildExamShareText, shareContentNative } from '../utils/shareUtils';
 
 interface ExamsViewProps {
@@ -41,6 +48,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isExamAiModalOpen, setIsExamAiModalOpen] = useState(false);
+  const [isReceiptScannerModalOpen, setIsReceiptScannerModalOpen] = useState(false);
 
   // Exam Form
   const [editingExamId, setEditingExamId] = useState<string | null>(null);
@@ -48,6 +56,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
   const [requestingDoctor, setRequestingDoctor] = useState('');
   const [executionDate, setExecutionDate] = useState('');
+  const [expectedResultDate, setExpectedResultDate] = useState('');
+  const [laboratory, setLaboratory] = useState('');
+  const [protocolNumber, setProtocolNumber] = useState('');
+  const [pickupInstructions, setPickupInstructions] = useState('');
   const [status, setStatus] = useState<ExamStatus>('solicitado');
   const [notes, setNotes] = useState('');
   const [documentId, setDocumentId] = useState('');
@@ -80,6 +92,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setRequestDate(new Date().toISOString().split('T')[0]);
     setRequestingDoctor(selectedPatient?.primaryDoctor || '');
     setExecutionDate('');
+    setExpectedResultDate('');
+    setLaboratory('');
+    setProtocolNumber('');
+    setPickupInstructions('');
     setStatus('solicitado');
     setNotes('');
     setDocumentId('');
@@ -100,6 +116,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       execDate = execDate.slice(0, 16);
     }
     setExecutionDate(execDate);
+    setExpectedResultDate(exam.expectedResultDate || '');
+    setLaboratory(exam.laboratory || '');
+    setProtocolNumber(exam.protocolNumber || '');
+    setPickupInstructions(exam.pickupInstructions || '');
     setStatus(exam.status);
     setNotes(exam.notes || '');
     setDocumentId(exam.documentId || '');
@@ -123,6 +143,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           requestDate,
           requestingDoctor,
           executionDate: executionDate || undefined,
+          expectedResultDate: expectedResultDate || undefined,
+          laboratory: laboratory || undefined,
+          protocolNumber: protocolNumber || undefined,
+          pickupInstructions: pickupInstructions || undefined,
           status,
           notes,
           documentId: documentId || undefined,
@@ -134,6 +158,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           requestDate,
           requestingDoctor,
           executionDate: executionDate || undefined,
+          expectedResultDate: expectedResultDate || undefined,
+          laboratory: laboratory || undefined,
+          protocolNumber: protocolNumber || undefined,
+          pickupInstructions: pickupInstructions || undefined,
           status,
           notes,
           documentId: documentId || undefined,
@@ -149,6 +177,66 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleQuickStatusChange = async (exam: Exam, newStatus: ExamStatus) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const payload: Partial<Exam> = { status: newStatus };
+      if (newStatus === 'resultado_disponivel') {
+        payload.resultAvailableDate = today;
+      } else if (newStatus === 'retirado') {
+        payload.resultConsultedDate = today;
+      }
+      await api.updateExam(exam.id, payload);
+      const label =
+        newStatus === 'resultado_disponivel'
+          ? 'Resultado marcado como disponível!'
+          : 'Retirada / consulta do resultado confirmada!';
+      showToast(label, 'success');
+      fetchExamsAndDocs();
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao atualizar situação do exame', 'error');
+    }
+  };
+
+  const getExpectedDateInfo = (expectedDateStr?: string, examStatus?: ExamStatus) => {
+    if (!expectedDateStr || examStatus === 'retirado') return null;
+    const d = new Date(expectedDateStr);
+    if (isNaN(d.getTime())) return null;
+    const now = new Date();
+    const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dataAlvo = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diffDays = Math.round((dataAlvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    const dateFormatted = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+
+    if (diffDays < 0) {
+      const atraso = Math.abs(diffDays);
+      return {
+        type: 'atrasado',
+        text: `Resultado atrasado (${atraso === 1 ? 'desde ontem' : `há ${atraso} dias`})`,
+        badgeClass: 'bg-rose-100 text-rose-800 border-rose-200',
+      };
+    }
+    if (diffDays === 0) {
+      return {
+        type: 'hoje',
+        text: 'Previsão de resultado: HOJE',
+        badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+      };
+    }
+    if (diffDays <= 3) {
+      return {
+        type: 'chegando',
+        text: `Previsão de resultado: em ${diffDays} dia(s) (${dateFormatted})`,
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+      };
+    }
+    return {
+      type: 'no_prazo',
+      text: `Previsão de resultado: ${dateFormatted}`,
+      badgeClass: 'bg-sky-50 text-sky-800 border-sky-200',
+    };
   };
 
   const handleDelete = async (id: string, examName: string) => {
@@ -207,6 +295,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       agendado: 'Agendado',
       realizado: 'Realizado (Aguardando laudo)',
       resultado_disponivel: 'Resultado / Laudo Disponível',
+      retirado: 'Retirado / Concluído',
     };
 
     const dateToUse = exam.executionDate
@@ -262,6 +351,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            id="exam-collection-receipt-scan-header-btn"
+            onClick={() => setIsReceiptScannerModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4 text-amber-200" />
+            <span>Ler Comprovante de Coleta</span>
+          </button>
+          <button
+            type="button"
             id="exam-scan-ai-header-btn"
             onClick={() => setIsExamAiModalOpen(true)}
             className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
@@ -287,7 +385,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           <input
             id="search-exams-input"
             type="text"
-            placeholder="Buscar por nome do exame, médico solicitante ou preparo..."
+            placeholder="Buscar por nome, laboratório, protocolo ou médico..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white text-slate-800"
@@ -329,6 +427,17 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             Agendados ({exams.filter((e) => e.status === 'agendado').length})
           </button>
           <button
+            id="filter-exam-realizado"
+            onClick={() => setFilterStatus('realizado')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+              filterStatus === 'realizado'
+                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Coletados ({exams.filter((e) => e.status === 'realizado').length})
+          </button>
+          <button
             id="filter-exam-resultado"
             onClick={() => setFilterStatus('resultado_disponivel')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
@@ -338,6 +447,17 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             }`}
           >
             Laudos Prontos ({exams.filter((e) => e.status === 'resultado_disponivel').length})
+          </button>
+          <button
+            id="filter-exam-retirado"
+            onClick={() => setFilterStatus('retirado')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+              filterStatus === 'retirado'
+                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Retirados ({exams.filter((e) => e.status === 'retirado').length})
           </button>
         </div>
       </div>
@@ -352,6 +472,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             const isResultadoPronto = exam.status === 'resultado_disponivel';
             const isAgendado = exam.status === 'agendado';
             const isRealizado = exam.status === 'realizado';
+            const isRetirado = exam.status === 'retirado';
+            const expectedInfo = getExpectedDateInfo(exam.expectedResultDate, exam.status);
 
             return (
               <div
@@ -363,14 +485,16 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-1.5 border ${
                           isResultadoPronto
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                             : isAgendado
-                            ? 'bg-amber-100 text-amber-800'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
                             : isRealizado
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-slate-100 text-slate-700'
+                            ? 'bg-blue-100 text-blue-800 border-blue-300'
+                            : isRetirado
+                            ? 'bg-slate-100 text-slate-700 border-slate-300'
+                            : 'bg-purple-50 text-purple-700 border-purple-200'
                         }`}
                       >
                         {isResultadoPronto
@@ -378,7 +502,9 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                           : isAgendado
                           ? 'Agendado'
                           : isRealizado
-                          ? 'Realizado (Aguardando laudo)'
+                          ? 'Coletado / Aguardando Resultado'
+                          : isRetirado
+                          ? 'Retirado / Concluído'
                           : 'Solicitado'}
                       </span>
                       <h3 className="text-base font-bold text-slate-900 leading-snug">
@@ -415,11 +541,29 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   </div>
 
                   {/* Details */}
-                  <div className="mt-3.5 space-y-1.5 text-xs text-slate-600">
+                  <div className="mt-3.5 space-y-2 text-xs text-slate-600">
                     <div className="flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span>Solicitado por: <strong className="text-slate-700">{exam.requestingDoctor}</strong></span>
                     </div>
+
+                    {(exam.laboratory || exam.protocolNumber) && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {exam.laboratory && (
+                          <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-medium">
+                            <Building2 className="w-3 h-3 text-slate-500 shrink-0" />
+                            <span>{exam.laboratory}</span>
+                          </div>
+                        )}
+                        {exam.protocolNumber && (
+                          <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">
+                            <Barcode className="w-3 h-3 text-slate-500 shrink-0" />
+                            <span>Prot: {exam.protocolNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -428,14 +572,63 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       {exam.executionDate && (
                         <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-md font-semibold text-[11px]">
                           <Clock className="w-3 h-3 text-amber-700 shrink-0" />
-                          <span>Execução: {formatExecutionDateTime(exam.executionDate)}</span>
+                          <span>Execução / Coleta: {formatExecutionDateTime(exam.executionDate)}</span>
                         </div>
                       )}
                     </div>
+
+                    {expectedInfo && (
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${expectedInfo.badgeClass}`}>
+                        {expectedInfo.type === 'atrasado' ? (
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{expectedInfo.text}</span>
+                      </div>
+                    )}
+
+                    {exam.pickupInstructions && (
+                      <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 p-2 rounded-lg">
+                        <strong>Instruções de Retirada:</strong> {exam.pickupInstructions}
+                      </p>
+                    )}
+
                     {exam.notes && (
                       <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5">
                         {exam.notes}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Quick status actions */}
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    {exam.status === 'realizado' && (
+                      <button
+                        type="button"
+                        id={`quick-ready-btn-${exam.id}`}
+                        onClick={() => handleQuickStatusChange(exam, 'resultado_disponivel')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Marcar Laudo Disponível</span>
+                      </button>
+                    )}
+                    {exam.status === 'resultado_disponivel' && (
+                      <button
+                        type="button"
+                        id={`quick-retirado-btn-${exam.id}`}
+                        onClick={() => handleQuickStatusChange(exam, 'retirado')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Confirmar Retirada / Leitura</span>
+                      </button>
+                    )}
+                    {exam.status === 'retirado' && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <Check className="w-3 h-3 text-emerald-600" /> Retirado / Concluído
+                      </span>
                     )}
                   </div>
                 </div>
@@ -567,13 +760,41 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   >
                     <option value="solicitado">Solicitado (Pendente agendamento)</option>
                     <option value="agendado">Agendado (Com data marcada)</option>
-                    <option value="realizado">Realizado (Aguardando laudo)</option>
+                    <option value="realizado">Realizado / Coletado (Aguardando laudo)</option>
                     <option value="resultado_disponivel">Resultado Disponível</option>
+                    <option value="retirado">Retirado / Concluído</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Laboratório / Clínica
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Fleury, Dasa, Lavoisier"
+                    value={laboratory}
+                    onChange={(e) => setLaboratory(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Protocolo / Número do Pedido
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 2026-9812-FL"
+                    value={protocolNumber}
+                    onChange={(e) => setProtocolNumber(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Data da Solicitação
@@ -587,7 +808,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data e Horário da Realização
+                    Data de Realização
                   </label>
                   <input
                     type="datetime-local"
@@ -596,6 +817,30 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Previsão do Resultado
+                  </label>
+                  <input
+                    type="date"
+                    value={expectedResultDate}
+                    onChange={(e) => setExpectedResultDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Local / Instruções de Retirada
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Portal do laboratório fleury.com.br ou unidade Morumbi"
+                  value={pickupInstructions}
+                  onChange={(e) => setPickupInstructions(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                />
               </div>
 
               <div>
@@ -655,6 +900,17 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         <ExamReportScannerModal
           isOpen={isExamAiModalOpen}
           onClose={() => setIsExamAiModalOpen(false)}
+          onSuccess={fetchExamsAndDocs}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
+      )}
+
+      {/* AI Exam Collection Receipt Scanner Modal */}
+      {selectedPatient && (
+        <ExamCollectionReceiptScannerModal
+          isOpen={isReceiptScannerModalOpen}
+          onClose={() => setIsReceiptScannerModalOpen(false)}
           onSuccess={fetchExamsAndDocs}
           patient={selectedPatient}
           showToast={showToast}

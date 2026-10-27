@@ -186,7 +186,12 @@ export interface Appointment {
   updatedAt?: string;
 }
 
-export type ExamStatus = 'solicitado' | 'agendado' | 'realizado' | 'resultado_disponivel';
+export type ExamStatus =
+  | 'solicitado'
+  | 'agendado'
+  | 'realizado'
+  | 'resultado_disponivel'
+  | 'retirado';
 
 export interface Exam {
   id: string;
@@ -194,7 +199,14 @@ export interface Exam {
   name: string;
   requestDate: string;
   requestingDoctor: string;
+  scheduledDate?: string;
   executionDate?: string;
+  expectedResultDate?: string;
+  resultAvailableDate?: string;
+  resultConsultedDate?: string;
+  laboratory?: string;
+  protocolNumber?: string;
+  pickupInstructions?: string;
   status: ExamStatus;
   notes?: string;
   documentId?: string;
@@ -268,6 +280,25 @@ export interface ExtractedExamReportResponse {
   clinicalSummary: string;
   confidenceWarning?: string;
   generalNotes?: string;
+}
+
+export interface ExtractedCollectionItem {
+  examName: string;
+  notes?: string;
+}
+
+export interface ExtractedCollectionReceiptResponse {
+  laboratory?: string;
+  protocolNumber?: string;
+  collectionDate?: string;
+  expectedResultDate?: string;
+  pickupDate?: string;
+  pickupLocationOrInstructions?: string;
+  requestingDoctor?: string;
+  patientNameIdentified?: string;
+  generalNotes?: string;
+  confidenceWarning?: string;
+  exams: ExtractedCollectionItem[];
 }
 
 export type ExtractedScheduleType = 'consulta' | 'exame';
@@ -359,6 +390,9 @@ export interface ItemAgenda {
   documentoId?: string;
   nomeDocumento?: string;
   referenciaOrigemId: string;
+  laboratorio?: string;
+  numeroProtocolo?: string;
+  dataPrevisaoResultado?: string;
   prazoStatus?: StatusPrazoItem;
   diasParaData?: number;
   prazoRotulo?: string;

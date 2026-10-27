@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { ExtractedExamReportResponse } from '../types';
+import { ExtractedExamReportResponse, ExtractedCollectionReceiptResponse } from '../types';
 
 const SYSTEM_INSTRUCTION = `Você é um médico patologista clínico e especialista em diagnóstico laboratorial e por imagem de alta precisão.
 Sua missão é analisar cuidadosamente a imagem ou PDF do laudo/resultado de exame e transcrever com rigor científico todos os parâmetros avaliados, valores encontrados, intervalos de referência e impressões clínicas para o prontuário do paciente.
@@ -26,6 +26,31 @@ DIRETRIZES FUNDAMENTAIS:
 5. ILEGIBILIDADE OU DÚVIDA (confidenceWarning):
    - Caso o documento esteja cortado, com baixa resolução, borrado ou com páginas faltando, declare explicitamente no campo confidenceWarning.
 6. O retorno DEVE ser estritamente em formato JSON em conformidade com o schema definido.`;
+
+const RECEIPT_SYSTEM_INSTRUCTION = `Você é um especialista em documentação clínica e atendimento laboratorial de alta precisão.
+Sua missão é analisar cuidadosamente a imagem ou PDF do comprovante de coleta, protocolo de atendimento ou recibo de exames laboratoriais/gráficos e extrair com rigor factual todos os exames realizados, datas e dados de retirada para o acompanhamento do paciente.
+
+DIRETRIZES FUNDAMENTAIS:
+1. ZERO ALUCINAÇÃO: Extraia estritamente as informações presentes e legíveis no comprovante. Jamais invente ou estime datas, protocolos, nomes ou instruções ausentes.
+2. DADOS DO ATENDIMENTO:
+   - laboratory: Nome do laboratório, clínica ou posto de coleta emitente.
+   - protocolNumber: Número de protocolo, número de atendimento, OS ou código de rastreamento do pedido.
+   - collectionDate: Data da coleta ou realização do exame (formato YYYY-MM-DD se possível).
+   - expectedResultDate: Data prevista informada no comprovante para liberação/disponibilização do laudo/resultado (formato YYYY-MM-DD se possível).
+   - pickupDate: Data prevista específica para retirada física do laudo, se informada explicitamente no documento (formato YYYY-MM-DD se possível).
+   - pickupLocationOrInstructions: Unidade de retirada, endereço, site/portal para consulta online, senha de internet ou instruções presentes no comprovante.
+   - requestingDoctor: Médico solicitante indicado no comprovante, se legível.
+   - patientNameIdentified: Nome completo do paciente impresso no comprovante.
+   - generalNotes: Orientações de preparo subsequente, jejum, horário de atendimento ou advertências constantes no comprovante.
+3. EXAMES COLETADOS (exams):
+   - Liste cada exame ou painel individual presente no comprovante (ex: "Hemograma Completo", "Glicemia de Jejum", "Perfil Lipídico", "Urina Tipo I", "Urocultura").
+   - Para cada exame, preencha:
+     * examName: Nome claro do exame.
+     * notes: Observações ou prazo específico daquele exame se diferente do geral.
+4. ILEGIBILIDADE OU AUSÊNCIA:
+   - Se uma informação não constar no documento ou estiver ilegível, mantenha o campo como string vazia ou omisso.
+   - Caso a imagem esteja borrada, cortada ou de difícil leitura, informe um aviso claro em "confidenceWarning".
+5. O retorno DEVE ser estritamente em formato JSON em conformidade com o schema definido.`;
 
 export class ExamAiService {
   private ai: GoogleGenAI;
@@ -108,6 +133,71 @@ export class ExamAiService {
     } catch (err: any) {
       console.error('[ExamAiService] Falha ao fazer parse do retorno JSON do Gemini:', err, text);
       throw new Error('Não foi possível interpretar os resultados do laudo de exame via IA. Tente novamente.');
+    }
+  }
+
+  async extractCollectionReceiptFromBuffer(
+    buffer: Buffer,
+    mimeType: string
+  ): Promise<ExtractedCollectionReceiptResponse> {
+    const base64Data = buffer.toString('base64');
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: [
+        {
+          inlineData: {
+            mimeType: mimeType || 'application/pdf',
+            data: base64Data,
+          },
+        },
+        {
+          text: 'Analise este comprovante de coleta/atendimento de exames, identifique o laboratório, protocolo, datas de realização e previsão de resultado, além dos exames coletados.',
+        },
+      ],
+      config: {
+        systemInstruction: RECEIPT_SYSTEM_INSTRUCTION,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            laboratory: { type: Type.STRING },
+            protocolNumber: { type: Type.STRING },
+            collectionDate: { type: Type.STRING },
+            expectedResultDate: { type: Type.STRING },
+            pickupDate: { type: Type.STRING },
+            pickupLocationOrInstructions: { type: Type.STRING },
+            requestingDoctor: { type: Type.STRING },
+            patientNameIdentified: { type: Type.STRING },
+            generalNotes: { type: Type.STRING },
+            confidenceWarning: { type: Type.STRING },
+            exams: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  examName: { type: Type.STRING },
+                  notes: { type: Type.STRING },
+                },
+                required: ['examName'],
+              },
+            },
+          },
+          required: ['exams'],
+        },
+      },
+    });
+
+    const text = response.text?.trim() || '{}';
+    try {
+      const parsed = JSON.parse(text) as ExtractedCollectionReceiptResponse;
+      if (!Array.isArray(parsed.exams)) {
+        parsed.exams = [];
+      }
+      return parsed;
+    } catch (err: any) {
+      console.error('[ExamAiService] Falha ao fazer parse do JSON do comprovante de coleta:', err, text);
+      throw new Error('Não foi possível interpretar os dados do comprovante de coleta via IA. Tente novamente.');
     }
   }
 }

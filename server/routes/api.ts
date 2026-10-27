@@ -2092,6 +2092,54 @@ export function createApiRouter(
     }
   );
 
+  // 7.2.1 AI Exam Collection Receipt Extraction (In-memory, Zero Storage)
+  router.post(
+    '/patients/:patientId/ai/extract-collection-receipt',
+    requireAuth,
+    requireActiveMembership,
+    upload.single('file'),
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canCreate = await authzService.canCreateRecord(userId, patientId, familyId);
+        if (!canCreate && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Visualizadores não possuem permissão para extrair comprovantes de coleta com IA',
+          });
+        }
+
+        if (!req.file || !req.file.buffer) {
+          return res.status(400).json({ error: 'Nenhum arquivo enviado para processamento' });
+        }
+
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (!allowedMimes.includes(req.file.mimetype)) {
+          return res.status(400).json({
+            error: 'Formato inválido. Envie um arquivo PDF ou imagem (JPEG, PNG, WEBP).',
+          });
+        }
+
+        const result = await examAiService.extractCollectionReceiptFromBuffer(
+          req.file.buffer,
+          req.file.mimetype
+        );
+
+        // Descarte explícito do buffer da memória imediatamente após uso (Zero Storage)
+        (req.file as any).buffer = null;
+
+        res.json(result);
+      } catch (error: any) {
+        console.error('[API] Erro ao extrair comprovante de coleta via Gemini IA:', error);
+        res.status(500).json({
+          error: error.message || 'Falha ao processar comprovante de coleta com Inteligência Artificial.',
+        });
+      }
+    }
+  );
+
   // 7.3 AI Schedule Extraction (In-memory, Zero Storage)
   router.post(
     '/patients/:patientId/ai/extract-schedule',
@@ -2319,18 +2367,39 @@ export function createApiRouter(
           });
         }
 
-        const { name, requestDate, requestingDoctor, executionDate, status, notes, documentId } =
-          req.body;
+        const {
+          name,
+          requestDate,
+          requestingDoctor,
+          scheduledDate,
+          executionDate,
+          expectedResultDate,
+          resultAvailableDate,
+          resultConsultedDate,
+          laboratory,
+          protocolNumber,
+          pickupInstructions,
+          status,
+          notes,
+          documentId,
+        } = req.body;
         if (!name) {
           return res.status(400).json({ error: 'Nome do exame é obrigatório' });
         }
         const newExam = await repository.createExam(
           {
             patientId,
-            name,
+            name: String(name).trim(),
             requestDate: requestDate || new Date().toISOString().split('T')[0],
             requestingDoctor: requestingDoctor || 'Médico Assistente',
+            scheduledDate,
             executionDate,
+            expectedResultDate,
+            resultAvailableDate,
+            resultConsultedDate,
+            laboratory,
+            protocolNumber,
+            pickupInstructions,
             status: status || 'solicitado',
             notes,
             documentId,

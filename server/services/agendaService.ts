@@ -17,11 +17,11 @@ function calcularPrazo(
     };
   }
 
-  if (ehPendente || !dataHoraIso) {
+  if (!dataHoraIso) {
     return {
-      prazoStatus: 'chegando', // Alerta amarelo para pendência de liberação/agendamento
+      prazoStatus: ehPendente ? 'chegando' : 'no_prazo',
       diasParaData: 0,
-      prazoRotulo: 'Aguardando agendamento',
+      prazoRotulo: ehPendente ? 'Aguardando agendamento' : 'Data a definir',
     };
   }
 
@@ -153,47 +153,95 @@ export class AgendaService {
 
     // 3. Normalização de Exames
     const itensExames: ItemAgenda[] = exams.map((exam) => {
-      const dataHoraExame = exam.executionDate || undefined;
-      const temData = Boolean(dataHoraExame && !isNaN(new Date(dataHoraExame).getTime()));
+      let statusNormalizado: StatusAgenda = 'realizado';
+      let statusRotulo = 'Exame Realizado';
+      let ehPendente = false;
+      let motivoAlerta: string | undefined = undefined;
+      let dataAlvoIso: string | undefined = exam.executionDate || undefined;
+
+      if (exam.status === 'solicitado') {
+        statusNormalizado = 'pendente_agendamento';
+        statusRotulo = 'Aguardando Liberação / Agendamento';
+        ehPendente = true;
+        motivoAlerta = 'Aguardando agendamento ou liberação de guia pelo SUS/Convênio';
+        dataAlvoIso = undefined;
+      } else if (exam.status === 'agendado') {
+        dataAlvoIso = exam.scheduledDate || exam.executionDate || undefined;
+        const temDataAgendada = Boolean(dataAlvoIso && !isNaN(new Date(dataAlvoIso).getTime()));
+        statusNormalizado = 'agendado';
+        statusRotulo = temDataAgendada ? 'Exame Agendado' : 'Agendamento Pendente';
+        ehPendente = !temDataAgendada;
+        motivoAlerta = !temDataAgendada ? 'Exame agendado sem data definida' : undefined;
+      } else if (exam.status === 'realizado') {
+        if (exam.expectedResultDate) {
+          dataAlvoIso = exam.expectedResultDate;
+          const prazoResult = calcularPrazo(exam.expectedResultDate, false, 'agendado');
+          if (prazoResult.prazoStatus === 'atrasado') {
+            statusNormalizado = 'agendado';
+            statusRotulo = 'Resultado Atrasado (Aguardando laudo)';
+            ehPendente = true;
+            motivoAlerta = `Previsão de resultado ultrapassada (${prazoResult.prazoRotulo}). Contate o laboratório`;
+          } else {
+            statusNormalizado = 'agendado';
+            statusRotulo = 'Coleta Realizada (Aguardando resultado)';
+            ehPendente = prazoResult.prazoStatus === 'chegando';
+            motivoAlerta = ehPendente ? `Previsão de resultado: ${prazoResult.prazoRotulo}` : undefined;
+          }
+        } else {
+          statusNormalizado = 'realizado';
+          statusRotulo = 'Exame Realizado (Aguardando laudo)';
+          ehPendente = false;
+          dataAlvoIso = exam.executionDate || undefined;
+        }
+      } else if (exam.status === 'resultado_disponivel') {
+        statusNormalizado = 'agendado';
+        statusRotulo = 'Resultado Disponível para Retirada / Consulta';
+        ehPendente = true;
+        motivoAlerta = 'Laudo liberado pelo laboratório. Confirme a retirada ou leitura';
+        dataAlvoIso = exam.resultAvailableDate || exam.expectedResultDate || exam.executionDate || undefined;
+      } else if (exam.status === 'retirado') {
+        statusNormalizado = 'realizado';
+        statusRotulo = 'Resultado Consultado / Retirado';
+        ehPendente = false;
+        motivoAlerta = undefined;
+        dataAlvoIso = exam.resultConsultedDate || exam.resultAvailableDate || exam.executionDate || undefined;
+      }
+
+      const temData = Boolean(dataAlvoIso && !isNaN(new Date(dataAlvoIso).getTime()));
       let dataExibicao: string | undefined = undefined;
       let horarioExibicao: string | undefined = undefined;
 
-      if (temData && dataHoraExame) {
+      if (temData && dataAlvoIso) {
         try {
-          const d = new Date(dataHoraExame);
+          const d = new Date(dataAlvoIso);
           dataExibicao = d.toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: 'short',
             year: 'numeric',
           });
-          if (dataHoraExame.includes('T')) {
+          if (dataAlvoIso.includes('T')) {
             horarioExibicao = d.toLocaleTimeString('pt-BR', {
               hour: '2-digit',
               minute: '2-digit',
             });
           }
         } catch {
-          dataExibicao = dataHoraExame.split('T')[0];
+          dataExibicao = dataAlvoIso.split('T')[0];
         }
       }
 
-      const statusNormalizado: StatusAgenda =
-        exam.status === 'solicitado'
-          ? 'pendente_agendamento'
-          : exam.status === 'agendado'
-          ? 'agendado'
-          : 'realizado';
-
-      // Exame solicitado ou agendado sem data de realização confirmada é pendência (Alerta Amarelo)
-      const ehPendente =
-        statusNormalizado !== 'realizado' &&
-        (exam.status === 'solicitado' || !temData);
-
       const prazo = calcularPrazo(
-        temData ? dataHoraExame : undefined,
+        temData ? dataAlvoIso : undefined,
         ehPendente,
         statusNormalizado
       );
+
+      const subtituloPartes = [
+        exam.requestingDoctor ? `Solicitado por: ${exam.requestingDoctor}` : '',
+        exam.laboratory ? `Laboratório: ${exam.laboratory}` : '',
+        exam.protocolNumber ? `Protocolo: ${exam.protocolNumber}` : '',
+      ].filter(Boolean);
+      const subtitulo = subtituloPartes.join(' • ') || 'Exame Laboratorial / Imagem';
 
       return {
         id: `exame-${exam.id}`,
@@ -201,26 +249,22 @@ export class AgendaService {
         patientId,
         tipo: 'exame',
         titulo: exam.name,
-        subtitulo: exam.requestingDoctor ? `Solicitado por: ${exam.requestingDoctor}` : 'Solicitante a confirmar',
+        subtitulo,
         categoriaOuEspecialidade: 'Exame Diagnóstico',
-        dataHora: temData ? dataHoraExame : undefined,
+        dataHora: temData ? dataAlvoIso : undefined,
         dataExibicao,
         horarioExibicao,
         possuiDataDefinida: temData,
         status: statusNormalizado,
-        statusRotulo:
-          statusNormalizado === 'pendente_agendamento'
-            ? 'Aguardando Liberação / Agendamento'
-            : statusNormalizado === 'agendado'
-            ? 'Exame Agendado'
-            : 'Exame Realizado',
+        statusRotulo,
         ehAlertaPendente: ehPendente,
-        motivoAlerta: ehPendente
-          ? 'Aguardando agendamento ou liberação de guia pelo SUS/Convênio'
-          : undefined,
+        motivoAlerta,
         observacoes: exam.notes,
         documentoId: exam.documentId,
         nomeDocumento: exam.documentId ? docsMap.get(exam.documentId) : undefined,
+        laboratorio: exam.laboratory,
+        numeroProtocolo: exam.protocolNumber,
+        dataPrevisaoResultado: exam.expectedResultDate,
         prazoStatus: prazo.prazoStatus,
         diasParaData: prazo.diasParaData,
         prazoRotulo: prazo.prazoRotulo,

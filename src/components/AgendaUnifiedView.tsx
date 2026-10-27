@@ -770,6 +770,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     <option value="agendado">Agendado (Com Data Marcada)</option>
                     <option value="realizado">Realizado (Aguardando Laudo)</option>
                     <option value="resultado_disponivel">Resultado / Laudo Disponível</option>
+                    <option value="retirado">Resultado Consultado / Retirado (Concluído)</option>
                   </select>
                 </div>
               </div>
