@@ -46,6 +46,28 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   };
 
+  handleClearCacheAndReload = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            await reg.unregister();
+          }
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            await caches.delete(key);
+          }
+        }
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -59,9 +81,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 {this.props.title || this.props.fallbackTitle || 'Ocorreu um erro ao exibir este componente'}
               </h3>
               <p className="text-xs text-rose-800 mt-1 leading-relaxed">
-                A aplicação impediu que a tela ficasse em branco. Você pode tentar reabrir o recurso ou retornar à tela anterior.
+                A aplicação impediu que a tela ficasse em branco. Você pode tentar reabrir o recurso ou forçar a atualização da página no celular.
               </p>
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex flex-wrap items-center gap-2 mt-4">
                 <button
                   type="button"
                   onClick={this.handleReset}
@@ -69,6 +91,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Tentar novamente</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={this.handleClearCacheAndReload}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-2xs active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Limpar cache e recarregar</span>
                 </button>
               </div>
             </div>

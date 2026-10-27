@@ -108,7 +108,17 @@ describe('Auditoria de Resiliência Mobile: Leitores de Comprovantes e Prevenç�
     assert.ok(content.includes('<ErrorBoundary title="Erro no Leitor de Comprovante de Coleta">'), 'ExamCollectionReceiptScannerModal deve estar envelopado em ErrorBoundary');
   });
 
-  it('7. App.tsx deve possuir ErrorBoundary global para blindar a árvore React contra telas brancas', () => {
+  it('7. AppointmentsView e DocumentsView devem proteger modais com ErrorBoundary', () => {
+    const aptContent = fs.readFileSync(path.resolve('src/components/AppointmentsView.tsx'), 'utf8');
+    assert.ok(aptContent.includes('ErrorBoundary'), 'AppointmentsView deve importar ErrorBoundary');
+    assert.ok(aptContent.includes('<ErrorBoundary title="Erro no Leitor de Guia/Comprovante">'), 'AppointmentsView deve envelopar ScheduleScannerModal em ErrorBoundary');
+
+    const docContent = fs.readFileSync(path.resolve('src/components/DocumentsView.tsx'), 'utf8');
+    assert.ok(docContent.includes('ErrorBoundary'), 'DocumentsView deve importar ErrorBoundary');
+    assert.ok(docContent.includes('<ErrorBoundary title="Erro no Leitor de Agendamento">'), 'DocumentsView deve envelopar ScheduleScannerModal em ErrorBoundary');
+  });
+
+  it('8. App.tsx deve possuir ErrorBoundary global para blindar a árvore React contra telas brancas', () => {
     assert.ok(fs.existsSync(appPath), 'App.tsx deve existir');
     const content = fs.readFileSync(appPath, 'utf8');
 

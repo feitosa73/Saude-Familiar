@@ -22,6 +22,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { ScheduleScannerModal } from './ScheduleScannerModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import { buildAppointmentShareText, shareContentNative } from '../utils/shareUtils';
 
 interface AppointmentsViewProps {
@@ -788,7 +789,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       )}
 
       {/* AI Schedule Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Guia/Comprovante">
         <ScheduleScannerModal
           isOpen={isScheduleAiModalOpen}
           onClose={() => setIsScheduleAiModalOpen(false)}
@@ -796,7 +797,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
     </div>
   );
 };

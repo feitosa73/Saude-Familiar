@@ -23,6 +23,7 @@ import { PrescriptionScannerModal } from './PrescriptionScannerModal';
 import { DocumentTypeSelectorModal, SelectedAiDocumentType } from './DocumentTypeSelectorModal';
 import { ExamReportScannerModal } from './ExamReportScannerModal';
 import { ScheduleScannerModal } from './ScheduleScannerModal';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface DocumentsViewProps {
   isModalOpen: boolean;
@@ -667,17 +668,17 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
       )}
 
       {/* Modal Seletor de Tipo de Documento */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Seletor de Documento">
         <DocumentTypeSelectorModal
           isOpen={isTypeSelectorOpen}
           onClose={() => setIsTypeSelectorOpen(false)}
           onSelectType={handleSelectDocumentType}
-          patientName={selectedPatient.name}
+          patientName={selectedPatient?.name}
         />
-      )}
+      </ErrorBoundary>
 
       {/* AI Prescription Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Receita">
         <PrescriptionScannerModal
           isOpen={isPrescriptionModalOpen}
           onClose={() => setIsPrescriptionModalOpen(false)}
@@ -685,10 +686,10 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
 
       {/* AI Exam Report Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Laudo">
         <ExamReportScannerModal
           isOpen={isExamReportModalOpen}
           onClose={() => setIsExamReportModalOpen(false)}
@@ -696,10 +697,10 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
 
       {/* AI Schedule Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Agendamento">
         <ScheduleScannerModal
           isOpen={isScheduleModalOpen}
           onClose={() => setIsScheduleModalOpen(false)}
@@ -707,7 +708,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
     </div>
   );
 };

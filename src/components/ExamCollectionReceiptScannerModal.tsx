@@ -201,7 +201,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
       setExpectedResultDate(data.expectedResultDate || '');
       setPickupDate(data.pickupDate || '');
       setPickupLocationOrInstructions(data.pickupLocationOrInstructions || '');
-      setRequestingDoctor(data.requestingDoctor || patient.primaryDoctor || '');
+      setRequestingDoctor(data.requestingDoctor || patient?.primaryDoctor || '');
       setPatientIdentified(data.patientNameIdentified || '');
       setConfidenceWarning(data.confidenceWarning || null);
       setGeneralNotes(data.generalNotes || '');
@@ -213,7 +213,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
       // Check for patient name mismatch
       const detected = (data.patientNameIdentified || '').trim().toLowerCase();
-      const current = (patient.name || '').trim().toLowerCase();
+      const current = (patient?.name || '').trim().toLowerCase();
       const isMismatch =
         detected.length > 3 &&
         current.length > 0 &&
@@ -269,15 +269,20 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   const handleApproveAndSave = async () => {
     const validExams = exams.filter((e) => e.examName.trim().length > 0);
     if (validExams.length === 0) {
-      showToast('Informe o nome de ao menos um exame para cadastro.', 'error');
+      safeToast('Informe o nome de ao menos um exame para cadastro.', 'error');
       return;
     }
 
     if (hasPatientMismatch && !patientMismatchAcknowledged) {
-      showToast(
+      safeToast(
         'Por favor, confirme a ciência da divergência do nome do paciente antes de prosseguir.',
         'error'
       );
+      return;
+    }
+
+    if (!patient?.id) {
+      safeToast('Nenhum paciente selecionado.', 'error');
       return;
     }
 
@@ -338,7 +343,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           laboratory: laboratory.trim() || undefined,
           protocolNumber: protocolNumber.trim() || undefined,
           pickupInstructions: pickupLocationOrInstructions.trim() || undefined,
-          requestingDoctor: requestingDoctor.trim() || patient.primaryDoctor || 'Médico Assistente',
+          requestingDoctor: requestingDoctor.trim() || patient?.primaryDoctor || 'Médico Assistente',
           status: 'realizado', // Coleta realizada, aguardando resultado
           notes: notesParts.join('\n') || undefined,
           documentId: createdDocId,

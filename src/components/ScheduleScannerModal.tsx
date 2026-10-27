@@ -107,11 +107,11 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
       'application/pdf',
     ];
     if (!validMimes.includes(file.type)) {
-      showToast('Formato não suportado. Por favor, envie uma foto/print (JPEG, PNG, WEBP) ou PDF.', 'error');
+      safeToast('Formato não suportado. Por favor, envie uma foto/print (JPEG, PNG, WEBP) ou PDF.', 'error');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      showToast('O arquivo excede o limite máximo de 10 MB.', 'error');
+      safeToast('O arquivo excede o limite máximo de 10 MB.', 'error');
       return;
     }
     setSelectedFile(file);
@@ -247,13 +247,18 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
   // Approve & Save
   const handleApproveAndSave = async () => {
     if (schedules.length === 0) {
-      showToast('Adicione pelo menos um agendamento para salvar.', 'error');
+      safeToast('Adicione pelo menos um agendamento para salvar.', 'error');
       return;
     }
 
     const invalid = schedules.find((s) => !s.title.trim() || !s.dateTime.trim());
     if (invalid) {
-      showToast('Informe o título e a data/hora de todos os agendamentos.', 'error');
+      safeToast('Informe o título e a data/hora de todos os agendamentos.', 'error');
+      return;
+    }
+
+    if (!patient?.id) {
+      safeToast('Nenhum paciente selecionado para gravar os agendamentos.', 'error');
       return;
     }
 

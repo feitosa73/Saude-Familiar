@@ -25,8 +25,8 @@ interface PrescriptionScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  patient: Patient;
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  patient?: Patient | null;
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 type Step = 'upload' | 'processing' | 'review';
@@ -42,6 +42,12 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const safePatientName = patient?.name || 'Paciente';
+  const safeToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (showToast) showToast(msg, type);
+  };
 
   // Extracted data state for review
   const [doctor, setDoctor] = useState('');
@@ -256,7 +262,7 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
   const isPatientMismatch =
     patientIdentified &&
     patientIdentified.length > 2 &&
-    !patient.name.toLowerCase().includes(patientIdentified.toLowerCase().split(' ')[0]);
+    !safePatientName.toLowerCase().includes(patientIdentified.toLowerCase().split(' ')[0]);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
@@ -275,7 +281,7 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Paciente: <span className="font-semibold text-slate-700">{patient.name}</span>
+                Paciente: <span className="font-semibold text-slate-700">{safePatientName}</span>
               </p>
             </div>
           </div>
