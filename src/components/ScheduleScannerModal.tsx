@@ -27,12 +27,13 @@ import {
 } from '../types';
 import { api } from '../services/api';
 
-interface ScheduleScannerModalProps {
+export interface ScheduleScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  patient: Patient;
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  onSuccess?: () => void;
+  onSaved?: () => void;
+  patient?: Patient | null;
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
   defaultTypeFilter?: ExtractedScheduleType;
 }
 
@@ -42,6 +43,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  onSaved,
   patient,
   showToast,
 }) => {
@@ -49,6 +51,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Extracted data state
   const [patientIdentified, setPatientIdentified] = useState('');
@@ -60,6 +63,16 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const safePatientName = patient?.name || 'Paciente';
+  const safeToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (showToast) showToast(msg, type);
+  };
+
+  const handleTriggerSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onSaved) onSaved();
+  };
+
   if (!isOpen) return null;
 
   const resetState = () => {
@@ -67,6 +80,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
     setSelectedFile(null);
     setIsDragging(false);
     setIsSaving(false);
+    setErrorMessage(null);
     setPatientIdentified('');
     setConfidenceWarning(null);
     setGeneralNotes('');
@@ -121,10 +135,42 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
     }
   };
 
+  const handleTriggerCamera = () => {
+    try {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+        cameraInputRef.current.click();
+      } else {
+        safeToast('Câmera indisponível no dispositivo. Selecione um arquivo da galeria.', 'info');
+        fileInputRef.current?.click();
+      }
+    } catch (err: any) {
+      console.error('[ScheduleScanner] Erro ao abrir câmera:', err?.message);
+      safeToast('Não foi possível acionar a câmera diretamente. Selecione um arquivo da galeria.', 'info');
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleTriggerFilePicker = () => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+    } catch (err: any) {
+      console.error('[ScheduleScanner] Erro ao abrir seletor:', err?.message);
+    }
+  };
+
   const handleStartExtraction = async () => {
     if (!selectedFile) return;
+    if (!patient?.id) {
+      safeToast('Selecione um paciente para continuar.', 'error');
+      return;
+    }
 
     setStep('processing');
+    setErrorMessage(null);
     try {
       const data: ExtractedScheduleResponse = await api.extractScheduleWithAi(
         patient.id,
@@ -153,10 +199,11 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
       setSchedules(normalizedSchedules);
 
       setStep('review');
-      showToast('Agendamentos identificados com sucesso! Revise os detalhes abaixo.', 'info');
+      safeToast('Agendamentos identificados com sucesso! Revise os detalhes abaixo.', 'info');
     } catch (err: any) {
-      console.error('Erro na extração de agendamentos:', err);
-      showToast(err.message || 'Erro ao processar comprovante com IA', 'error');
+      console.error('[ScheduleScanner] Erro na extração:', err?.message);
+      setErrorMessage(err.message || 'Erro ao processar comprovante com IA');
+      safeToast(err.message || 'Erro ao processar comprovante com IA', 'error');
       setStep('upload');
     }
   };
@@ -277,15 +324,15 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
       if (consultationsCount > 0) summaryParts.push(`${consultationsCount} consulta(s)`);
       if (examsCount > 0) summaryParts.push(`${examsCount} exame(s)`);
 
-      showToast(
+      safeToast(
         `${summaryParts.join(' e ')} agendado(s) com sucesso na agenda do paciente!`,
         'success'
       );
       handleClose();
-      onSuccess();
+      handleTriggerSuccess();
     } catch (err: any) {
-      console.error('Erro ao aprovar agendamentos:', err);
-      showToast(err.message || 'Erro ao persistir agendamentos na agenda', 'error');
+      console.error('[ScheduleScanner] Erro ao aprovar agendamentos:', err?.message);
+      safeToast(err.message || 'Erro ao persistir agendamentos na agenda', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -308,7 +355,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Cadastro automático para {patient.name}
+                Cadastro automático para {safePatientName}
               </p>
             </div>
           </div>
@@ -363,22 +410,22 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                   className="hidden"
                 />
 
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
+                    onClick={handleTriggerCamera}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
                   >
-                    <FileText className="w-4 h-4" />
-                    <span>Selecionar Imagem / PDF</span>
+                    <Camera className="w-5 h-5 shrink-0" />
+                    <span>Tirar foto com a câmera</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
+                    onClick={handleTriggerFilePicker}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>Fotografar Comprovante / Guia</span>
+                    <FileText className="w-5 h-5 shrink-0" />
+                    <span>Selecionar imagem ou PDF</span>
                   </button>
                 </div>
 

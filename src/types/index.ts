@@ -150,6 +150,8 @@ export interface Patient {
   createdAt?: string;
   updatedAt?: string;
   cpfMasked?: string;
+  cpfHash?: string;
+  relationship?: string;
 }
 
 export interface Medication {

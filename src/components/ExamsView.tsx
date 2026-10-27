@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ExamReportScannerModal } from './ExamReportScannerModal';
 import { ExamCollectionReceiptScannerModal } from './ExamCollectionReceiptScannerModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import { buildExamShareText, shareContentNative } from '../utils/shareUtils';
 
 interface ExamsViewProps {
@@ -896,7 +897,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       )}
 
       {/* AI Exam Report Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Laudo">
         <ExamReportScannerModal
           isOpen={isExamAiModalOpen}
           onClose={() => setIsExamAiModalOpen(false)}
@@ -904,10 +905,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
 
       {/* AI Exam Collection Receipt Scanner Modal */}
-      {selectedPatient && (
+      <ErrorBoundary title="Erro no Leitor de Comprovante de Coleta">
         <ExamCollectionReceiptScannerModal
           isOpen={isReceiptScannerModalOpen}
           onClose={() => setIsReceiptScannerModalOpen(false)}
@@ -915,7 +916,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           patient={selectedPatient}
           showToast={showToast}
         />
-      )}
+      </ErrorBoundary>
     </div>
   );
 };

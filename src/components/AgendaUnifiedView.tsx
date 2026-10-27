@@ -5,6 +5,8 @@ import { api } from '../services/api';
 import { ItemAgenda, Appointment, Exam, ExamStatus, AppointmentStatus, MedicalDocument } from '../types';
 import { AgendaCard } from './AgendaCard';
 import { ScheduleScannerModal } from './ScheduleScannerModal';
+import { ExamCollectionReceiptScannerModal } from './ExamCollectionReceiptScannerModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   CalendarCheck2,
   Activity,
@@ -20,6 +22,7 @@ import {
   Calendar,
   Stethoscope,
   Filter,
+  FileCheck,
 } from 'lucide-react';
 import {
   shareContentNative,
@@ -43,6 +46,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'consultas' | 'exames'>('todos');
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [isReceiptScannerModalOpen, setIsReceiptScannerModalOpen] = useState(false);
 
   // Modais de Criação/Edição
   const [isAptModalOpen, setIsAptModalOpen] = useState(false);
@@ -355,6 +359,16 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               >
                 <Sparkles className="w-4 h-4 text-purple-600" />
                 <span>Escanear Comprovante</span>
+              </button>
+
+              <button
+                id="btn-agenda-coleta-ia"
+                onClick={() => setIsReceiptScannerModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl font-bold text-xs sm:text-sm transition-all min-h-[44px]"
+                title="Ler comprovante ou protocolo de coleta laboratorial com IA"
+              >
+                <FileCheck className="w-4 h-4 text-sky-600" />
+                <span>Ler Comprovante de Coleta</span>
               </button>
 
               <button
@@ -854,12 +868,28 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
         </div>
       )}
 
-      {/* 7. MODAL DE ESCANEAMENTO COM IA (ZERO STORAGE) */}
-      <ScheduleScannerModal
-        isOpen={isScannerModalOpen}
-        onClose={() => setIsScannerModalOpen(false)}
-        onSaved={loadData}
-      />
+      {/* 7. MODAIS DE ESCANEAMENTO COM IA (ZERO STORAGE & ERROR BOUNDARY) */}
+      <ErrorBoundary title="Erro no Leitor de Agendamento">
+        <ScheduleScannerModal
+          isOpen={isScannerModalOpen}
+          onClose={() => setIsScannerModalOpen(false)}
+          onSuccess={loadData}
+          onSaved={loadData}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
+      </ErrorBoundary>
+
+      <ErrorBoundary title="Erro no Leitor de Comprovante de Coleta">
+        <ExamCollectionReceiptScannerModal
+          isOpen={isReceiptScannerModalOpen}
+          onClose={() => setIsReceiptScannerModalOpen(false)}
+          onSuccess={loadData}
+          onSaved={loadData}
+          patient={selectedPatient}
+          showToast={showToast}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

@@ -29,8 +29,8 @@ interface ExamReportScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  patient: Patient;
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  patient?: Patient | null;
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 type Step = 'upload' | 'processing' | 'review';
@@ -46,6 +46,12 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const safePatientName = patient?.name || 'Paciente';
+  const safeToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (showToast) showToast(msg, type);
+  };
 
   // Extracted data state for review
   const [examName, setExamName] = useState('');
@@ -83,11 +89,33 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
     setResults([]);
     setRegisterInExams(true);
     setArchiveInDocuments(true);
+    setErrorMessage(null);
   };
 
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const handleTriggerCamera = () => {
+    try {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      } else if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    } catch (err) {
+      console.warn('Falha ao abrir câmera nativa, recorrendo ao seletor de arquivos:', err);
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleTriggerFilePicker = () => {
+    try {
+      fileInputRef.current?.click();
+    } catch (err) {
+      console.warn('Falha ao abrir seletor de arquivo:', err);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,14 +132,15 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
       'application/pdf',
     ];
     if (!validMimes.includes(file.type)) {
-      showToast('Formato não suportado. Por favor, envie uma imagem (JPEG, PNG, WEBP) ou PDF.', 'error');
+      safeToast('Formato não suportado. Por favor, envie uma imagem (JPEG, PNG, WEBP) ou PDF.', 'error');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      showToast('O arquivo excede o limite máximo de 10 MB.', 'error');
+      safeToast('O arquivo excede o limite máximo de 10 MB.', 'error');
       return;
     }
     setSelectedFile(file);
+    setErrorMessage(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -134,8 +163,13 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
 
   const handleStartExtraction = async () => {
     if (!selectedFile) return;
+    if (!patient?.id) {
+      safeToast('Nenhum paciente selecionado para leitura de laudo.', 'error');
+      return;
+    }
 
     setStep('processing');
+    setErrorMessage(null);
     try {
       const data: ExtractedExamReportResponse = await api.extractExamReportWithAi(
         patient.id,
@@ -153,10 +187,12 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
       setResults(data.results || []);
 
       setStep('review');
-      showToast('Laudo de exame lido com sucesso! Revise os resultados abaixo.', 'info');
+      safeToast('Laudo de exame lido com sucesso! Revise os resultados abaixo.', 'info');
     } catch (err: any) {
       console.error('Erro na extração de laudo de exame:', err);
-      showToast(err.message || 'Erro ao processar laudo de exame com IA', 'error');
+      const userMessage = err?.message || 'Erro ao processar laudo de exame com IA';
+      setErrorMessage(userMessage);
+      safeToast(userMessage, 'error');
       setStep('upload');
     }
   };
@@ -192,7 +228,11 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
   // Save to Database
   const handleApproveAndSave = async () => {
     if (!examName.trim()) {
-      showToast('Informe o nome do exame.', 'error');
+      safeToast('Informe o nome do exame.', 'error');
+      return;
+    }
+    if (!patient?.id) {
+      safeToast('Nenhum paciente selecionado.', 'error');
       return;
     }
 
@@ -280,7 +320,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
         important: hasAltered,
       });
 
-      showToast(
+      safeToast(
         `Laudo de ${examName} gravado com sucesso no prontuário!`,
         'success'
       );
@@ -288,7 +328,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
       onSuccess();
     } catch (err: any) {
       console.error('Erro ao aprovar e gravar laudo de exame:', err);
-      showToast(err.message || 'Erro ao persistir laudo no prontuário', 'error');
+      safeToast(err.message || 'Erro ao persistir laudo no prontuário', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -311,7 +351,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Extração de resultados e analitos para o prontuário de {patient.name}
+                Extração de resultados e analitos para o prontuário de {safePatientName}
               </p>
             </div>
           </div>
@@ -326,6 +366,22 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
 
         {/* Content Area */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 overscroll-contain">
+          {errorMessage && (
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 text-rose-800 text-xs">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-rose-500 hover:text-rose-700 font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-6">
@@ -333,7 +389,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`p-8 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-center transition-all ${
+                className={`p-6 sm:p-8 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-center transition-all ${
                   isDragging
                     ? 'border-emerald-500 bg-emerald-50/60 scale-[1.01]'
                     : 'border-slate-300 hover:border-emerald-400 bg-slate-50/50'
@@ -343,7 +399,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   <UploadCloud className="w-8 h-8" />
                 </div>
                 <h3 className="text-base font-bold text-slate-800">
-                  Arraste o Laudo de Exame (PDF ou Imagem) aqui
+                  Fotografe ou selecione o Laudo de Exame (PDF ou Imagem)
                 </h3>
                 <p className="text-xs text-slate-500 max-w-sm mt-1 mb-5">
                   Suportamos fotos do celular e arquivos em PDF de laboratórios (ex: Fleury, Dasa, Sabin, Hemograma, Urina, Raio-X). Até 10 MB.
@@ -366,22 +422,22 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   className="hidden"
                 />
 
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
+                    onClick={handleTriggerCamera}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
                   >
-                    <FileText className="w-4 h-4" />
-                    <span>Selecionar Arquivo</span>
+                    <Camera className="w-5 h-5 shrink-0" />
+                    <span>Tirar foto com a câmera</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98]"
+                    onClick={handleTriggerFilePicker}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>Tirar Foto do Laudo</span>
+                    <FileText className="w-5 h-5 shrink-0" />
+                    <span>Selecionar imagem ou PDF</span>
                   </button>
                 </div>
 

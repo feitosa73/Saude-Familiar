@@ -25,6 +25,7 @@ import { CpfRegularizationModal } from './components/CpfRegularizationModal';
 import { NotificationToast } from './components/NotificationToast';
 import { InviteAcceptView } from './components/InviteAcceptView';
 import { UserCpfRegularizationView } from './components/UserCpfRegularizationView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShieldAlert } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -326,6 +327,7 @@ const MainContent: React.FC = () => {
       <AccessRequestsManagerModal
         isOpen={isRequestsModalOpen}
         onClose={() => setIsRequestsModalOpen(false)}
+        family={family}
       />
       <CpfRegularizationModal
         isOpen={isRegularizationModalOpen}
@@ -342,10 +344,12 @@ const MainContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <PatientProvider>
-        <MainContent />
-      </PatientProvider>
-    </AuthProvider>
+    <ErrorBoundary title="Erro inesperado na aplicação">
+      <AuthProvider>
+        <PatientProvider>
+          <MainContent />
+        </PatientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

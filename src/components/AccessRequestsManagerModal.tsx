@@ -19,7 +19,7 @@ import { api } from '../services/api';
 interface AccessRequestsManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  family: Family | null;
+  family?: Family | null;
   onRequestsUpdated?: () => Promise<void>;
 }
 

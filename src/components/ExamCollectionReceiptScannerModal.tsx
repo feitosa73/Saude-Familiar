@@ -25,12 +25,13 @@ import {
 } from '../types';
 import { api } from '../services/api';
 
-interface ExamCollectionReceiptScannerModalProps {
+export interface ExamCollectionReceiptScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  patient: Patient;
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  onSuccess?: () => void;
+  onSaved?: () => void;
+  patient?: Patient | null;
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 type Step = 'upload' | 'processing' | 'review';
@@ -39,6 +40,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   isOpen,
   onClose,
   onSuccess,
+  onSaved,
   patient,
   showToast,
 }) => {
@@ -46,6 +48,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Extracted data for review
   const [laboratory, setLaboratory] = useState('');
@@ -67,6 +70,16 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const safePatientName = patient?.name || 'Paciente';
+  const safeToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (showToast) showToast(msg, type);
+  };
+
+  const handleTriggerSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onSaved) onSaved();
+  };
+
   if (!isOpen) return null;
 
   const resetState = () => {
@@ -74,6 +87,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     setSelectedFile(null);
     setIsDragging(false);
     setIsSaving(false);
+    setErrorMessage(null);
     setLaboratory('');
     setProtocolNumber('');
     setCollectionDate('');
@@ -94,6 +108,34 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     onClose();
   };
 
+  const handleTriggerCamera = () => {
+    try {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+        cameraInputRef.current.click();
+      } else {
+        safeToast('Câmera não disponível no dispositivo. Selecione um arquivo da galeria.', 'info');
+        fileInputRef.current?.click();
+      }
+    } catch (err: any) {
+      console.error('[ReceiptScanner] Falha ao acionar câmera:', err?.message);
+      safeToast('Não foi possível acionar a câmera diretamente. Selecione um arquivo da galeria.', 'info');
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleTriggerFilePicker = () => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+    } catch (err: any) {
+      console.error('[ReceiptScanner] Falha ao acionar seletor:', err?.message);
+      safeToast('Não foi possível abrir o seletor de arquivos.', 'error');
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       validateAndSetFile(e.target.files[0]);
@@ -109,13 +151,14 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
       'application/pdf',
     ];
     if (!validMimes.includes(file.type)) {
-      showToast('Formato não suportado. Envie uma imagem (JPG, PNG, WEBP) ou PDF.', 'error');
+      safeToast('Formato não suportado. Envie uma imagem (JPG, PNG, WEBP) ou PDF.', 'error');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      showToast('O arquivo excede o limite máximo de 10 MB.', 'error');
+      safeToast('O arquivo excede o limite máximo de 10 MB.', 'error');
       return;
     }
+    setErrorMessage(null);
     setSelectedFile(file);
   };
 
@@ -139,8 +182,13 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
   const handleStartExtraction = async () => {
     if (!selectedFile) return;
+    if (!patient?.id) {
+      safeToast('Selecione um paciente para continuar.', 'error');
+      return;
+    }
 
     setStep('processing');
+    setErrorMessage(null);
     try {
       const data: ExtractedCollectionReceiptResponse = await api.extractCollectionReceiptWithAi(
         patient.id,
@@ -165,19 +213,21 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
       // Check for patient name mismatch
       const detected = (data.patientNameIdentified || '').trim().toLowerCase();
-      const current = patient.name.trim().toLowerCase();
+      const current = (patient.name || '').trim().toLowerCase();
       const isMismatch =
         detected.length > 3 &&
+        current.length > 0 &&
         !current.includes(detected) &&
         !detected.includes(current);
 
       setPatientMismatchAcknowledged(!isMismatch);
 
       setStep('review');
-      showToast('Comprovante de coleta lido com sucesso! Revise os dados abaixo.', 'info');
+      safeToast('Comprovante de coleta lido com sucesso! Revise os dados abaixo.', 'info');
     } catch (err: any) {
-      console.error('Erro na extração do comprovante de coleta:', err);
-      showToast(err.message || 'Erro ao processar comprovante de coleta com IA', 'error');
+      console.error('[ReceiptScanner] Erro na extração:', err?.message);
+      setErrorMessage(err.message || 'Erro ao processar comprovante de coleta com IA');
+      safeToast(err.message || 'Erro ao processar comprovante de coleta com IA', 'error');
       setStep('upload');
     }
   };
@@ -211,8 +261,9 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   const hasPatientMismatch =
     Boolean(patientIdentified.trim()) &&
     patientIdentified.trim().toLowerCase().length > 3 &&
-    !patient.name.toLowerCase().includes(patientIdentified.trim().toLowerCase()) &&
-    !patientIdentified.trim().toLowerCase().includes(patient.name.toLowerCase());
+    Boolean(patient?.name) &&
+    !patient!.name.toLowerCase().includes(patientIdentified.trim().toLowerCase()) &&
+    !patientIdentified.trim().toLowerCase().includes(patient!.name.toLowerCase());
 
   // Confirm and Save
   const handleApproveAndSave = async () => {
@@ -295,23 +346,23 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
         successCount++;
       }
 
-      showToast(
+      safeToast(
         `${successCount} exame(s) registrado(s) com sucesso a partir do comprovante de coleta!`,
         'success'
       );
-      onSuccess();
       handleClose();
+      handleTriggerSuccess();
     } catch (err: any) {
-      console.error('Erro ao salvar exames a partir do comprovante:', err);
-      showToast(err.message || 'Erro ao registrar exames no prontuário.', 'error');
+      console.error('[ReceiptScanner] Erro ao salvar exames:', err?.message);
+      safeToast(err.message || 'Erro ao registrar exames no prontuário.', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-5 py-4 bg-linear-to-r from-blue-700 via-indigo-700 to-sky-800 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -323,11 +374,12 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                 Leitura de Comprovante de Coleta com IA
               </h2>
               <p className="text-xs text-sky-100">
-                Extração automática de exames, protocolo e previsão de resultado para {patient.name}
+                Extração automática de exames, protocolo e previsão de resultado para {safePatientName}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={handleClose}
             className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
@@ -337,6 +389,22 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
         {/* Content Body */}
         <div className="p-5 overflow-y-auto flex-1 space-y-5">
+          {errorMessage && (
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-rose-500 hover:text-rose-700 font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-4">
@@ -347,13 +415,29 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                 </p>
               </div>
 
+              {/* Hidden Inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
               {/* Dropzone */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all flex flex-col items-center justify-center gap-4 ${
                   isDragging
                     ? 'border-blue-500 bg-blue-50/60'
                     : selectedFile
@@ -361,22 +445,6 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                     : 'border-slate-300 hover:border-blue-400 bg-slate-50/50'
                 }`}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
                 {selectedFile ? (
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mx-auto">
@@ -385,37 +453,45 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{selectedFile.name}</p>
                       <p className="text-xs text-slate-500">
-                        {(selectedFile.size / 1024).toFixed(0)} KB • Clique ou arraste para trocar
+                        {(selectedFile.size / 1024).toFixed(0)} KB • Pronto para leitura
                       </p>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                      <UploadCloud className="w-6 h-6" />
+                    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-xs">
+                      <UploadCloud className="w-7 h-7" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-700">
-                        Arraste o comprovante aqui ou clique para selecionar
+                      <p className="text-sm font-bold text-slate-700">
+                        Fotografe ou selecione o comprovante de coleta
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        Suporta fotos (JPG, PNG, WEBP) e documentos em PDF até 10 MB
+                        Fotos de recibos (JPG, PNG, WEBP) ou arquivos em PDF até 10 MB
                       </p>
                     </div>
                   </>
                 )}
-              </div>
 
-              {/* Camera Action Button (Mobile / Webcam) */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
-                >
-                  <Camera className="w-4 h-4 text-blue-600" />
-                  <span>Fotografar com a Câmera</span>
-                </button>
+                {/* Mobile & Desktop Action Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md pt-2">
+                  <button
+                    type="button"
+                    onClick={handleTriggerCamera}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
+                  >
+                    <Camera className="w-5 h-5 shrink-0" />
+                    <span>Tirar foto com a câmera</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTriggerFilePicker}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs min-h-[48px]"
+                  >
+                    <FileText className="w-5 h-5 shrink-0" />
+                    <span>Selecionar imagem ou PDF</span>
+                  </button>
+                </div>
               </div>
 
               {/* Zero Storage Notice */}
@@ -457,7 +533,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                     <span>Divergência de Nome Identificada no Comprovante</span>
                   </div>
                   <p>
-                    O documento identifica o paciente como: <strong>"{patientIdentified}"</strong>, enquanto o paciente selecionado é <strong>"{patient.name}"</strong>.
+                    O documento identifica o paciente como: <strong>"{patientIdentified}"</strong>, enquanto o paciente selecionado é <strong>"{safePatientName}"</strong>.
                   </p>
                   <label className="flex items-center gap-2 font-semibold pt-1 cursor-pointer">
                     <input
@@ -466,7 +542,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                       onChange={(e) => setPatientMismatchAcknowledged(e.target.checked)}
                       className="w-4 h-4 text-blue-600 rounded-sm border-slate-300 focus:ring-blue-500"
                     />
-                    <span>Confirmo que este comprovante pertence a {patient.name} e desejo prosseguir.</span>
+                    <span>Confirmo que este comprovante pertence a {safePatientName} e desejo prosseguir.</span>
                   </label>
                 </div>
               )}
