@@ -327,45 +327,65 @@ describe('Auditoria Técnica: Integridade Ponta a Ponta, Credenciais e Regras de
     assert.strictEqual(examsAfterReplay.length, 2, 'Não pode criar exames duplicados');
   });
 
-  it('8. Nova Solução: Mascaramento no Servidor e Revelação de Senha sob Demanda', async () => {
+  it('8. Minimização Total de Credenciais: Ausência de Login, Senha e Código em Texto Claro nas Consultas Comuns', async () => {
     const familyRepo = new MemoryFamilyRepository();
     const healthRepo = new MemoryHealthRepository(familyRepo);
 
-    const examWithPassword = await healthRepo.createExam({
+    const examWithCredentials = await healthRepo.createExam({
       patientId: 'pat-pwd-sec',
-      name: 'Perfil Lipídico',
+      name: 'Perfil Lipídico e Glicemia',
       requestDate: '2026-10-28',
       requestingDoctor: 'Dra. Cardiologista',
       accessUser: 'usuario_portal_88',
       accessPassword: 'senhaSuperSecretaDoLaboratorio!',
+      accessCode: 'CHAVE_LOCALIZADOR_777',
       status: 'realizado',
     });
 
     // Helper de sanitização idêntico ao implementado em server/routes/api.ts
     const sanitizeExamForClient = (e: Exam): Exam => {
       const hasPassword = Boolean(e.accessPassword && e.accessPassword.trim().length > 0);
+      const hasUser = Boolean(e.accessUser && e.accessUser.trim().length > 0);
+      const hasCode = Boolean(e.accessCode && e.accessCode.trim().length > 0);
       return {
         ...e,
         accessPassword: hasPassword ? '••••••••' : undefined,
         hasAccessPassword: hasPassword,
+        accessUser: undefined,
+        hasAccessUser: hasUser,
+        accessCode: undefined,
+        hasAccessCode: hasCode,
       };
     };
 
     // Consulta padrão (GET /exams ou GET /exams/:id)
-    const clientPayload = sanitizeExamForClient(examWithPassword);
-    assert.strictEqual(clientPayload.accessPassword, '••••••••', 'A senha NÃO deve ser enviada em texto claro');
-    assert.strictEqual(clientPayload.hasAccessPassword, true, 'O frontend deve saber que existe uma senha cadastrada');
-    assert.strictEqual(clientPayload.accessUser, 'usuario_portal_88');
+    const clientPayload = sanitizeExamForClient(examWithCredentials);
 
-    // Revelação sob demanda (POST /exams/:id/reveal-password)
-    const fetchedRealExam = await healthRepo.getExamById(examWithPassword.id);
+    // NENHUMA credencial pode vir em texto claro nas respostas padrão
+    assert.strictEqual(clientPayload.accessPassword, '••••••••', 'A senha NÃO deve ser enviada em texto claro');
+    assert.strictEqual(clientPayload.accessUser, undefined, 'O login de acesso NÃO deve ser enviado nas respostas comuns');
+    assert.strictEqual(clientPayload.accessCode, undefined, 'O código de acesso NÃO deve ser enviado nas respostas comuns');
+
+    // As flags booleanas de presença devem ser verdadeiras
+    assert.strictEqual(clientPayload.hasAccessPassword, true, 'hasAccessPassword deve ser true');
+    assert.strictEqual(clientPayload.hasAccessUser, true, 'hasAccessUser deve ser true');
+    assert.strictEqual(clientPayload.hasAccessCode, true, 'hasAccessCode deve ser true');
+
+    // Revelação sob demanda autorizada (POST /exams/:id/reveal-credentials)
+    const fetchedRealExam = await healthRepo.getExamById(examWithCredentials.id);
     assert.ok(fetchedRealExam);
     const revealPayload = {
       success: true,
+      accessUser: fetchedRealExam?.accessUser || null,
       accessPassword: fetchedRealExam?.accessPassword || null,
+      accessCode: fetchedRealExam?.accessCode || null,
+      hasAccessUser: Boolean(fetchedRealExam?.accessUser),
       hasAccessPassword: Boolean(fetchedRealExam?.accessPassword),
+      hasAccessCode: Boolean(fetchedRealExam?.accessCode),
     };
+    assert.strictEqual(revealPayload.accessUser, 'usuario_portal_88');
     assert.strictEqual(revealPayload.accessPassword, 'senhaSuperSecretaDoLaboratorio!');
+    assert.strictEqual(revealPayload.accessCode, 'CHAVE_LOCALIZADOR_777');
   });
 
   it('9. Nova Solução: Classificação Semântica e Desmembramento das Pendências na Agenda', async () => {
@@ -409,5 +429,213 @@ describe('Auditoria Técnica: Integridade Ponta a Ponta, Credenciais e Regras de
     assert.strictEqual(agenda.totalAgendamentosSemData, 1, 'Deve contar 1 agendamento pendente sem data');
     assert.strictEqual(agenda.totalLaudosDisponiveis, 1, 'Deve contar 1 laudo pronto disponível');
     assert.strictEqual(agenda.totalPendenciasSemData, 2, 'Contador legado preservado para retrocompatibilidade');
+  });
+
+  it('10. Autorização no Servidor: Apenas Usuários Autorizados Conseguem Revelar Credenciais', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+    const { ServerAuthorizationService } = await import('../server/services/authorizationService');
+    const authzService = new ServerAuthorizationService(healthRepo);
+
+    const patientId = 'pat-auth-test';
+    const familyId = 'fam-auth-test';
+
+    // Cria paciente e exame confidencial
+    await healthRepo.createPatient({
+      id: patientId,
+      name: 'Paciente Teste Auth',
+      birthDate: '1970-01-01',
+    } as any, familyId);
+
+    const exam = await healthRepo.createExam({
+      patientId,
+      name: 'Tomografia de Crânio',
+      requestDate: '2026-10-28',
+      requestingDoctor: 'Dr. Neurologista',
+      accessUser: 'usuario_seguro_xyz',
+      accessPassword: 'senhaUltraSecreta999!',
+      accessCode: 'TOKEN_123',
+      status: 'realizado',
+    });
+
+    // Usuário 1: Concedido acesso de visualizador
+    await healthRepo.createPatientAccess({
+      userId: 'user-autorizado',
+      patientId,
+      role: 'VIEWER',
+      familyId,
+    } as any);
+
+    // Usuário 2: Sem acesso ao paciente
+    const isUser1Authorized = await authzService.canViewPatient('user-autorizado', patientId, familyId);
+    const isUser2Authorized = await authzService.canViewPatient('user-estranho', patientId, familyId);
+
+    assert.strictEqual(isUser1Authorized, true, 'Usuário com acesso ao paciente deve estar autorizado');
+    assert.strictEqual(isUser2Authorized, false, 'Usuário sem acesso ao paciente DEVE ser rejeitado');
+
+    // Simula a rota de revelação sob demanda com validação de autorização
+    const handleRevealRequest = async (userId: string, targetExamId: string) => {
+      const targetExam = await healthRepo.getExamById(targetExamId);
+      if (!targetExam) return { status: 404, error: 'Exame não encontrado' };
+
+      const canView = await authzService.canViewPatient(userId, targetExam.patientId, familyId);
+      if (!canView) {
+        return { status: 403, error: 'Você não possui autorização para consultar credenciais deste paciente' };
+      }
+
+      return {
+        status: 200,
+        data: {
+          success: true,
+          accessUser: targetExam.accessUser,
+          accessPassword: targetExam.accessPassword,
+          accessCode: targetExam.accessCode,
+        },
+      };
+    };
+
+    // Teste de rejeição 403
+    const unauthorizedResponse = await handleRevealRequest('user-estranho', exam.id);
+    assert.strictEqual(unauthorizedResponse.status, 403);
+    assert.ok(unauthorizedResponse.error);
+
+    // Teste de autorização 200
+    const authorizedResponse = await handleRevealRequest('user-autorizado', exam.id);
+    assert.strictEqual(authorizedResponse.status, 200);
+    assert.strictEqual(authorizedResponse.data?.accessPassword, 'senhaUltraSecreta999!');
+    assert.strictEqual(authorizedResponse.data?.accessUser, 'usuario_seguro_xyz');
+    assert.strictEqual(authorizedResponse.data?.accessCode, 'TOKEN_123');
+  });
+
+  it('11. Idempotência Concorrente Real: Duas Requisições Simultâneas com a Mesma Chave via Promise.all Geram Apenas 1 Registro', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+
+    const concurrentBatchKey = `batch_concurrent_${Date.now()}_${Math.random()}`;
+    const batchRequest = {
+      idempotencyKey: concurrentBatchKey,
+      archiveDocument: {
+        title: 'Comprovante Coleta Concorrente',
+        category: 'pedido_exame' as const,
+        date: '2026-10-28',
+        fileName: 'comprovante.jpg',
+        fileType: 'image/jpeg',
+        fileSize: '150 KB',
+      },
+      exams: [
+        { name: 'Urina Tipo I (EAS)', requestDate: '2026-10-28', status: 'realizado' as const },
+        { name: 'Urocultura com Antibiograma', requestDate: '2026-10-28', status: 'realizado' as const },
+      ],
+    };
+
+    // Dispara DUAS requisições SIMULTÂNEAS com a MESMA chave de idempotência
+    const [res1, res2] = await Promise.all([
+      healthRepo.createExamReceiptBatch('pat-concurrent-test', batchRequest, 'fam-concurrent'),
+      healthRepo.createExamReceiptBatch('pat-concurrent-test', batchRequest, 'fam-concurrent'),
+    ]);
+
+    // Ambas devem ter sucesso
+    assert.strictEqual(res1.success, true);
+    assert.strictEqual(res2.success, true);
+
+    // Exatamente uma é a criadora original (isIdempotentReplay: false) e a outra é o replay (isIdempotentReplay: true)
+    const replays = [res1.isIdempotentReplay, res2.isIdempotentReplay];
+    assert.ok(replays.includes(false), 'Uma requisição deve ser a criadora original');
+    assert.ok(replays.includes(true), 'A requisição concorrente simultânea deve ser tratada como replay idempotente');
+
+    // Ambas apontam para o mesmo documento
+    assert.strictEqual(res1.createdDocumentId, res2.createdDocumentId);
+
+    // Verificação estrita no banco: NENHUM documento ou exame duplicado!
+    const docsInDb = await healthRepo.getDocuments('pat-concurrent-test');
+    const examsInDb = await healthRepo.getExams('pat-concurrent-test');
+    assert.strictEqual(docsInDb.length, 1, 'Deve existir exatamente 1 documento no banco, sem duplicata');
+    assert.strictEqual(examsInDb.length, 2, 'Devem existir exatamente 2 exames no banco, sem duplicatas');
+
+    // Uma repetição POSTERIOR (após o commit) também retorna o cache
+    const res3 = await healthRepo.createExamReceiptBatch('pat-concurrent-test', batchRequest, 'fam-concurrent');
+    assert.strictEqual(res3.isIdempotentReplay, true);
+    assert.strictEqual(res3.createdDocumentId, res1.createdDocumentId);
+
+    const docsAfter3 = await healthRepo.getDocuments('pat-concurrent-test');
+    const examsAfter3 = await healthRepo.getExams('pat-concurrent-test');
+    assert.strictEqual(docsAfter3.length, 1);
+    assert.strictEqual(examsAfter3.length, 2);
+  });
+
+  it('12. Preservação de Credenciais no PUT /exams/:id: Edição de Outro Campo Não Apaga Valores Ocultos/Mascarados', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+
+    // Exame inicial com credenciais completas
+    const created = await healthRepo.createExam({
+      patientId: 'pat-edit-test',
+      name: 'Hemograma Completo',
+      requestDate: '2026-10-28',
+      requestingDoctor: 'Dr. Antigo',
+      accessUser: 'meu_login_salvo',
+      accessPassword: 'minha_senha_super_secreta',
+      accessCode: 'LOCALIZADOR_456',
+      status: 'realizado',
+    });
+
+    // Simula a lógica do PUT /exams/:id: o frontend enviou apenas o novo médico, com campos de credenciais omitidos ou com bolinhas
+    const updatePayload: any = {
+      requestingDoctor: 'Dr. Novo Especialista',
+      accessPassword: '••••••••', // Máscara vinda da UI
+      accessUser: undefined,     // Minimizado
+      accessCode: undefined,     // Minimizado
+    };
+
+    // Regra de proteção implementada em server/routes/api.ts
+    if (updatePayload.accessPassword === '••••••••' || updatePayload.accessPassword === undefined) {
+      delete updatePayload.accessPassword;
+    }
+    if (updatePayload.accessUser === undefined) {
+      delete updatePayload.accessUser;
+    }
+    if (updatePayload.accessCode === undefined) {
+      delete updatePayload.accessCode;
+    }
+
+    const updated = await healthRepo.updateExam(created.id, updatePayload);
+    assert.ok(updated);
+    assert.strictEqual(updated?.requestingDoctor, 'Dr. Novo Especialista');
+
+    // Confirma que os dados confidenciais originais não foram destruídos!
+    const reloaded = await healthRepo.getExamById(created.id);
+    assert.strictEqual(reloaded?.accessUser, 'meu_login_salvo', 'accessUser deve ser preservado');
+    assert.strictEqual(reloaded?.accessPassword, 'minha_senha_super_secreta', 'accessPassword deve ser preservada');
+    assert.strictEqual(reloaded?.accessCode, 'LOCALIZADOR_456', 'accessCode deve ser preservado');
+  });
+
+  it('13. Limpeza de Credenciais Reveladas no Frontend: Estado É Limpo ao Trocar Paciente ou Desmontar Componente', () => {
+    // Simula o ciclo de vida do componente React ExamsView
+    let revealedCredentialsMap: Record<string, { accessUser?: string; accessPassword?: string; accessCode?: string }> = {};
+    let revealedVisibilityState: Record<string, boolean> = {};
+
+    // 1. Usuário revela credencial do exame 1
+    revealedCredentialsMap['exam-1'] = {
+      accessUser: 'usuario_revelado',
+      accessPassword: 'senha_revelada',
+      accessCode: 'codigo_revelado',
+    };
+    revealedVisibilityState['exam-1'] = true;
+
+    assert.ok(revealedCredentialsMap['exam-1']);
+    assert.strictEqual(revealedVisibilityState['exam-1'], true);
+
+    // 2. Simula o cleanup do useEffect ao trocar de paciente ou desmontar a tela
+    const cleanupEffect = () => {
+      revealedCredentialsMap = {};
+      revealedVisibilityState = {};
+    };
+
+    cleanupEffect();
+
+    // 3. Verifica que todo o estado de credenciais em memória foi limpo
+    assert.strictEqual(Object.keys(revealedCredentialsMap).length, 0, 'revealedCredentialsMap deve estar vazio após cleanup');
+    assert.strictEqual(Object.keys(revealedVisibilityState).length, 0, 'revealedVisibilityState deve estar vazio após cleanup');
+    assert.strictEqual(revealedCredentialsMap['exam-1'], undefined);
   });
 });

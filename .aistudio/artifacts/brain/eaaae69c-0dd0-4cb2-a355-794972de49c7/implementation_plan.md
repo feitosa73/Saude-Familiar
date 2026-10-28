@@ -1,67 +1,43 @@
-# Relatório de Execução Técnica: Segurança de Credenciais, Idempotência e Agenda
+# Relatório de Ajustes e Resolução das Ressalvas Técnicas
 
-## 1. Escopo Executado e Objetivos Atingidos
+## 1. Minimização de Credenciais no Servidor e no Cliente
 
-Conforme aprovado na auditoria, foram implementadas as três prioridades técnicas essenciais sem tocar no backlog futuro (UX-01, UX-02 e PROPOSTA-01):
-
----
-
-### Prioridade 1: Segurança das Credenciais de Acesso
-- **Isolamento de Notas Livres:** Removidos login (`accessUser`) e código de acesso (`accessCode`) das strings concatenadas em `docNotes` e `notesParts` em `ExamCollectionReceiptScannerModal.tsx`. As credenciais agora residem exclusivamente em campos estruturados e seguros do modelo de dados (`accessUser`, `accessPassword`, `accessCode`).
-- **Mascaramento por Padrão no Servidor:** O helper autoritativo `sanitizeExamForClient` em `server/routes/api.ts` substitui senhas por `'••••••••'` e define a flag `hasAccessPassword: true` em rotas públicas/listagens (`GET /patients/:patientId/exams` e `GET /exams/:id`).
-- **Revelação sob Demanda Autorizada:** Criado o endpoint seguro `POST /exams/:id/reveal-password`, que valida o token de autenticação e a permissão do usuário em relação ao paciente (`canViewPatient` ou `familyOwner`). A senha real só trafega na rede quando explicitamente solicitada.
-- **Proteção contra Sobrescrita Acidental:** No `PUT /exams/:id` e no formulário `handleSubmit` de `ExamsView.tsx`, o valor de máscara `'••••••••'` é ignorado, impedindo que a senha gravada no banco seja substituída por bolinhas.
-- **Interface Segura:** Em `ExamsView.tsx`, o botão de visualização da senha dispara a consulta sob demanda à API com estado de carregamento e armazena localmente em memória apenas durante a sessão do usuário.
+- **Minimização Total em Consultas Comuns:** A função `sanitizeExamForClient` em `server/routes/api.ts` agora omite completamente `accessUser` e `accessCode` (`undefined`) e mascara a senha (`accessPassword: '••••••••'`) em todas as rotas de listagem e detalhe padrão (`GET /patients/:patientId/exams` e `GET /exams/:id`).
+- **Sinalização Transparente sem Vazamento:** Foram implementadas as flags booleanas `hasAccessUser: boolean`, `hasAccessPassword: boolean` e `hasAccessCode: boolean`. Isso permite que o frontend saiba se o exame possui dados de acesso cadastrados sem jamais trafegar credenciais em texto claro na inicialização da tela ou na listagem da agenda.
+- **Endpoint de Revelação sob Demanda Autorizado:** As rotas `POST /exams/:id/reveal-credentials` (e o alias retrocompatível `POST /exams/:id/reveal-password`) realizam checagem estrita de autorização (`authzService.canViewPatient` ou papel `owner`). Somente usuários autorizados recebem o objeto `ExamCredentialsResponse` contendo as credenciais completas.
+- **Preservação de Dados Ocultos na Edição (`PUT /exams/:id`):** O backend agora verifica se `accessUser`, `accessPassword` ou `accessCode` vieram indefinidos ou mascarados com `'••••••••'`, deletando-os do `updatePayload` antes de persistir. No frontend (`src/components/ExamsView.tsx`), o formulário de edição não envia valores vazios para apagar credenciais salvas caso o usuário edite apenas outros campos (como médico, status ou data).
 
 ---
 
-### Prioridade 2: Integridade e Idempotência no Salvamento em Lote
-- **Endpoint em Lote Atômico:** Implementado `POST /patients/:patientId/exams/receipt-batch` em `server/routes/api.ts`.
-- **Chave de Idempotência Persistida:** Tanto em `FirestoreHealthRepository` (`families/{familyId}/idempotency_keys/{key}`) quanto em `MemoryHealthRepository`, cada lote recebido verifica se a chave já existe. Se existir, retorna imediatamente a resposta gravada (`isIdempotentReplay: true`) sem duplicar documentos nem exames.
-- **Transação Consistente no Firestore:** A gravação do documento de arquivo (`MedicalDocument`), de todos os exames do lote (`Exam[]`) com seus respectivos `documentId` vinculados e da chave de idempotência ocorre em um único `batch.commit()`.
-- **Geração de Chave Estável:** `ExamCollectionReceiptScannerModal.tsx` agora mantém `idempotencyKeyRef` estável durante todo o fluxo de conferência humana e submissão, substituindo o antigo loop sequencial de salvamento por uma chamada única a `api.createExamReceiptBatch`.
-- **Eliminação de Colisão de IDs:** Identificadores em memória foram robustecidos com sufixos criptográficos randômicos (`exam-${Date.now()}-${random}`), eliminando colisões em operações síncronas.
+## 2. Limpeza de Credenciais Reveladas no Frontend
+
+- **Ciclo de Vida em Memória Estrita:** As credenciais consultadas sob demanda são armazenadas unicamente no estado React local (`revealedCredentialsMap`).
+- **Limpeza na Troca de Paciente:** O hook `useEffect([selectedPatient])` zera explicitamente os mapas de credenciais e de visibilidade (`setRevealedCredentialsMap({})` e `setRevealedVisibilityState({})`).
+- **Limpeza no Desmonte da Tela:** A função de cleanup retornada pelo `useEffect` garante que ao sair da tela de exames ou fechar a visualização, todas as credenciais reveladas sejam descartadas da memória imediatamente.
+- **Zero Armazenamento no Navegador:** Nenhuma credencial revelada é gravada em `localStorage`, `sessionStorage` ou `IndexedDB`.
 
 ---
 
-### Prioridade 3: Classificação e Textos das Pendências na Agenda
-- **Classificação Semântica (`categoriaAlerta`):**
-  - Consultas sem data confirmada: `aguardando_agendamento`.
-  - Exames no status `solicitado`: `aguardando_agendamento`.
-  - Exames com data agendada indefinida: `aguardando_agendamento`.
-  - Exames coletados com prazo ultrapassado: `previsao_resultado_vencida`.
-  - Exames com laudo pronto emitido (`resultado_disponivel`): `resultado_disponivel`.
-  - Exames concluídos (`retirado`): `retirado_em_maos`.
-- **Desmembramento dos Contadores na Agenda:** `AgendaUnificadaResponse` agora retorna contadores específicos (`totalAgendamentosSemData` e `totalLaudosDisponiveis`), preservando `totalPendenciasSemData` para retrocompatibilidade.
-- **Ajuste nos Cabeçalhos e Caixas de Alerta:**
-  - Em `AgendaUnifiedView.tsx`, o acordeão e o título da seção calculam textos contextuais claros (ex.: *"Você possui 1 agendamento a marcar e 1 laudo disponível"* ou *"Laudos Disponíveis para Consulta / Retirada"*).
-  - Em `AgendaCard.tsx`, se `categoriaAlerta === 'resultado_disponivel'`, a caixa de alerta exibe *"Laudo Liberado pelo Laboratório:"* com badge esmeralda *"Laudo Liberado"* no lugar de *"Data a Definir"* e *"Aguardando definição:"*.
-  - Se a previsão estiver vencida, exibe *"Previsão Ultrapassada:"* com alerta em tom rosado.
+## 3. Idempotência Concorrente no Repositório
+
+- **Firestore Real (`FirestoreHealthRepository.ts`):** 
+  - A operação `createExamReceiptBatch` foi convertida para executar dentro de uma transação Firestore atômica (`this.db.runTransaction(async (transaction) => { ... })`).
+  - A leitura de `idempotencyRef` ocorre atomicamente dentro da transação antes de qualquer escrita.
+  - Graças ao mecanismo de Optimistic Concurrency Control (OCC) do Firestore, requisições simultâneas com a mesma chave têm colisão detectada no commit, fazendo com que a transação concorrente seja automaticamente refeita. No retry, ela lê a chave recém-persistida e retorna o snapshot cacheado com `isIdempotentReplay: true`, garantindo que jamais sejam criados documentos ou exames duplicados.
+- **Repositório em Memória (`MemoryRepositories.ts`):**
+  - Implementado o controle de concorrência com mapa de promessas em voo (`inFlightBatches`). Requisições concorrentes disparadas simultaneamente via `Promise.all` compartilham a mesma execução assíncrona, evitando duplicidade e retornando replay idempotente seguro.
 
 ---
 
-### Backlog Técnico Preservado (Não Implementado nesta Etapa)
-- **UX-01:** Tipografia ampliada e legibilidade avançada.
-- **UX-02:** Otimização de largura de tela em monitores desktop ultrawide.
-- **PROPOSTA-01:** Módulo completo de ciclo de retorno médico, condutas e encaminhamentos.
+## 4. Testes de Regressão e Validação
 
----
+### Testes Executados em Ambiente de Teste (Runner Nativo / Repositório em Memória)
+- **Teste 8:** Comprova que consultas comuns não retornam login, senha ou código de acesso em texto claro, mas apenas as flags booleanas `hasAccess*`.
+- **Teste 10:** Comprova que a rota de revelação bloqueia usuários não autorizados com HTTP 403 e permite acesso apenas a usuários autorizados com HTTP 200.
+- **Teste 11 (`Promise.all` concorrente):** Executa duas chamadas rigorosamente simultâneas com a mesma chave de idempotência. Comprova que ambas retornam sucesso, uma como original e outra como replay (`isIdempotentReplay: true`), e que apenas 1 documento e 2 exames foram gravados no banco.
+- **Teste 12:** Comprova que a atualização via `PUT /exams/:id` com dados mascarados/indefinidos preserva intactos o login, senha e código de acesso originais no banco.
+- **Teste 13:** Comprova que o desmonte do componente e a troca de paciente limpam integralmente as credenciais reveladas da memória.
 
-## 2. Testes e Validação Executados
-
-1. **Testes Unitários e Integrados (`test/audit-e2e-collection-receipt-and-credentials.test.ts`):**
-   - Teste 1: Validação de integridade semântica dos campos extraídos.
-   - Teste 2: Persistência e recuperação integral dos campos no repositório.
-   - Teste 3: Auditoria de vazamento de senhas em `ItemAgenda`.
-   - Teste 4: Omissão padrão de senhas no compartilhamento familiar via WhatsApp/texto.
-   - Teste 5: Diagnóstico do comportamento legado de falha parcial.
-   - Teste 6: Auditoria de regra de negócio para laudos disponíveis.
-   - Teste 7: Gravação atômica em lote e idempotência com retentativa sem duplicidade.
-   - Teste 8: Mascaramento padrão no servidor e revelação sob demanda com autorização.
-   - Teste 9: Classificação semântica por `categoriaAlerta` e desmembramento de contadores na Agenda.
-2. **Suíte Completa de Testes (`npm test`):**
-   - **88 testes executados**, 15 suítes, **100% de sucesso (88 pass / 0 fail)**.
-3. **Validação de Tipos e Linter (`tsc --noEmit` / `lint_applet`):**
-   - Execução limpa, zero erros de sintaxe ou tipos (`exit code 0`).
-4. **Compilação da Aplicação (`compile_applet`):**
-   - Build de produção gerado com sucesso sem avisos impeditivos.
+### Validação Arquitetural contra Firestore Real
+- A transação foi desenhada em estrita conformidade com as regras do Firestore SDK (`transaction.get` de todas as chaves antes de `transaction.set`), sem exceder limites de 500 operações por batch/transação (um comprovante típico tem de 1 a 10 exames).
+- A separação de ambientes está documentada: testes de unidade/integração rodam via `npm test` sobre o repositório em memória com simulação assíncrona de I/O, enquanto em produção/Cloud Run o driver do Firestore assume a autoridade transacional.

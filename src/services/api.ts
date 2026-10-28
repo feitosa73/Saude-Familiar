@@ -3,6 +3,7 @@ import {
   Medication,
   Appointment,
   Exam,
+  ExamCredentialsResponse,
   ExamReceiptBatchRequest,
   ExamReceiptBatchResponse,
   MedicalDocument,
@@ -498,8 +499,15 @@ export const api = {
       method: 'DELETE',
     }),
   revealExamPassword: (examId: string, patientId?: string) =>
-    request<{ success: boolean; accessPassword: string | null; hasAccessPassword: boolean }>(
-      `/exams/${examId}/reveal-password${patientId ? `?patientId=${patientId}` : ''}`,
+    request<ExamCredentialsResponse>(
+      `/exams/${examId}/reveal-credentials${patientId ? `?patientId=${patientId}` : ''}`,
+      {
+        method: 'POST',
+      }
+    ),
+  revealExamCredentials: (examId: string, patientId?: string) =>
+    request<ExamCredentialsResponse>(
+      `/exams/${examId}/reveal-credentials${patientId ? `?patientId=${patientId}` : ''}`,
       {
         method: 'POST',
       }

@@ -2335,10 +2335,16 @@ export function createApiRouter(
 
   const sanitizeExamForClient = (exam: Exam): Exam => {
     const hasPassword = Boolean(exam.accessPassword && exam.accessPassword.trim().length > 0);
+    const hasUser = Boolean(exam.accessUser && exam.accessUser.trim().length > 0);
+    const hasCode = Boolean(exam.accessCode && exam.accessCode.trim().length > 0);
     return {
       ...exam,
       accessPassword: hasPassword ? '••••••••' : undefined,
       hasAccessPassword: hasPassword,
+      accessUser: undefined,
+      hasAccessUser: hasUser,
+      accessCode: undefined,
+      hasAccessCode: hasCode,
     };
   };
 
@@ -2431,9 +2437,10 @@ export function createApiRouter(
     }
   );
 
-  // 9.1 Revelação de Senha sob Demanda (Protegida e Autorizada no Servidor)
+  // 9.1 Revelação de Credenciais sob Demanda (Protegida e Autorizada no Servidor)
+  // Suporta tanto /reveal-credentials quanto /reveal-password para total retrocompatibilidade
   router.post(
-    '/exams/:id/reveal-password',
+    ['/exams/:id/reveal-credentials', '/exams/:id/reveal-password'],
     requireAuth,
     requireActiveMembership,
     async (req: AuthorizedFamilyRequest, res: Response) => {
@@ -2451,14 +2458,22 @@ export function createApiRouter(
           });
         }
 
+        const hasPassword = Boolean(exam.accessPassword && exam.accessPassword.trim().length > 0);
+        const hasUser = Boolean(exam.accessUser && exam.accessUser.trim().length > 0);
+        const hasCode = Boolean(exam.accessCode && exam.accessCode.trim().length > 0);
+
         res.json({
           success: true,
+          accessUser: exam.accessUser || null,
           accessPassword: exam.accessPassword || null,
-          hasAccessPassword: Boolean(exam.accessPassword && exam.accessPassword.trim().length > 0),
+          accessCode: exam.accessCode || null,
+          hasAccessPassword: hasPassword,
+          hasAccessUser: hasUser,
+          hasAccessCode: hasCode,
         });
       } catch (error) {
-        console.error('Error revealing exam password:', error);
-        res.status(500).json({ error: 'Erro ao consultar senha de acesso do exame' });
+        console.error('Error revealing exam credentials:', error);
+        res.status(500).json({ error: 'Erro ao consultar credenciais de acesso do exame' });
       }
     }
   );
@@ -2555,9 +2570,15 @@ export function createApiRouter(
         }
 
         const updatePayload = { ...req.body };
-        // Impede que a máscara com bolinhas enviada pelo cliente sobrescreva a senha real salva no servidor
-        if (updatePayload.accessPassword === '••••••••') {
+        // Impede que a máscara com bolinhas ou ausência de revelação sobrescreva as credenciais reais no banco
+        if (updatePayload.accessPassword === '••••••••' || updatePayload.accessPassword === undefined) {
           delete updatePayload.accessPassword;
+        }
+        if (updatePayload.accessUser === undefined) {
+          delete updatePayload.accessUser;
+        }
+        if (updatePayload.accessCode === undefined) {
+          delete updatePayload.accessCode;
         }
 
         const updated = await repository.updateExam(req.params.id, updatePayload, familyId, exam.patientId);

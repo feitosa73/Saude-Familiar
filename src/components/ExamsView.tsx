@@ -59,8 +59,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [isExamAiModalOpen, setIsExamAiModalOpen] = useState(false);
   const [isReceiptScannerModalOpen, setIsReceiptScannerModalOpen] = useState(false);
 
-  // Passwords revealed on-demand state in list cards
-  const [revealedPasswordsMap, setRevealedPasswordsMap] = useState<Record<string, string>>({});
+  // Credentials revealed on-demand state in list cards (In-memory only, no persistence)
+  const [revealedCredentialsMap, setRevealedCredentialsMap] = useState<
+    Record<string, { accessUser?: string; accessPassword?: string; accessCode?: string }>
+  >({});
   const [revealedVisibilityState, setRevealedVisibilityState] = useState<Record<string, boolean>>({});
   const [loadingPasswordId, setLoadingPasswordId] = useState<string | null>(null);
 
@@ -106,33 +108,49 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   };
 
   useEffect(() => {
+    // Limpeza mandatória de credenciais reveladas na troca de paciente
+    setRevealedCredentialsMap({});
+    setRevealedVisibilityState({});
     fetchExamsAndDocs();
+
+    // Limpeza ao fechar a tela / desmontar o componente
+    return () => {
+      setRevealedCredentialsMap({});
+      setRevealedVisibilityState({});
+    };
   }, [selectedPatient]);
 
-  const togglePasswordVisibility = async (examId: string) => {
+  const toggleCredentialsVisibility = async (examId: string) => {
     const isCurrentlyVisible = Boolean(revealedVisibilityState[examId]);
     if (isCurrentlyVisible) {
       setRevealedVisibilityState((prev) => ({ ...prev, [examId]: false }));
       return;
     }
 
-    if (revealedPasswordsMap[examId]) {
+    if (revealedCredentialsMap[examId]) {
       setRevealedVisibilityState((prev) => ({ ...prev, [examId]: true }));
       return;
     }
 
     try {
       setLoadingPasswordId(examId);
-      const res = await api.revealExamPassword(examId, selectedPatient?.id);
-      if (res.success && res.accessPassword) {
-        setRevealedPasswordsMap((prev) => ({ ...prev, [examId]: res.accessPassword! }));
+      const res = await api.revealExamCredentials(examId, selectedPatient?.id);
+      if (res.success && (res.accessUser || res.accessPassword || res.accessCode)) {
+        setRevealedCredentialsMap((prev) => ({
+          ...prev,
+          [examId]: {
+            accessUser: res.accessUser || undefined,
+            accessPassword: res.accessPassword || undefined,
+            accessCode: res.accessCode || undefined,
+          },
+        }));
         setRevealedVisibilityState((prev) => ({ ...prev, [examId]: true }));
       } else {
-        showToast('Nenhuma senha cadastrada para este exame.', 'info');
+        showToast('Nenhuma credencial cadastrada para este exame.', 'info');
       }
     } catch (err: any) {
-      console.error('Erro ao revelar senha do exame:', err);
-      showToast('Não foi possível carregar a senha segura.', 'error');
+      console.error('Erro ao revelar credenciais do exame:', err);
+      showToast('Não foi possível carregar as credenciais seguras.', 'error');
     } finally {
       setLoadingPasswordId(null);
     }
@@ -177,10 +195,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setLaboratory(exam.laboratory || '');
     setProtocolNumber(exam.protocolNumber || '');
     setPortalUrl(exam.portalUrl || '');
-    setAccessUser(exam.accessUser || '');
-    setAccessPassword(exam.accessPassword || '');
+
+    // Carrega credenciais reveladas sob demanda caso já estejam na memória deste exame
+    const revealed = revealedCredentialsMap[exam.id];
+    setAccessUser(revealed?.accessUser || exam.accessUser || '');
+    setAccessPassword(revealed?.accessPassword || '');
     setShowFormPassword(false);
-    setAccessCode(exam.accessCode || '');
+    setAccessCode(revealed?.accessCode || exam.accessCode || '');
     setPickupInstructions(exam.pickupInstructions || '');
     setStatus(exam.status);
     setNotes(exam.notes || '');
@@ -199,7 +220,9 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
     try {
       setIsSubmitting(true);
-      const examPayload = {
+      const existingExam = editingExamId ? exams.find((e) => e.id === editingExamId) : null;
+
+      const examPayload: Partial<Exam> = {
         name: name.trim(),
         requestDate,
         requestingDoctor: requestingDoctor.trim(),
@@ -208,12 +231,6 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         laboratory: laboratory.trim() || undefined,
         protocolNumber: protocolNumber.trim() || undefined,
         portalUrl: portalUrl.trim() || undefined,
-        accessUser: accessUser.trim() || undefined,
-        accessPassword:
-          accessPassword.trim() && accessPassword.trim() !== '••••••••'
-            ? accessPassword.trim()
-            : undefined,
-        accessCode: accessCode.trim() || undefined,
         pickupInstructions: pickupInstructions.trim() || undefined,
         status,
         notes: notes.trim() || undefined,
@@ -221,10 +238,34 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       };
 
       if (editingExamId) {
+        // Na edição: só envia se o usuário digitou um novo valor
+        // Se manteve vazio ou mascarado e já existia credencial, envia undefined para o backend preservar o valor do banco
+        if (accessUser.trim()) {
+          examPayload.accessUser = accessUser.trim();
+        } else if (!existingExam?.hasAccessUser && !existingExam?.accessUser) {
+          examPayload.accessUser = undefined;
+        }
+
+        if (accessPassword.trim() && accessPassword.trim() !== '••••••••') {
+          examPayload.accessPassword = accessPassword.trim();
+        }
+
+        if (accessCode.trim()) {
+          examPayload.accessCode = accessCode.trim();
+        } else if (!existingExam?.hasAccessCode && !existingExam?.accessCode) {
+          examPayload.accessCode = undefined;
+        }
+
         await api.updateExam(editingExamId, examPayload);
         showToast('Exame atualizado com sucesso!', 'success');
       } else {
-        await api.createExam(selectedPatient.id, examPayload);
+        if (accessUser.trim()) examPayload.accessUser = accessUser.trim();
+        if (accessPassword.trim() && accessPassword.trim() !== '••••••••') {
+          examPayload.accessPassword = accessPassword.trim();
+        }
+        if (accessCode.trim()) examPayload.accessCode = accessCode.trim();
+
+        await api.createExam(selectedPatient.id, examPayload as any);
         showToast('Exame cadastrado com sucesso!', 'success');
       }
 
@@ -359,6 +400,38 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setIncludeCredentialsInShare(false);
   };
 
+  const handleToggleIncludeCredentialsInShare = async (checked: boolean) => {
+    setIncludeCredentialsInShare(checked);
+    if (checked && sharingExam) {
+      const alreadyRevealed = revealedCredentialsMap[sharingExam.id];
+      if (
+        !alreadyRevealed &&
+        (sharingExam.hasAccessPassword ||
+          sharingExam.hasAccessUser ||
+          sharingExam.hasAccessCode ||
+          sharingExam.accessPassword ||
+          sharingExam.accessUser ||
+          sharingExam.accessCode)
+      ) {
+        try {
+          const res = await api.revealExamCredentials(sharingExam.id, selectedPatient?.id);
+          if (res.success) {
+            setRevealedCredentialsMap((prev) => ({
+              ...prev,
+              [sharingExam.id]: {
+                accessUser: res.accessUser || undefined,
+                accessPassword: res.accessPassword || undefined,
+                accessCode: res.accessCode || undefined,
+              },
+            }));
+          }
+        } catch (err) {
+          console.error('Erro ao consultar credenciais para compartilhamento:', err);
+        }
+      }
+    }
+  };
+
   // Execute share from modal
   const handleExecuteShare = async (copyOnly: boolean = false) => {
     if (!sharingExam || !selectedPatient) return;
@@ -375,6 +448,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       ? `${formatExecutionDateTime(sharingExam.executionDate)}`
       : formatDate(sharingExam.requestDate) || 'A definir';
 
+    const revealedCreds = revealedCredentialsMap[sharingExam.id];
+
     const { title, text } = buildExamShareText({
       patientName: selectedPatient.name,
       examName: sharingExam.name,
@@ -386,9 +461,9 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       protocolNumber: sharingExam.protocolNumber,
       expectedResultDate: sharingExam.expectedResultDate ? formatDate(sharingExam.expectedResultDate) : undefined,
       portalUrl: sharingExam.portalUrl,
-      accessUser: sharingExam.accessUser,
-      accessPassword: sharingExam.accessPassword,
-      accessCode: sharingExam.accessCode,
+      accessUser: revealedCreds?.accessUser || sharingExam.accessUser,
+      accessPassword: revealedCreds?.accessPassword || sharingExam.accessPassword,
+      accessCode: revealedCreds?.accessCode || sharingExam.accessCode,
       includeCredentials: includeCredentialsInShare,
     });
 
@@ -571,13 +646,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             const expectedInfo = getExpectedDateInfo(exam.expectedResultDate, exam.status);
             const hasCredentials = Boolean(
               exam.accessUser ||
+                exam.hasAccessUser ||
                 exam.accessPassword ||
                 exam.hasAccessPassword ||
                 exam.accessCode ||
+                exam.hasAccessCode ||
                 exam.portalUrl
             );
-            const revealedPw = revealedPasswordsMap[exam.id];
-            const isPasswordRevealed = Boolean(revealedVisibilityState[exam.id] && revealedPw);
+            const revealedCreds = revealedCredentialsMap[exam.id];
+            const isCredsRevealed = Boolean(revealedVisibilityState[exam.id] && revealedCreds);
 
             return (
               <div
@@ -717,55 +794,76 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                             <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
                             <span>Acesso ao Laudo Online</span>
                           </span>
-                          {exam.portalUrl && (
-                            <a
-                              href={exam.portalUrl.startsWith('http') ? exam.portalUrl : `https://${exam.portalUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5 font-bold"
-                            >
-                              <span>Acessar Portal</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
+
+                          <div className="flex items-center gap-2">
+                            {(exam.hasAccessPassword ||
+                              exam.hasAccessUser ||
+                              exam.hasAccessCode ||
+                              exam.accessPassword ||
+                              exam.accessUser ||
+                              exam.accessCode) && (
+                              <button
+                                type="button"
+                                onClick={() => toggleCredentialsVisibility(exam.id)}
+                                disabled={loadingPasswordId === exam.id}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-2xs transition-colors"
+                                title={isCredsRevealed ? 'Ocultar credenciais' : 'Revelar credenciais sob demanda'}
+                              >
+                                {loadingPasswordId === exam.id ? (
+                                  <span className="animate-pulse">Consultando...</span>
+                                ) : isCredsRevealed ? (
+                                  <>
+                                    <EyeOff className="w-3 h-3 text-indigo-600" />
+                                    <span>Ocultar</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="w-3 h-3 text-indigo-600" />
+                                    <span>Revelar</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            {exam.portalUrl && (
+                              <a
+                                href={exam.portalUrl.startsWith('http') ? exam.portalUrl : `https://${exam.portalUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5 font-bold"
+                              >
+                                <span>Acessar Portal</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 font-mono text-[11px]">
-                          {exam.accessUser && (
+                          {(exam.hasAccessUser || exam.accessUser) && (
                             <div>
                               <span className="text-slate-500 font-sans">Login: </span>
-                              <strong className="text-slate-800">{exam.accessUser}</strong>
+                              <strong className="text-slate-800">
+                                {isCredsRevealed ? (revealedCreds?.accessUser || '—') : '••••••••'}
+                              </strong>
                             </div>
                           )}
 
-                          {(exam.accessPassword || exam.hasAccessPassword) && (
-                            <div className="flex items-center gap-1.5">
+                          {(exam.hasAccessPassword || exam.accessPassword) && (
+                            <div>
                               <span className="text-slate-500 font-sans">Senha: </span>
                               <strong className="text-slate-800">
-                                {isPasswordRevealed ? revealedPw : '••••••••'}
+                                {isCredsRevealed ? (revealedCreds?.accessPassword || '••••••••') : '••••••••'}
                               </strong>
-                              <button
-                                type="button"
-                                onClick={() => togglePasswordVisibility(exam.id)}
-                                disabled={loadingPasswordId === exam.id}
-                                className="p-0.5 text-indigo-600 hover:text-indigo-800"
-                                title={isPasswordRevealed ? 'Ocultar senha' : 'Ver senha'}
-                              >
-                                {loadingPasswordId === exam.id ? (
-                                  <span className="text-[10px] animate-pulse">...</span>
-                                ) : isPasswordRevealed ? (
-                                  <EyeOff className="w-3 h-3" />
-                                ) : (
-                                  <Eye className="w-3 h-3" />
-                                )}
-                              </button>
                             </div>
                           )}
 
-                          {exam.accessCode && (
+                          {(exam.hasAccessCode || exam.accessCode) && (
                             <div className="sm:col-span-2">
                               <span className="text-slate-500 font-sans">Chave: </span>
-                              <strong className="text-slate-800">{exam.accessCode}</strong>
+                              <strong className="text-slate-800">
+                                {isCredsRevealed ? (revealedCreds?.accessCode || '—') : '••••••••'}
+                              </strong>
                             </div>
                           )}
                         </div>
@@ -1168,13 +1266,18 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             </p>
 
             {/* Credential Inclusion Toggle */}
-            {(sharingExam.accessUser || sharingExam.accessPassword || sharingExam.accessCode) && (
+            {(sharingExam.hasAccessUser ||
+              sharingExam.hasAccessPassword ||
+              sharingExam.hasAccessCode ||
+              sharingExam.accessUser ||
+              sharingExam.accessPassword ||
+              sharingExam.accessCode) && (
               <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 text-xs">
                 <label className="flex items-start gap-2.5 cursor-pointer font-semibold text-amber-950">
                   <input
                     type="checkbox"
                     checked={includeCredentialsInShare}
-                    onChange={(e) => setIncludeCredentialsInShare(e.target.checked)}
+                    onChange={(e) => handleToggleIncludeCredentialsInShare(e.target.checked)}
                     className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 mt-0.5"
                   />
                   <span>
@@ -1215,9 +1318,9 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       ? formatDate(sharingExam.expectedResultDate)
                       : undefined,
                     portalUrl: sharingExam.portalUrl,
-                    accessUser: sharingExam.accessUser,
-                    accessPassword: sharingExam.accessPassword,
-                    accessCode: sharingExam.accessCode,
+                    accessUser: revealedCredentialsMap[sharingExam.id]?.accessUser || sharingExam.accessUser,
+                    accessPassword: revealedCredentialsMap[sharingExam.id]?.accessPassword || sharingExam.accessPassword,
+                    accessCode: revealedCredentialsMap[sharingExam.id]?.accessCode || sharingExam.accessCode,
                     includeCredentials: includeCredentialsInShare,
                   }).text
                 }

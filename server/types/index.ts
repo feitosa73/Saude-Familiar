@@ -221,9 +221,11 @@ export interface Exam {
   laboratory?: string;
   protocolNumber?: string;
   accessUser?: string;
+  hasAccessUser?: boolean;
   accessPassword?: string;
   hasAccessPassword?: boolean;
   accessCode?: string;
+  hasAccessCode?: boolean;
   portalUrl?: string;
   pickupInstructions?: string;
   status: ExamStatus;
@@ -231,6 +233,16 @@ export interface Exam {
   documentId?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ExamCredentialsResponse {
+  success: boolean;
+  accessUser: string | null;
+  accessPassword: string | null;
+  accessCode: string | null;
+  hasAccessPassword: boolean;
+  hasAccessUser: boolean;
+  hasAccessCode: boolean;
 }
 
 export type DocumentCategory =

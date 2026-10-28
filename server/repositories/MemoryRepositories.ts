@@ -762,6 +762,7 @@ export class MemoryHealthRepository implements IHealthRepository {
   private documents = new Map<string, MedicalDocument>();
   private timeline = new Map<string, TimelineEvent>();
   private idempotencyKeys = new Map<string, ExamReceiptBatchResponse>();
+  private inFlightBatches = new Map<string, Promise<ExamReceiptBatchResponse>>();
   private familyRepo: MemoryFamilyRepository;
 
   constructor(familyRepo: MemoryFamilyRepository) {
@@ -1194,65 +1195,85 @@ export class MemoryHealthRepository implements IHealthRepository {
       };
     }
 
-    let createdDocumentId: string | undefined = undefined;
-    if (batchData.archiveDocument) {
-      const docId = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      const doc: MedicalDocument = {
-        id: docId,
-        patientId,
-        title: batchData.archiveDocument.title,
-        category: batchData.archiveDocument.category || 'pedido_exame',
-        date: batchData.archiveDocument.date,
-        doctor: batchData.archiveDocument.doctor,
-        notes: batchData.archiveDocument.notes,
-        fileName: batchData.archiveDocument.fileName,
-        fileType: batchData.archiveDocument.fileType,
-        fileSize: batchData.archiveDocument.fileSize,
-        extractedByAi: batchData.archiveDocument.extractedByAi ?? true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+    if (this.inFlightBatches.has(key)) {
+      const ongoing = await this.inFlightBatches.get(key)!;
+      return {
+        ...ongoing,
+        isIdempotentReplay: true,
       };
-      this.documents.set(docId, doc);
-      createdDocumentId = docId;
     }
 
-    const createdExams: Exam[] = [];
-    for (let i = 0; i < batchData.exams.length; i++) {
-      const item = batchData.exams[i];
-      const examId = `exam-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}`;
-      const exam: Exam = {
-        id: examId,
-        patientId,
-        name: item.name,
-        requestDate: item.requestDate,
-        executionDate: item.executionDate,
-        expectedResultDate: item.expectedResultDate,
-        pickupDate: item.pickupDate,
-        laboratory: item.laboratory,
-        protocolNumber: item.protocolNumber,
-        portalUrl: item.portalUrl,
-        accessUser: item.accessUser,
-        accessPassword: item.accessPassword,
-        accessCode: item.accessCode,
-        pickupInstructions: item.pickupInstructions,
-        requestingDoctor: item.requestingDoctor || 'Médico Assistente',
-        status: item.status,
-        notes: item.notes,
-        documentId: createdDocumentId,
+    const executionPromise = (async (): Promise<ExamReceiptBatchResponse> => {
+      // Simulação assíncrona de I/O para expor janelas de concorrência
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      let createdDocumentId: string | undefined = undefined;
+      if (batchData.archiveDocument) {
+        const docId = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const doc: MedicalDocument = {
+          id: docId,
+          patientId,
+          title: batchData.archiveDocument.title,
+          category: batchData.archiveDocument.category || 'pedido_exame',
+          date: batchData.archiveDocument.date,
+          doctor: batchData.archiveDocument.doctor,
+          notes: batchData.archiveDocument.notes,
+          fileName: batchData.archiveDocument.fileName,
+          fileType: batchData.archiveDocument.fileType,
+          fileSize: batchData.archiveDocument.fileSize,
+          extractedByAi: batchData.archiveDocument.extractedByAi ?? true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        this.documents.set(docId, doc);
+        createdDocumentId = docId;
+      }
+
+      const createdExams: Exam[] = [];
+      for (let i = 0; i < batchData.exams.length; i++) {
+        const item = batchData.exams[i];
+        const examId = `exam-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}`;
+        const exam: Exam = {
+          id: examId,
+          patientId,
+          name: item.name,
+          requestDate: item.requestDate,
+          executionDate: item.executionDate,
+          expectedResultDate: item.expectedResultDate,
+          pickupDate: item.pickupDate,
+          laboratory: item.laboratory,
+          protocolNumber: item.protocolNumber,
+          portalUrl: item.portalUrl,
+          accessUser: item.accessUser,
+          accessPassword: item.accessPassword,
+          accessCode: item.accessCode,
+          pickupInstructions: item.pickupInstructions,
+          requestingDoctor: item.requestingDoctor || 'Médico Assistente',
+          status: item.status,
+          notes: item.notes,
+          documentId: createdDocumentId,
+        };
+        this.exams.set(examId, exam);
+        createdExams.push(exam);
+      }
+
+      const response: ExamReceiptBatchResponse = {
+        success: true,
+        createdDocumentId,
+        createdExams,
+        isIdempotentReplay: false,
       };
-      this.exams.set(examId, exam);
-      createdExams.push(exam);
+
+      this.idempotencyKeys.set(key, response);
+      return response;
+    })();
+
+    this.inFlightBatches.set(key, executionPromise);
+    try {
+      return await executionPromise;
+    } finally {
+      this.inFlightBatches.delete(key);
     }
-
-    const response: ExamReceiptBatchResponse = {
-      success: true,
-      createdDocumentId,
-      createdExams,
-      isIdempotentReplay: false,
-    };
-
-    this.idempotencyKeys.set(key, response);
-    return response;
   }
 
   async getDocuments(patientId: string): Promise<MedicalDocument[]> {
