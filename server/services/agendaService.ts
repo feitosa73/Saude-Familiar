@@ -113,6 +113,7 @@ export class AgendaService {
           : 'cancelado';
 
       const ehPendente = !temData && statusNormalizado === 'agendado';
+      const categoriaAlerta = ehPendente ? 'aguardando_agendamento' : 'sem_alerta';
       const prazo = calcularPrazo(
         temData ? apt.dateTime : undefined,
         ehPendente,
@@ -142,6 +143,7 @@ export class AgendaService {
             ? 'Consulta Realizada'
             : 'Cancelada',
         ehAlertaPendente: ehPendente,
+        categoriaAlerta,
         motivoAlerta: ehPendente ? 'Retorno ou consulta sem data confirmada' : undefined,
         motivo: apt.reason,
         observacoes: apt.notes,
@@ -156,6 +158,7 @@ export class AgendaService {
       let statusNormalizado: StatusAgenda = 'realizado';
       let statusRotulo = 'Exame Realizado';
       let ehPendente = false;
+      let categoriaAlerta: 'aguardando_agendamento' | 'previsao_resultado_vencida' | 'resultado_disponivel' | 'retirado_em_maos' | 'sem_alerta' = 'sem_alerta';
       let motivoAlerta: string | undefined = undefined;
       let dataAlvoIso: string | undefined = exam.executionDate || undefined;
 
@@ -163,6 +166,7 @@ export class AgendaService {
         statusNormalizado = 'pendente_agendamento';
         statusRotulo = 'Aguardando Liberação / Agendamento';
         ehPendente = true;
+        categoriaAlerta = 'aguardando_agendamento';
         motivoAlerta = 'Aguardando agendamento ou liberação de guia pelo SUS/Convênio';
         dataAlvoIso = undefined;
       } else if (exam.status === 'agendado') {
@@ -171,6 +175,7 @@ export class AgendaService {
         statusNormalizado = 'agendado';
         statusRotulo = temDataAgendada ? 'Exame Agendado' : 'Agendamento Pendente';
         ehPendente = !temDataAgendada;
+        categoriaAlerta = !temDataAgendada ? 'aguardando_agendamento' : 'sem_alerta';
         motivoAlerta = !temDataAgendada ? 'Exame agendado sem data definida' : undefined;
       } else if (exam.status === 'realizado') {
         if (exam.expectedResultDate) {
@@ -180,29 +185,34 @@ export class AgendaService {
             statusNormalizado = 'agendado';
             statusRotulo = 'Resultado Atrasado (Aguardando laudo)';
             ehPendente = true;
+            categoriaAlerta = 'previsao_resultado_vencida';
             motivoAlerta = `Previsão de resultado ultrapassada (${prazoResult.prazoRotulo}). Contate o laboratório`;
           } else {
             statusNormalizado = 'agendado';
             statusRotulo = 'Coleta Realizada (Aguardando resultado)';
             ehPendente = prazoResult.prazoStatus === 'chegando';
+            categoriaAlerta = ehPendente ? 'previsao_resultado_vencida' : 'sem_alerta';
             motivoAlerta = ehPendente ? `Previsão de resultado: ${prazoResult.prazoRotulo}` : undefined;
           }
         } else {
           statusNormalizado = 'realizado';
           statusRotulo = 'Exame Realizado (Aguardando laudo)';
           ehPendente = false;
+          categoriaAlerta = 'sem_alerta';
           dataAlvoIso = exam.executionDate || undefined;
         }
       } else if (exam.status === 'resultado_disponivel') {
         statusNormalizado = 'agendado';
         statusRotulo = 'Resultado Disponível para Retirada / Consulta';
         ehPendente = true;
+        categoriaAlerta = 'resultado_disponivel';
         motivoAlerta = 'Laudo liberado pelo laboratório. Confirme a retirada ou leitura';
         dataAlvoIso = exam.resultAvailableDate || exam.expectedResultDate || exam.executionDate || undefined;
       } else if (exam.status === 'retirado') {
         statusNormalizado = 'realizado';
         statusRotulo = 'Resultado Consultado / Retirado';
         ehPendente = false;
+        categoriaAlerta = 'retirado_em_maos';
         motivoAlerta = undefined;
         dataAlvoIso = exam.resultConsultedDate || exam.resultAvailableDate || exam.executionDate || undefined;
       }
@@ -258,6 +268,7 @@ export class AgendaService {
         status: statusNormalizado,
         statusRotulo,
         ehAlertaPendente: ehPendente,
+        categoriaAlerta,
         motivoAlerta,
         observacoes: exam.notes,
         documentoId: exam.documentId,
@@ -292,9 +303,19 @@ export class AgendaService {
       (item) => item.status === 'realizado' || item.status === 'cancelado'
     );
 
+    const totalAgendamentosSemData = itensPendentes.filter(
+      (it) => it.categoriaAlerta === 'aguardando_agendamento'
+    ).length;
+
+    const totalLaudosDisponiveis = itensPendentes.filter(
+      (it) => it.categoriaAlerta === 'resultado_disponivel'
+    ).length;
+
     return {
       totalItens: todos.length,
       totalPendenciasSemData: itensPendentes.length,
+      totalAgendamentosSemData,
+      totalLaudosDisponiveis,
       itensPendentes,
       itensConfirmados,
       linhaDoTempoGeral: [...itensPendentes, ...itensConfirmados, ...itensHistorico],

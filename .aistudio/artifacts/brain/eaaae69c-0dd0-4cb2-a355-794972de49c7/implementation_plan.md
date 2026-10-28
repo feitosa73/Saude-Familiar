@@ -1,75 +1,67 @@
-# Relatório Técnico: Diagnóstico de Ambientes, Inventário de Mocks e Plano de Sanitização Seguro
+# Relatório de Execução Técnica: Segurança de Credenciais, Idempotência e Agenda
 
-## 1. Diagnóstico de Ambientes, Bancos e Credenciais
+## 1. Escopo Executado e Objetivos Atingidos
 
-### 1.1 Projetos Firebase e Google Cloud Referenciados
-- **Projeto Oficial:** `prj-saudefamiliar-pessoal-pfl`
-- **Região GCP:** `southamerica-east1` (São Paulo)
-- **Serviço Cloud Run Oficial:** `saude-familiar-api`
-- **Banco de Dados:** Cloud Firestore `(default)` no projeto `prj-saudefamiliar-pessoal-pfl`
-- **Identidades de Serviço (IAM):**
-  - Execução Cloud Run (Runtime): `sa-saudefamiliar-runtime@prj-saudefamiliar-pessoal-pfl.iam.gserviceaccount.com`
-  - Deploy CI/CD: `sa-saudefamiliar-deploy@prj-saudefamiliar-pessoal-pfl.iam.gserviceaccount.com`
-
-### 1.2 Relação entre o Preview do Google AI Studio e o Ambiente Oficial
-- **Vínculo de Projeto:** O ambiente de Preview/Dev do Google AI Studio está configurado com `FIREBASE_PROJECT_ID: 'prj-saudefamiliar-pessoal-pfl'` e `GOOGLE_CLOUD_PROJECT: 'prj-saudefamiliar-pessoal-pfl'`.
-- **Frontend (Browser):** O cliente web inicializa o Firebase Auth diretamente contra o domínio oficial `prj-saudefamiliar-pessoal-pfl.firebaseapp.com`. Usuários autenticados no navegador geram tokens reais do Firebase Auth do projeto oficial.
-- **Backend (Cloud Run vs. AI Studio Container):**
-  - No Cloud Run oficial, a Runtime Service Account possui concessão IAM no Firestore e autentica chamadas autoritativas ao Firestore.
-  - No container interno do AI Studio, o ambiente roda sob Cloud Run (`K_SERVICE` definido), apontando para o mesmo projeto `prj-saudefamiliar-pessoal-pfl`. Porém, a conta de serviço do sandbox do AI Studio recebe `PERMISSION_DENIED` se não tiver sido adicionada ao IAM do projeto `prj-saudefamiliar-pessoal-pfl`.
-- **Causa Raiz da Poluição Histórica:** No código legado antes da correção recente, rotinas como `link-demo-family`, os botões de "Cuidador Demo / Familiar Demo" no `AuthModal`, e o fallback de repositório em memória gravavam ou associavam dados de teste que, ao rodar em instâncias conectadas ao Firestore com credenciais de produção, persistiram artefatos fictícios (`fam-demo-123`, `demo-user-familiar`) diretamente no banco de dados oficial.
+Conforme aprovado na auditoria, foram implementadas as três prioridades técnicas essenciais sem tocar no backlog futuro (UX-01, UX-02 e PROPOSTA-01):
 
 ---
 
-## 2. Inventário Estruturado de Mocks, Dados Fictícios e Fixtures
-
-| Item / Identificador | Localização | Propósito Original | Ambiente Afetado | Dependências Envolvidas | Risco Identificado | Ação Recomendada |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `demo-user-familiar` | Firestore (`users/demo-user-familiar`) | Usuário fictício ("Ana Silva") para teste de perfil visualizador | Cloud Firestore (Produção) | Teve o hash de CPF da Rose indevidamente indexado em `cpf_registry` | **Crítico:** Bloqueia a regularização legítima do CPF da usuária real Rose Rocha (`409 Conflict`) | **Reconciliar & Excluir:** Transferir a titularidade do CPF para a conta real da Rose e remover o documento fictício |
-| `demo-user-cuidador` | Firestore (`users/demo-user-cuidador`) | Usuário fictício ("Carlos Silva") para teste de perfil cuidador | Cloud Firestore (Produção) | Criador original da família fictícia `fam-demo-123` | **Médio:** Poluição de dados e confusão cadastral com usuários reais | **Excluir:** Remover após confirmação de desvinculação |
-| `fam-demo-123` ("Família Silva") | Firestore (`families/fam-demo-123`) e subcoleções | Família de demonstração pré-populada | Cloud Firestore (Produção) | Subcoleções `memberships`, `invitations`, `patients` (`pat-dona-maria`) | **Alto:** Usuários reais sem família já foram indevidamente associados a ela no passado | **Excluir com Backup:** Fazer dump JSON prévio e remover a família e suas subcoleções |
-| `pat-dona-maria` ("Dona Maria Silva") | Firestore (`patients/pat-dona-maria`) | Paciente fictícia de exemplo com histórico clínico sintético | Cloud Firestore (Produção) | Medicamentos (`med-losartana`), consultas e exames de teste | **Alto:** Exibição indevida para usuários reais em momentos de desvio de família | **Excluir:** Remover registros clínicos fictícios isolados na família demo |
-| `cpf_registry` (registros demo) | Firestore (`cpf_registry/{hash}`) | Registro do CPF sintético do cuidador demo e CPF da Rose associado a demo | Cloud Firestore (Produção) | Consulta atômica de unicidade no `POST /user/regularize-cpf` | **Crítico:** Impede a regularização do CPF legítimo de Rose | **Reconciliar:** Atualizar o registro do CPF da Rose para `userId: 4KqcQiz9zOgaf3RIVqQfapG8w9H3`. Deletar hashes sintéticos de demo |
-| `MemoryRepositories.ts` (seedDefaultData) | Código-fonte (`server/repositories/`) | Fixtures em memória para testes automatizados unitários | Desenvolvimento / Testes (`NODE_ENV=test`) | Utilizado pelos 59 testes em `npm test` | **Baixo:** Seguro se restrito estritamente a testes unitários | **Preservar Isolado:** Manter ativo exclusivamente quando `NODE_ENV === 'test'` |
-| Tokens sintéticos (`Bearer demo-token-*`) | `server/middlewares/requireAuth.ts` | Bypass de autenticação para simulação | Produção / Cloud Run | Antigos endpoints de desenvolvimento | **Alto:** Risco de personificação se aceitos em produção | **Bloqueio Mantido:** Já protegido com rejeição incondicional `401 DEMO_TOKENS_FORBIDDEN_IN_PROD` |
-| Rota `/user/link-demo-family` | `server/routes/api.ts` | Associação de usuário à família demo | Produção / API | Frontend legado | **Alto:** Risco de vinculação indevida de novos usuários | **Bloqueio Mantido:** Já desativado com `403 DEMO_FAMILY_DISABLED` |
-| Botões de Login Demo | `src/components/AuthModal.tsx` | Acesso rápido a contas demo no frontend | Interface do Usuário | Chamadas `authService.loginAsDemo` | **Médio:** Exposição pública de acesso simulado | **Remoção Confirmada:** Já removidos da interface de login |
-| Switch de Modo Demo na Navbar | `src/components/Navbar.tsx` | Alternância de perfil simulado na barra de navegação | Interface do Usuário | Estado de sessão local | **Médio:** Confusão de contexto para usuários reais | **Remoção Confirmada:** Já removido da barra superior |
-| Opção 0 no Onboarding | `src/components/FamilyOnboardingView.tsx` | Atalho para explorar a "Família Silva" | Interface do Usuário | Inicialização de novas famílias | **Médio:** Usuários reais optando por ver dados demo em vez de criar sua família | **Remoção Confirmada:** Já removido do onboarding |
+### Prioridade 1: Segurança das Credenciais de Acesso
+- **Isolamento de Notas Livres:** Removidos login (`accessUser`) e código de acesso (`accessCode`) das strings concatenadas em `docNotes` e `notesParts` em `ExamCollectionReceiptScannerModal.tsx`. As credenciais agora residem exclusivamente em campos estruturados e seguros do modelo de dados (`accessUser`, `accessPassword`, `accessCode`).
+- **Mascaramento por Padrão no Servidor:** O helper autoritativo `sanitizeExamForClient` em `server/routes/api.ts` substitui senhas por `'••••••••'` e define a flag `hasAccessPassword: true` em rotas públicas/listagens (`GET /patients/:patientId/exams` e `GET /exams/:id`).
+- **Revelação sob Demanda Autorizada:** Criado o endpoint seguro `POST /exams/:id/reveal-password`, que valida o token de autenticação e a permissão do usuário em relação ao paciente (`canViewPatient` ou `familyOwner`). A senha real só trafega na rede quando explicitamente solicitada.
+- **Proteção contra Sobrescrita Acidental:** No `PUT /exams/:id` e no formulário `handleSubmit` de `ExamsView.tsx`, o valor de máscara `'••••••••'` é ignorado, impedindo que a senha gravada no banco seja substituída por bolinhas.
+- **Interface Segura:** Em `ExamsView.tsx`, o botão de visualização da senha dispara a consulta sob demanda à API com estado de carregamento e armazena localmente em memória apenas durante a sessão do usuário.
 
 ---
 
-## 3. Preservação Absoluta das Contas e Dados Reais
-
-Os seguintes registros reais foram formalmente identificados e **estão protegidos com salvaguarda estrita contra qualquer exclusão ou modificação acidental**:
-1. **Conta de Rose Rocha:**
-   - UID: `4KqcQiz9zOgaf3RIVqQfapG8w9H3`
-   - E-mail: `rose.rocha7@gmail.com`
-   - Família Real: `2MExa2k0fBOCbAmdhtY9`
-   - Status: Usuária legítima administradora/responsável.
-2. **Conta de Aluízio Feitosa Lima / Maria das Dores Lima:**
-   - E-mail: `feitosa.lima@gmail.com`
-   - Pacientes: Aluízio Feitosa Lima, Maria das Dores Lima e respectivos prontuários, consultas e medicações.
-3. **Coleções Válidas:**
-   - Documentos em `families/2MExa2k0fBOCbAmdhtY9`, seus membros e prontuários vinculados.
+### Prioridade 2: Integridade e Idempotência no Salvamento em Lote
+- **Endpoint em Lote Atômico:** Implementado `POST /patients/:patientId/exams/receipt-batch` em `server/routes/api.ts`.
+- **Chave de Idempotência Persistida:** Tanto em `FirestoreHealthRepository` (`families/{familyId}/idempotency_keys/{key}`) quanto em `MemoryHealthRepository`, cada lote recebido verifica se a chave já existe. Se existir, retorna imediatamente a resposta gravada (`isIdempotentReplay: true`) sem duplicar documentos nem exames.
+- **Transação Consistente no Firestore:** A gravação do documento de arquivo (`MedicalDocument`), de todos os exames do lote (`Exam[]`) com seus respectivos `documentId` vinculados e da chave de idempotência ocorre em um único `batch.commit()`.
+- **Geração de Chave Estável:** `ExamCollectionReceiptScannerModal.tsx` agora mantém `idempotencyKeyRef` estável durante todo o fluxo de conferência humana e submissão, substituindo o antigo loop sequencial de salvamento por uma chamada única a `api.createExamReceiptBatch`.
+- **Eliminação de Colisão de IDs:** Identificadores em memória foram robustecidos com sufixos criptográficos randômicos (`exam-${Date.now()}-${random}`), eliminando colisões em operações síncronas.
 
 ---
 
-## 4. Plano de Sanitização Seguro em 3 Etapas
+### Prioridade 3: Classificação e Textos das Pendências na Agenda
+- **Classificação Semântica (`categoriaAlerta`):**
+  - Consultas sem data confirmada: `aguardando_agendamento`.
+  - Exames no status `solicitado`: `aguardando_agendamento`.
+  - Exames com data agendada indefinida: `aguardando_agendamento`.
+  - Exames coletados com prazo ultrapassado: `previsao_resultado_vencida`.
+  - Exames com laudo pronto emitido (`resultado_disponivel`): `resultado_disponivel`.
+  - Exames concluídos (`retirado`): `retirado_em_maos`.
+- **Desmembramento dos Contadores na Agenda:** `AgendaUnificadaResponse` agora retorna contadores específicos (`totalAgendamentosSemData` e `totalLaudosDisponiveis`), preservando `totalPendenciasSemData` para retrocompatibilidade.
+- **Ajuste nos Cabeçalhos e Caixas de Alerta:**
+  - Em `AgendaUnifiedView.tsx`, o acordeão e o título da seção calculam textos contextuais claros (ex.: *"Você possui 1 agendamento a marcar e 1 laudo disponível"* ou *"Laudos Disponíveis para Consulta / Retirada"*).
+  - Em `AgendaCard.tsx`, se `categoriaAlerta === 'resultado_disponivel'`, a caixa de alerta exibe *"Laudo Liberado pelo Laboratório:"* com badge esmeralda *"Laudo Liberado"* no lugar de *"Data a Definir"* e *"Aguardando definição:"*.
+  - Se a previsão estiver vencida, exibe *"Previsão Ultrapassada:"* com alerta em tom rosado.
 
-### Etapa 1: Reconciliação do Índice de CPF da Rose (Sem Perda de Dados)
-- Executar via transação atômica no Firestore:
-  - Localizar a entrada em `cpf_registry` associada ao CPF da Rose.
-  - Atualizar o ponteiro `userId` e `entityId` de `demo-user-familiar` para o UID legítimo `4KqcQiz9zOgaf3RIVqQfapG8w9H3`.
-  - Atualizar o documento `users/4KqcQiz9zOgaf3RIVqQfapG8w9H3` com `cpfHash` e `cpfMasked` correspondentes.
-  - Com isso, a tela de bloqueio da Rose desaparece instantaneamente e seu acesso pleno é restaurado.
+---
 
-### Etapa 2: Backup e Exclusão Segura dos Artefatos Fictícios no Firestore
-- Gerar export/snapshot JSON dos documentos a serem excluídos (`users/demo-user-familiar`, `users/demo-user-cuidador`, `families/fam-demo-123`, `patients/pat-dona-maria`).
-- Executar exclusão permanente apenas desses 4 IDs conhecidos, garantindo por verificação explícita que nenhum UID real seja tocado.
-- Excluir registros em `cpf_registry` que pertençam unicamente ao CPF sintético de teste `11144477735`.
+### Backlog Técnico Preservado (Não Implementado nesta Etapa)
+- **UX-01:** Tipografia ampliada e legibilidade avançada.
+- **UX-02:** Otimização de largura de tela em monitores desktop ultrawide.
+- **PROPOSTA-01:** Módulo completo de ciclo de retorno médico, condutas e encaminhamentos.
 
-### Etapa 3: Higienização de Código e Blindagem Final de Ambientes
-- Remover do `authService.ts` a função `loginAsDemo()` e o chaveamento de tokens fictícios em `safeStorage`.
-- Manter `MemoryRepositories.ts` exclusivamente vinculado à execução do runner de testes (`NODE_ENV === 'test'`).
-- Manter o bloqueio definitivo em `server/middlewares/requireAuth.ts` e `server/routes/api.ts`.
+---
+
+## 2. Testes e Validação Executados
+
+1. **Testes Unitários e Integrados (`test/audit-e2e-collection-receipt-and-credentials.test.ts`):**
+   - Teste 1: Validação de integridade semântica dos campos extraídos.
+   - Teste 2: Persistência e recuperação integral dos campos no repositório.
+   - Teste 3: Auditoria de vazamento de senhas em `ItemAgenda`.
+   - Teste 4: Omissão padrão de senhas no compartilhamento familiar via WhatsApp/texto.
+   - Teste 5: Diagnóstico do comportamento legado de falha parcial.
+   - Teste 6: Auditoria de regra de negócio para laudos disponíveis.
+   - Teste 7: Gravação atômica em lote e idempotência com retentativa sem duplicidade.
+   - Teste 8: Mascaramento padrão no servidor e revelação sob demanda com autorização.
+   - Teste 9: Classificação semântica por `categoriaAlerta` e desmembramento de contadores na Agenda.
+2. **Suíte Completa de Testes (`npm test`):**
+   - **88 testes executados**, 15 suítes, **100% de sucesso (88 pass / 0 fail)**.
+3. **Validação de Tipos e Linter (`tsc --noEmit` / `lint_applet`):**
+   - Execução limpa, zero erros de sintaxe ou tipos (`exit code 0`).
+4. **Compilação da Aplicação (`compile_applet`):**
+   - Build de produção gerado com sucesso sem avisos impeditivos.

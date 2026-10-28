@@ -3,6 +3,8 @@ import {
   Medication,
   Appointment,
   Exam,
+  ExamReceiptBatchRequest,
+  ExamReceiptBatchResponse,
   MedicalDocument,
   TimelineEvent,
   TimelineEventType,
@@ -48,6 +50,11 @@ export interface IHealthRepository {
   createExam(data: Omit<Exam, 'id'>, familyId?: string): Promise<Exam>;
   updateExam(id: string, data: Partial<Exam>, familyId?: string, patientId?: string): Promise<Exam | null>;
   deleteExam(id: string, familyId?: string, patientId?: string): Promise<boolean>;
+  createExamReceiptBatch(
+    patientId: string,
+    batchData: ExamReceiptBatchRequest,
+    familyId?: string
+  ): Promise<ExamReceiptBatchResponse>;
 
   // Documents
   getDocuments(patientId: string, familyId?: string): Promise<MedicalDocument[]>;

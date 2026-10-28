@@ -206,10 +206,12 @@ export interface Exam {
   expectedResultDate?: string;
   resultAvailableDate?: string;
   resultConsultedDate?: string;
+  pickupDate?: string;
   laboratory?: string;
   protocolNumber?: string;
   accessUser?: string;
   accessPassword?: string;
+  hasAccessPassword?: boolean;
   accessCode?: string;
   portalUrl?: string;
   pickupInstructions?: string;
@@ -378,6 +380,13 @@ export type StatusAgenda =
 
 export type StatusPrazoItem = 'atrasado' | 'chegando' | 'no_prazo';
 
+export type CategoriaAlertaAgenda =
+  | 'aguardando_agendamento'
+  | 'previsao_resultado_vencida'
+  | 'resultado_disponivel'
+  | 'retirado_em_maos'
+  | 'sem_alerta';
+
 export interface ItemAgenda {
   id: string;
   patientId: string;
@@ -393,6 +402,7 @@ export interface ItemAgenda {
   status: StatusAgenda;
   statusRotulo: string;
   ehAlertaPendente: boolean;
+  categoriaAlerta?: CategoriaAlertaAgenda;
   motivoAlerta?: string;
   motivo?: string;
   instrucoesPreparo?: string;
@@ -411,9 +421,52 @@ export interface ItemAgenda {
   prazoRotulo?: string;
 }
 
+export interface ExamReceiptBatchItem {
+  name: string;
+  requestDate: string;
+  executionDate?: string;
+  expectedResultDate?: string;
+  pickupDate?: string;
+  laboratory?: string;
+  protocolNumber?: string;
+  portalUrl?: string;
+  accessUser?: string;
+  accessPassword?: string;
+  accessCode?: string;
+  pickupInstructions?: string;
+  requestingDoctor?: string;
+  status: ExamStatus;
+  notes?: string;
+}
+
+export interface ExamReceiptBatchRequest {
+  idempotencyKey: string;
+  archiveDocument?: {
+    title: string;
+    category?: DocumentCategory;
+    date: string;
+    doctor?: string;
+    notes?: string;
+    fileName: string;
+    fileType: string;
+    fileSize: string;
+    extractedByAi?: boolean;
+  };
+  exams: ExamReceiptBatchItem[];
+}
+
+export interface ExamReceiptBatchResponse {
+  success: boolean;
+  createdDocumentId?: string;
+  createdExams: Exam[];
+  isIdempotentReplay?: boolean;
+}
+
 export interface AgendaUnificadaResponse {
   totalItens: number;
   totalPendenciasSemData: number;
+  totalAgendamentosSemData?: number;
+  totalLaudosDisponiveis?: number;
   itensConfirmados: ItemAgenda[];
   itensPendentes: ItemAgenda[];
   linhaDoTempoGeral: ItemAgenda[];

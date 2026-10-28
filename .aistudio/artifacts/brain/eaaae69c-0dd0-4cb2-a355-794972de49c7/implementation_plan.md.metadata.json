@@ -1,6 +1,6 @@
 {
-  "summary":  "Relatório Técnico da Fase 1: Diagnóstico Obrigatório, Mapeamento de Ambientes (GCP/Firebase), Inventário Estruturado de Dados de Teste/Demonstração e Plano de Sanitização Seguro para o Saúde Familiar.",
-  "updatedAt":  "2026-10-26T19:57:56.156789968Z",
+  "summary":  "Relatório de Execução das Três Prioridades Técnicas Aprovadas:\n1. Segurança de credenciais com isolamento estrito de notas livres e revelação sob demanda autorizada no servidor.\n2. Integridade e idempotência no salvamento em lote de comprovantes com múltiplos exames via chave de idempotência persistida.\n3. Classificação e textos semânticos das pendências na Agenda Unificada diferenciando agendamentos pendentes de laudos liberados.\nBacklog técnico (UX-01, UX-02 e PROPOSTA-01) preservado conforme alinhamento.",
+  "updatedAt":  "2026-10-28T15:13:24.567737786Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

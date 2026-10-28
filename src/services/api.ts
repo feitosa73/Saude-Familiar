@@ -3,6 +3,8 @@ import {
   Medication,
   Appointment,
   Exam,
+  ExamReceiptBatchRequest,
+  ExamReceiptBatchResponse,
   MedicalDocument,
   TimelineEvent,
   DashboardData,
@@ -494,6 +496,18 @@ export const api = {
   deleteExam: (id: string) =>
     request<{ success: boolean }>(`/exams/${id}`, {
       method: 'DELETE',
+    }),
+  revealExamPassword: (examId: string, patientId?: string) =>
+    request<{ success: boolean; accessPassword: string | null; hasAccessPassword: boolean }>(
+      `/exams/${examId}/reveal-password${patientId ? `?patientId=${patientId}` : ''}`,
+      {
+        method: 'POST',
+      }
+    ),
+  createExamReceiptBatch: (patientId: string, data: ExamReceiptBatchRequest) =>
+    request<ExamReceiptBatchResponse>(`/patients/${patientId}/exams/receipt-batch`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 
   // Documents

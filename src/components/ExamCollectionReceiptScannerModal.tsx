@@ -93,6 +93,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
 
   const safePatientName = patient?.name || 'Paciente';
   const safeToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -143,6 +144,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     setGeneralNotes('');
     setExams([]);
     setArchiveInDocuments(true);
+    idempotencyKeyRef.current = crypto.randomUUID();
   };
 
   const handleClose = () => {
@@ -344,84 +346,80 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
       const today = new Date().toISOString().split('T')[0];
       const collectionDateToUse = collectionDate || today;
 
-      // 1. Optionally archive file in Medical Documents
-      let createdDocId: string | undefined = undefined;
-      if (archiveInDocuments && selectedFile) {
-        try {
-          const docNotes = [
-            laboratory ? `Laboratório/Clínica: ${laboratory}` : '',
-            protocolNumber ? `Protocolo/Atendimento: ${protocolNumber}` : '',
-            portalUrl ? `Portal de Resultados: ${portalUrl}` : '',
-            accessUser ? `Login/Usuário: ${accessUser}` : '',
-            accessCode ? `Código/Chave: ${accessCode}` : '',
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = crypto.randomUUID();
+      }
+
+      // Notas livres sem credenciais de acesso (credenciais são estritamente isoladas em seus campos tipados)
+      const docNotes = [
+        laboratory ? `Laboratório/Clínica: ${laboratory}` : '',
+        protocolNumber ? `Protocolo/Atendimento: ${protocolNumber}` : '',
+        portalUrl ? `Portal de Resultados: ${portalUrl}` : '',
+        expectedResultDate ? `Previsão de Resultado: ${expectedResultDate}` : '',
+        pickupLocationOrInstructions ? `Instruções: ${pickupLocationOrInstructions}` : '',
+        generalNotes,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      const batchPayload = {
+        idempotencyKey: idempotencyKeyRef.current,
+        archiveDocument:
+          archiveInDocuments && selectedFile
+            ? {
+                title: `Comprovante de Coleta - ${laboratory || 'Exames'}`,
+                category: 'pedido_exame' as const,
+                date: collectionDateToUse,
+                doctor: requestingDoctor || undefined,
+                notes: docNotes || undefined,
+                fileName: selectedFile.name,
+                fileType: selectedFile.type,
+                fileSize: `${(selectedFile.size / 1024).toFixed(0)} KB`,
+                extractedByAi: true,
+              }
+            : undefined,
+        exams: validExams.map((item) => {
+          const notesParts = [
+            laboratory ? `Laboratório: ${laboratory}` : '',
+            protocolNumber ? `Protocolo: ${protocolNumber}` : '',
+            portalUrl ? `Portal: ${portalUrl}` : '',
             expectedResultDate ? `Previsão de Resultado: ${expectedResultDate}` : '',
-            pickupLocationOrInstructions ? `Instruções: ${pickupLocationOrInstructions}` : '',
-            generalNotes,
-          ]
-            .filter(Boolean)
-            .join(' | ');
+            pickupDate ? `Data de Retirada: ${pickupDate}` : '',
+            pickupLocationOrInstructions ? `Local/Instruções: ${pickupLocationOrInstructions}` : '',
+            item.notes ? `Nota do Exame: ${item.notes}` : '',
+            generalNotes ? `Observações do Comprovante: ${generalNotes}` : '',
+          ].filter(Boolean);
 
-          const doc = await api.createDocument(patient.id, {
-            title: `Comprovante de Coleta - ${laboratory || 'Exames'}`,
-            category: 'pedido_exame',
-            date: collectionDateToUse,
-            doctor: requestingDoctor || undefined,
-            notes: docNotes || undefined,
-            fileName: selectedFile.name,
-            fileType: selectedFile.type,
-            fileSize: `${(selectedFile.size / 1024).toFixed(0)} KB`,
-            extractedByAi: true,
-          });
-          createdDocId = doc.id;
-        } catch (docErr) {
-          console.warn('[ExamReceiptScanner] Não foi possível salvar o arquivo como documento:', docErr);
-        }
-      }
+          return {
+            name: item.examName.trim(),
+            requestDate: collectionDateToUse,
+            executionDate: collectionDateToUse,
+            expectedResultDate: expectedResultDate || undefined,
+            pickupDate: pickupDate || undefined,
+            laboratory: laboratory.trim() || undefined,
+            protocolNumber: protocolNumber.trim() || undefined,
+            portalUrl: portalUrl.trim() || undefined,
+            accessUser: accessUser.trim() || undefined,
+            accessPassword: accessPassword.trim() || undefined,
+            accessCode: accessCode.trim() || undefined,
+            pickupInstructions: pickupLocationOrInstructions.trim() || undefined,
+            requestingDoctor: requestingDoctor.trim() || patient?.primaryDoctor || 'Médico Assistente',
+            status: 'realizado' as const,
+            notes: notesParts.join('\n') || undefined,
+          };
+        }),
+      };
 
-      // 2. Register each exam from the collection receipt with credentials
-      let successCount = 0;
-      for (const item of validExams) {
-        const notesParts = [
-          laboratory ? `Laboratório: ${laboratory}` : '',
-          protocolNumber ? `Protocolo: ${protocolNumber}` : '',
-          portalUrl ? `Portal: ${portalUrl}` : '',
-          accessUser ? `Usuário/Login: ${accessUser}` : '',
-          accessCode ? `Código: ${accessCode}` : '',
-          expectedResultDate ? `Previsão de Resultado: ${expectedResultDate}` : '',
-          pickupDate ? `Data de Retirada: ${pickupDate}` : '',
-          pickupLocationOrInstructions ? `Local/Instruções: ${pickupLocationOrInstructions}` : '',
-          item.notes ? `Nota do Exame: ${item.notes}` : '',
-          generalNotes ? `Observações do Comprovante: ${generalNotes}` : '',
-        ].filter(Boolean);
-
-        await api.createExam(patient.id, {
-          name: item.examName.trim(),
-          requestDate: collectionDateToUse,
-          executionDate: collectionDateToUse,
-          expectedResultDate: expectedResultDate || undefined,
-          laboratory: laboratory.trim() || undefined,
-          protocolNumber: protocolNumber.trim() || undefined,
-          portalUrl: portalUrl.trim() || undefined,
-          accessUser: accessUser.trim() || undefined,
-          accessPassword: accessPassword.trim() || undefined,
-          accessCode: accessCode.trim() || undefined,
-          pickupInstructions: pickupLocationOrInstructions.trim() || undefined,
-          requestingDoctor: requestingDoctor.trim() || patient?.primaryDoctor || 'Médico Assistente',
-          status: 'realizado', // Coleta realizada, aguardando resultado
-          notes: notesParts.join('\n') || undefined,
-          documentId: createdDocId,
-        });
-        successCount++;
-      }
+      const response = await api.createExamReceiptBatch(patient.id, batchPayload);
 
       safeToast(
-        `${successCount} exame(s) registrado(s) com sucesso a partir do comprovante de coleta!`,
+        `${response.createdExams.length} exame(s) registrado(s) com sucesso a partir do comprovante de coleta!`,
         'success'
       );
       handleClose();
       handleTriggerSuccess();
     } catch (err: any) {
-      console.error('[ReceiptScanner] Erro ao salvar exames:', err?.message);
+      console.error('[ReceiptScanner] Erro ao salvar exames em lote:', err?.message);
       safeToast(err.message || 'Erro ao registrar exames no prontuário.', 'error');
     } finally {
       setIsSaving(false);

@@ -6,6 +6,7 @@ import {
   MapPin,
   User,
   AlertCircle,
+  CheckCircle,
   FileCheck,
   Share2,
   Edit2,
@@ -142,6 +143,11 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
                 </div>
               )}
             </div>
+          ) : item.categoriaAlerta === 'resultado_disponivel' ? (
+            <div className="inline-flex items-center gap-1.5 bg-emerald-100/90 text-emerald-950 border border-emerald-300 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
+              <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>Laudo Liberado</span>
+            </div>
           ) : (
             <div className="inline-flex items-center gap-1.5 bg-amber-100/90 text-amber-950 border border-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
               <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
@@ -169,13 +175,45 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         </div>
       </div>
 
-      {/* Caixa de Alerta Amarelo com Motivo da Pendência */}
+      {/* Caixa de Alerta Contextual da Pendência */}
       {isPendente && item.motivoAlerta && (
-        <div className="mt-3 p-3 bg-amber-100/80 border border-amber-300 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+        <div
+          className={`mt-3 p-3 rounded-xl text-xs flex items-start gap-2.5 border ${
+            item.categoriaAlerta === 'resultado_disponivel'
+              ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+              : item.categoriaAlerta === 'previsao_resultado_vencida'
+              ? 'bg-rose-50/90 border-rose-300 text-rose-950'
+              : 'bg-amber-100/80 border-amber-300 text-amber-950'
+          }`}
+        >
+          {item.categoriaAlerta === 'resultado_disponivel' ? (
+            <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle
+              className={`w-4 h-4 shrink-0 mt-0.5 ${
+                item.categoriaAlerta === 'previsao_resultado_vencida' ? 'text-rose-700' : 'text-amber-700'
+              }`}
+            />
+          )}
           <div className="space-y-0.5">
-            <span className="font-bold block">Aguardando definição:</span>
-            <p className="leading-relaxed font-medium text-amber-900">
+            <span className="font-bold block">
+              {item.categoriaAlerta === 'resultado_disponivel'
+                ? 'Laudo Liberado pelo Laboratório:'
+                : item.categoriaAlerta === 'previsao_resultado_vencida'
+                ? 'Previsão Ultrapassada:'
+                : item.categoriaAlerta === 'aguardando_agendamento'
+                ? 'Aguardando Agendamento:'
+                : 'Aguardando definição:'}
+            </span>
+            <p
+              className={`leading-relaxed font-medium ${
+                item.categoriaAlerta === 'resultado_disponivel'
+                  ? 'text-emerald-900'
+                  : item.categoriaAlerta === 'previsao_resultado_vencida'
+                  ? 'text-rose-900'
+                  : 'text-amber-900'
+              }`}
+            >
               {item.motivoAlerta}
             </p>
           </div>

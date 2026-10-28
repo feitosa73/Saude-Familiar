@@ -4,6 +4,8 @@ import {
   Medication,
   Appointment,
   Exam,
+  ExamReceiptBatchRequest,
+  ExamReceiptBatchResponse,
   MedicalDocument,
   TimelineEvent,
   TimelineEventType,
@@ -874,6 +876,116 @@ export class FirestoreHealthRepository implements IHealthRepository {
       .delete();
 
     return true;
+  }
+
+  async createExamReceiptBatch(
+    patientId: string,
+    batchData: ExamReceiptBatchRequest,
+    familyId?: string
+  ): Promise<ExamReceiptBatchResponse> {
+    if (!familyId) throw new Error('familyId é obrigatório');
+
+    const idempotencyRef = this.db
+      .collection('families')
+      .doc(familyId)
+      .collection('idempotency_keys')
+      .doc(batchData.idempotencyKey);
+
+    const idempotencyDoc = await idempotencyRef.get();
+    if (idempotencyDoc.exists) {
+      const cached = idempotencyDoc.data() as ExamReceiptBatchResponse;
+      return {
+        ...cached,
+        isIdempotentReplay: true,
+      };
+    }
+
+    const batch = this.db.batch();
+    const now = new Date().toISOString();
+
+    let createdDocumentId: string | undefined = undefined;
+    if (batchData.archiveDocument) {
+      const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const docRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('documents')
+        .doc(docId);
+
+      const doc: MedicalDocument = {
+        id: docId,
+        patientId,
+        title: batchData.archiveDocument.title,
+        category: batchData.archiveDocument.category || 'pedido_exame',
+        date: batchData.archiveDocument.date,
+        doctor: batchData.archiveDocument.doctor,
+        notes: batchData.archiveDocument.notes,
+        fileName: batchData.archiveDocument.fileName,
+        fileType: batchData.archiveDocument.fileType,
+        fileSize: batchData.archiveDocument.fileSize,
+        extractedByAi: batchData.archiveDocument.extractedByAi ?? true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      batch.set(docRef, doc);
+      createdDocumentId = docId;
+    }
+
+    const createdExams: Exam[] = [];
+    for (let i = 0; i < batchData.exams.length; i++) {
+      const item = batchData.exams[i];
+      const examId = `exm_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 9)}`;
+      const examRef = this.db
+        .collection('families')
+        .doc(familyId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('exams')
+        .doc(examId);
+
+      const exam: Exam = {
+        id: examId,
+        patientId,
+        name: item.name,
+        requestDate: item.requestDate,
+        executionDate: item.executionDate,
+        expectedResultDate: item.expectedResultDate,
+        pickupDate: item.pickupDate,
+        laboratory: item.laboratory,
+        protocolNumber: item.protocolNumber,
+        portalUrl: item.portalUrl,
+        accessUser: item.accessUser,
+        accessPassword: item.accessPassword,
+        accessCode: item.accessCode,
+        pickupInstructions: item.pickupInstructions,
+        requestingDoctor: item.requestingDoctor || 'Médico Assistente',
+        status: item.status,
+        notes: item.notes,
+        documentId: createdDocumentId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      batch.set(examRef, exam);
+      createdExams.push(exam);
+    }
+
+    const responseSnapshot: ExamReceiptBatchResponse = {
+      success: true,
+      createdDocumentId,
+      createdExams,
+      isIdempotentReplay: false,
+    };
+
+    batch.set(idempotencyRef, {
+      ...responseSnapshot,
+      createdAt: now,
+    });
+
+    await batch.commit();
+
+    return responseSnapshot;
   }
 
   // =========================================================================

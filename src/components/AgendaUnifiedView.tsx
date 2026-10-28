@@ -120,10 +120,59 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
     });
   }, [items, filtroTipo, searchTerm]);
 
-  // Separação em pendências (sem data) e confirmados (com data)
+  // Separação em pendências (sem data ou laudos a retirar) e confirmados (com data)
   const pendencias = useMemo(() => itensFiltrados.filter((i) => i.ehAlertaPendente), [itensFiltrados]);
   const confirmados = useMemo(() => itensFiltrados.filter((i) => !i.ehAlertaPendente), [itensFiltrados]);
   const temMuitasPendencias = pendencias.length > 2;
+
+  const agendamentosPendentes = useMemo(
+    () => pendencias.filter((i) => i.categoriaAlerta === 'aguardando_agendamento'),
+    [pendencias]
+  );
+  const laudosDisponiveis = useMemo(
+    () => pendencias.filter((i) => i.categoriaAlerta === 'resultado_disponivel'),
+    [pendencias]
+  );
+  const prazosVencidos = useMemo(
+    () => pendencias.filter((i) => i.categoriaAlerta === 'previsao_resultado_vencida'),
+    [pendencias]
+  );
+
+  const tituloPendencias = useMemo(() => {
+    const partes: string[] = [];
+    if (agendamentosPendentes.length > 0) {
+      partes.push(`${agendamentosPendentes.length} agendamento(s) a marcar`);
+    }
+    if (laudosDisponiveis.length > 0) {
+      partes.push(`${laudosDisponiveis.length} laudo(s) disponível(is)`);
+    }
+    if (prazosVencidos.length > 0) {
+      partes.push(`${prazosVencidos.length} previsão(ões) vencida(s)`);
+    }
+    if (partes.length === 0) {
+      return `Você possui ${pendencias.length} pendência(s) ativa(s)`;
+    }
+    return `Você possui ${partes.join(' e ')}`;
+  }, [agendamentosPendentes.length, laudosDisponiveis.length, prazosVencidos.length, pendencias.length]);
+
+  const subtituloPendencias = useMemo(() => {
+    if (laudosDisponiveis.length > 0 && agendamentosPendentes.length === 0) {
+      return 'Clique para consultar os laudos ou marcar a retirada no laboratório';
+    }
+    return isAccordionOpen
+      ? 'Clique para recolher a lista'
+      : 'Clique para visualizar detalhes, credenciais de laudo ou agendar pendências';
+  }, [laudosDisponiveis.length, agendamentosPendentes.length, isAccordionOpen]);
+
+  const rotuloSecaoPequena = useMemo(() => {
+    if (laudosDisponiveis.length > 0 && agendamentosPendentes.length === 0) {
+      return `Laudos Disponíveis para Consulta / Retirada (${laudosDisponiveis.length})`;
+    }
+    if (agendamentosPendentes.length > 0 && laudosDisponiveis.length > 0) {
+      return `Agendamentos Pendentes e Laudos Prontos (${pendencias.length})`;
+    }
+    return `Aguardando Agendamento ou Liberação (${pendencias.length})`;
+  }, [laudosDisponiveis.length, agendamentosPendentes.length, pendencias.length]);
 
   // Abertura de Criação de Consulta
   const handleOpenNovaConsulta = () => {
@@ -480,10 +529,10 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   </div>
                   <div>
                     <h2 id="secao-pendencias-sem-data" className="text-sm font-bold text-amber-950">
-                      Você possui {pendencias.length} agendamentos aguardando liberação ou data
+                      {tituloPendencias}
                     </h2>
                     <p className="text-xs text-amber-800/90">
-                      {isAccordionOpen ? 'Clique para recolher a lista' : 'Clique para visualizar e agendar com o convênio ou posto de saúde'}
+                      {subtituloPendencias}
                     </p>
                   </div>
                 </div>
@@ -517,7 +566,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-amber-900 uppercase tracking-wider">
                 <AlertCircle className="w-4 h-4 text-amber-600" />
-                <h2 id="secao-pendencias-sem-data">Aguardando Agendamento ou Liberação ({pendencias.length})</h2>
+                <h2 id="secao-pendencias-sem-data">{rotuloSecaoPequena}</h2>
               </div>
               <div className="space-y-3">
                 {pendencias.map((item) => (

@@ -5,7 +5,7 @@ import { IHealthRepository } from '../repositories/IRepository';
 import { FirestoreHealthRepository } from '../repositories/FirestoreHealthRepository';
 import { IFamilyRepository } from '../repositories/IFamilyRepository';
 import { FirestoreFamilyRepository } from '../repositories/FirestoreFamilyRepository';
-import { TimelineEventType, PatientRole, UserMeResponse, FamilyMembership } from '../types';
+import { TimelineEventType, PatientRole, UserMeResponse, FamilyMembership, Exam } from '../types';
 import { ServerAuthorizationService } from '../services/authorizationService';
 import { prescriptionAiService } from '../services/prescriptionAiService';
 import { examAiService } from '../services/examAiService';
@@ -2333,6 +2333,15 @@ export function createApiRouter(
     }
   );
 
+  const sanitizeExamForClient = (exam: Exam): Exam => {
+    const hasPassword = Boolean(exam.accessPassword && exam.accessPassword.trim().length > 0);
+    return {
+      ...exam,
+      accessPassword: hasPassword ? '••••••••' : undefined,
+      hasAccessPassword: hasPassword,
+    };
+  };
+
   // 9. Exams (Protected)
   router.get(
     '/patients/:patientId/exams',
@@ -2342,7 +2351,7 @@ export function createApiRouter(
       try {
         const familyId = req.membership!.familyId;
         const exams = await repository.getExams(req.params.patientId, familyId);
-        res.json(exams);
+        res.json(exams.map(sanitizeExamForClient));
       } catch (error) {
         console.error('Error fetching exams:', error);
         res.status(500).json({ error: 'Erro ao buscar exames' });
@@ -2414,10 +2423,96 @@ export function createApiRouter(
           },
           familyId
         );
-        res.status(201).json(newExam);
+        res.status(201).json(sanitizeExamForClient(newExam));
       } catch (error) {
         console.error('Error creating exam:', error);
         res.status(500).json({ error: 'Erro ao cadastrar exame' });
+      }
+    }
+  );
+
+  // 9.1 Revelação de Senha sob Demanda (Protegida e Autorizada no Servidor)
+  router.post(
+    '/exams/:id/reveal-password',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const patientId = req.query.patientId as string | undefined;
+        const exam = await repository.getExamById(req.params.id, familyId, patientId);
+        if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
+
+        const userId = getCurrentUserId(req);
+        const canView = await authzService.canViewPatient(userId, exam.patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Você não possui autorização para consultar credenciais deste paciente',
+          });
+        }
+
+        res.json({
+          success: true,
+          accessPassword: exam.accessPassword || null,
+          hasAccessPassword: Boolean(exam.accessPassword && exam.accessPassword.trim().length > 0),
+        });
+      } catch (error) {
+        console.error('Error revealing exam password:', error);
+        res.status(500).json({ error: 'Erro ao consultar senha de acesso do exame' });
+      }
+    }
+  );
+
+  // 9.2 Gravação em Lote de Comprovante de Coleta com Idempotência
+  router.post(
+    '/patients/:patientId/exams/receipt-batch',
+    requireAuth,
+    requireActiveMembership,
+    async (req: AuthorizedFamilyRequest, res: Response) => {
+      try {
+        const familyId = req.membership!.familyId;
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canManage = await authzService.canManageExams(userId, patientId, familyId);
+        if (!canManage && req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Você não possui permissão para cadastrar exames para este paciente',
+          });
+        }
+
+        const { idempotencyKey, archiveDocument, exams } = req.body;
+        if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+          return res.status(400).json({ error: 'Chave de idempotência (idempotencyKey) é obrigatória.' });
+        }
+
+        if (!Array.isArray(exams) || exams.length === 0) {
+          return res.status(400).json({ error: 'A lista de exames não pode ser vazia.' });
+        }
+
+        for (const item of exams) {
+          if (!item.name || !String(item.name).trim()) {
+            return res.status(400).json({ error: 'Nome do exame é obrigatório para todos os itens do lote.' });
+          }
+        }
+
+        const result = await repository.createExamReceiptBatch(
+          patientId,
+          {
+            idempotencyKey,
+            archiveDocument,
+            exams,
+          },
+          familyId
+        );
+
+        res.status(201).json({
+          ...result,
+          createdExams: result.createdExams.map(sanitizeExamForClient),
+        });
+      } catch (error: any) {
+        console.error('[API] Error creating exam receipt batch:', error);
+        res.status(500).json({ error: error.message || 'Erro ao processar lote de comprovante de exame' });
       }
     }
   );
@@ -2432,7 +2527,7 @@ export function createApiRouter(
         const patientId = req.query.patientId as string | undefined;
         const exam = await repository.getExamById(req.params.id, familyId, patientId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
-        res.json(exam);
+        res.json(sanitizeExamForClient(exam));
       } catch (error) {
         console.error('Error fetching exam:', error);
         res.status(500).json({ error: 'Erro ao buscar exame' });
@@ -2459,8 +2554,14 @@ export function createApiRouter(
           });
         }
 
-        const updated = await repository.updateExam(req.params.id, req.body, familyId, exam.patientId);
-        res.json(updated);
+        const updatePayload = { ...req.body };
+        // Impede que a máscara com bolinhas enviada pelo cliente sobrescreva a senha real salva no servidor
+        if (updatePayload.accessPassword === '••••••••') {
+          delete updatePayload.accessPassword;
+        }
+
+        const updated = await repository.updateExam(req.params.id, updatePayload, familyId, exam.patientId);
+        res.json(updated ? sanitizeExamForClient(updated) : null);
       } catch (error) {
         console.error('Error updating exam:', error);
         res.status(500).json({ error: 'Erro ao atualizar exame' });

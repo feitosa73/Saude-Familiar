@@ -59,8 +59,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [isExamAiModalOpen, setIsExamAiModalOpen] = useState(false);
   const [isReceiptScannerModalOpen, setIsReceiptScannerModalOpen] = useState(false);
 
-  // Passwords revealed state in list cards
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  // Passwords revealed on-demand state in list cards
+  const [revealedPasswordsMap, setRevealedPasswordsMap] = useState<Record<string, string>>({});
+  const [revealedVisibilityState, setRevealedVisibilityState] = useState<Record<string, boolean>>({});
+  const [loadingPasswordId, setLoadingPasswordId] = useState<string | null>(null);
 
   // Secure Share Modal State
   const [sharingExam, setSharingExam] = useState<Exam | null>(null);
@@ -107,8 +109,33 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     fetchExamsAndDocs();
   }, [selectedPatient]);
 
-  const togglePasswordVisibility = (examId: string) => {
-    setRevealedPasswords((prev) => ({ ...prev, [examId]: !prev[examId] }));
+  const togglePasswordVisibility = async (examId: string) => {
+    const isCurrentlyVisible = Boolean(revealedVisibilityState[examId]);
+    if (isCurrentlyVisible) {
+      setRevealedVisibilityState((prev) => ({ ...prev, [examId]: false }));
+      return;
+    }
+
+    if (revealedPasswordsMap[examId]) {
+      setRevealedVisibilityState((prev) => ({ ...prev, [examId]: true }));
+      return;
+    }
+
+    try {
+      setLoadingPasswordId(examId);
+      const res = await api.revealExamPassword(examId, selectedPatient?.id);
+      if (res.success && res.accessPassword) {
+        setRevealedPasswordsMap((prev) => ({ ...prev, [examId]: res.accessPassword! }));
+        setRevealedVisibilityState((prev) => ({ ...prev, [examId]: true }));
+      } else {
+        showToast('Nenhuma senha cadastrada para este exame.', 'info');
+      }
+    } catch (err: any) {
+      console.error('Erro ao revelar senha do exame:', err);
+      showToast('Não foi possível carregar a senha segura.', 'error');
+    } finally {
+      setLoadingPasswordId(null);
+    }
   };
 
   const resetForm = () => {
@@ -182,7 +209,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         protocolNumber: protocolNumber.trim() || undefined,
         portalUrl: portalUrl.trim() || undefined,
         accessUser: accessUser.trim() || undefined,
-        accessPassword: accessPassword.trim() || undefined,
+        accessPassword:
+          accessPassword.trim() && accessPassword.trim() !== '••••••••'
+            ? accessPassword.trim()
+            : undefined,
         accessCode: accessCode.trim() || undefined,
         pickupInstructions: pickupInstructions.trim() || undefined,
         status,
@@ -539,8 +569,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             const isRealizado = exam.status === 'realizado';
             const isRetirado = exam.status === 'retirado';
             const expectedInfo = getExpectedDateInfo(exam.expectedResultDate, exam.status);
-            const hasCredentials = Boolean(exam.accessUser || exam.accessPassword || exam.accessCode || exam.portalUrl);
-            const isPasswordRevealed = Boolean(revealedPasswords[exam.id]);
+            const hasCredentials = Boolean(
+              exam.accessUser ||
+                exam.accessPassword ||
+                exam.hasAccessPassword ||
+                exam.accessCode ||
+                exam.portalUrl
+            );
+            const revealedPw = revealedPasswordsMap[exam.id];
+            const isPasswordRevealed = Boolean(revealedVisibilityState[exam.id] && revealedPw);
 
             return (
               <div
@@ -701,19 +738,26 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                             </div>
                           )}
 
-                          {exam.accessPassword && (
+                          {(exam.accessPassword || exam.hasAccessPassword) && (
                             <div className="flex items-center gap-1.5">
                               <span className="text-slate-500 font-sans">Senha: </span>
                               <strong className="text-slate-800">
-                                {isPasswordRevealed ? exam.accessPassword : '••••••••'}
+                                {isPasswordRevealed ? revealedPw : '••••••••'}
                               </strong>
                               <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility(exam.id)}
+                                disabled={loadingPasswordId === exam.id}
                                 className="p-0.5 text-indigo-600 hover:text-indigo-800"
                                 title={isPasswordRevealed ? 'Ocultar senha' : 'Ver senha'}
                               >
-                                {isPasswordRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                {loadingPasswordId === exam.id ? (
+                                  <span className="text-[10px] animate-pulse">...</span>
+                                ) : isPasswordRevealed ? (
+                                  <EyeOff className="w-3 h-3" />
+                                ) : (
+                                  <Eye className="w-3 h-3" />
+                                )}
                               </button>
                             </div>
                           )}
