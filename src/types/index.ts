@@ -208,6 +208,10 @@ export interface Exam {
   resultConsultedDate?: string;
   laboratory?: string;
   protocolNumber?: string;
+  accessUser?: string;
+  accessPassword?: string;
+  accessCode?: string;
+  portalUrl?: string;
   pickupInstructions?: string;
   status: ExamStatus;
   notes?: string;
@@ -292,6 +296,10 @@ export interface ExtractedCollectionItem {
 export interface ExtractedCollectionReceiptResponse {
   laboratory?: string;
   protocolNumber?: string;
+  accessUser?: string;
+  accessPassword?: string;
+  accessCode?: string;
+  portalUrl?: string;
   collectionDate?: string;
   expectedResultDate?: string;
   pickupDate?: string;
@@ -395,6 +403,9 @@ export interface ItemAgenda {
   laboratorio?: string;
   numeroProtocolo?: string;
   dataPrevisaoResultado?: string;
+  portalUrl?: string;
+  temCredenciaisAcesso?: boolean;
+  temSenhaAcesso?: boolean;
   prazoStatus?: StatusPrazoItem;
   diasParaData?: number;
   prazoRotulo?: string;

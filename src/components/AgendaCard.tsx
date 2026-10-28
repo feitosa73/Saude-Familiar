@@ -198,6 +198,31 @@ export const AgendaCard: React.FC<AgendaCardProps> = ({
         </div>
       )}
 
+      {/* Portal e Credenciais no Card da Agenda */}
+      {item.tipo === 'exame' && (item.portalUrl || item.temCredenciaisAcesso) && (
+        <div className="mt-2.5 p-2 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-950 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span className="font-semibold text-indigo-900">Acesso ao Laudo:</span>
+            {item.temCredenciaisAcesso && (
+              <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                Login e Senha salvos
+              </span>
+            )}
+          </div>
+          {item.portalUrl && (
+            <a
+              href={item.portalUrl.startsWith('http') ? item.portalUrl : `https://${item.portalUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 text-[11px]"
+            >
+              <span>Portal de Resultados</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Rodapé com Local, Documento Vinculado e Botão Avisar Família */}
       <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">

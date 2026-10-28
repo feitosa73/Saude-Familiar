@@ -307,4 +307,117 @@ describe('Módulo de Exames: Ciclo de Vida, Comprovante de Coleta e Alertas de A
     assert.strictEqual(canCreateCaregiver, true, 'Cuidador autorizado pode criar exames');
     assert.strictEqual(canViewCaregiver, true, 'Cuidador autorizado pode visualizar exames');
   });
+
+  it('10. Suporte e persistência de credenciais do portal do laboratório (login, senha, código e URL)', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+
+    const examWithCredentials = await healthRepo.createExam({
+      patientId: 'pat-credentials',
+      name: 'Painel Lipídico Completo',
+      requestingDoctor: 'Dr. Leonardo Cardiologista',
+      requestDate: '2026-10-28',
+      laboratory: 'Laboratório Fleury',
+      protocolNumber: 'FL-99210-SP',
+      portalUrl: 'https://portal.fleury.com.br/resultados',
+      accessUser: '982736152',
+      accessPassword: 'SenhaSegura123',
+      accessCode: 'LOC-7721',
+      expectedResultDate: '2026-11-02',
+      status: 'realizado',
+    });
+
+    assert.ok(examWithCredentials.id);
+    assert.strictEqual(examWithCredentials.laboratory, 'Laboratório Fleury');
+    assert.strictEqual(examWithCredentials.protocolNumber, 'FL-99210-SP');
+    assert.strictEqual(examWithCredentials.portalUrl, 'https://portal.fleury.com.br/resultados');
+    assert.strictEqual(examWithCredentials.accessUser, '982736152');
+    assert.strictEqual(examWithCredentials.accessPassword, 'SenhaSegura123');
+    assert.strictEqual(examWithCredentials.accessCode, 'LOC-7721');
+
+    // Recuperação
+    const retrieved = await healthRepo.getExamById(examWithCredentials.id);
+    assert.ok(retrieved);
+    assert.strictEqual(retrieved?.accessUser, '982736152');
+    assert.strictEqual(retrieved?.accessPassword, 'SenhaSegura123');
+    assert.strictEqual(retrieved?.accessCode, 'LOC-7721');
+    assert.strictEqual(retrieved?.portalUrl, 'https://portal.fleury.com.br/resultados');
+  });
+
+  it('11. Agenda Unificada: reflete portalUrl e sinaliza presença de credenciais sem vazar senhas em texto puro', async () => {
+    const familyRepo = new MemoryFamilyRepository();
+    const healthRepo = new MemoryHealthRepository(familyRepo);
+    const agendaService = new AgendaService(healthRepo);
+
+    await healthRepo.createExam({
+      patientId: 'pat-agenda-cred',
+      name: 'Hemograma e Ferritina',
+      requestingDoctor: 'Dra. Camila',
+      requestDate: '2026-10-28',
+      status: 'realizado',
+      expectedResultDate: '2026-11-04',
+      laboratory: 'Laboratório Lavoisier',
+      protocolNumber: 'LAV-3321',
+      portalUrl: 'https://lavoisier.com.br/laudos',
+      accessUser: 'paciente.maria',
+      accessPassword: 'SecretPassword99',
+    });
+
+    const agenda = await agendaService.getAgendaUnificada('pat-agenda-cred', 'fam-cred');
+    const item = agenda.linhaDoTempoGeral.find((i) => i.titulo === 'Hemograma e Ferritina');
+
+    assert.ok(item, 'Item de exame deve constar na agenda');
+    assert.strictEqual(item.portalUrl, 'https://lavoisier.com.br/laudos');
+    assert.strictEqual(item.temCredenciaisAcesso, true, 'Deve indicar que o exame possui credenciais de acesso cadastradas');
+    assert.strictEqual(item.temSenhaAcesso, true, 'Deve indicar presença de senha');
+  });
+
+  it('12. Compartilhamento Familiar Seguro: Omissão padrão de senhas e inclusão apenas com flag explícita', async () => {
+    // Importação dinâmica das funções utilitárias de compartilhamento
+    const { buildExamShareText } = await import('../src/utils/shareUtils');
+
+    const examData = {
+      patientName: 'Dona Maria de Lourdes',
+      examName: 'Ressonância Magnética de Crânio',
+      requestingDoctor: 'Dr. Lucas Neurologista',
+      dateStr: '28/10/2026',
+      statusLabel: 'Coleta Realizada (Aguardando laudo)',
+      laboratory: 'Hospital e Maternidade São Luiz',
+      protocolNumber: 'SL-884920',
+      expectedResultDate: '03/11/2026',
+      portalUrl: 'https://resultados.saoluiz.com.br',
+      accessUser: 'maria.lourdes',
+      accessPassword: 'SenhaUltraSecreta2026',
+      accessCode: 'CHAVE-9921',
+    };
+
+    // Caso A: Compartilhamento Padrão (includeCredentials NÃO informado ou false)
+    const defaultShare = buildExamShareText(examData);
+    assert.ok(defaultShare.text.includes('Ressonância Magnética de Crânio'));
+    assert.ok(defaultShare.text.includes('Hospital e Maternidade São Luiz'));
+    assert.ok(defaultShare.text.includes('SL-884920'));
+    assert.ok(defaultShare.text.includes('https://resultados.saoluiz.com.br'));
+    // CRÍTICO: NUNCA deve conter a senha nem o login por padrão
+    assert.strictEqual(
+      defaultShare.text.includes('SenhaUltraSecreta2026'),
+      false,
+      'A senha NUNCA pode ser incluída no compartilhamento padrão sem autorização explícita'
+    );
+    assert.strictEqual(
+      defaultShare.text.includes('maria.lourdes'),
+      false,
+      'O login não deve constar no compartilhamento comum'
+    );
+
+    // Caso B: Compartilhamento Explícito com Credenciais
+    const authorizedShare = buildExamShareText({
+      ...examData,
+      includeCredentials: true,
+    });
+    assert.ok(authorizedShare.text.includes('Dados de Acesso aos Resultados Online'));
+    assert.ok(authorizedShare.text.includes('maria.lourdes'));
+    assert.ok(authorizedShare.text.includes('SenhaUltraSecreta2026'));
+    assert.ok(authorizedShare.text.includes('CHAVE-9921'));
+    assert.ok(authorizedShare.text.includes('Informações confidenciais'));
+  });
 });

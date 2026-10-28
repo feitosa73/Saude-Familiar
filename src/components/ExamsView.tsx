@@ -23,6 +23,14 @@ import {
   AlertTriangle,
   FileText,
   Copy,
+  KeyRound,
+  Globe,
+  Lock,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { ExamReportScannerModal } from './ExamReportScannerModal';
 import { ExamCollectionReceiptScannerModal } from './ExamCollectionReceiptScannerModal';
@@ -51,6 +59,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [isExamAiModalOpen, setIsExamAiModalOpen] = useState(false);
   const [isReceiptScannerModalOpen, setIsReceiptScannerModalOpen] = useState(false);
 
+  // Passwords revealed state in list cards
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+
+  // Secure Share Modal State
+  const [sharingExam, setSharingExam] = useState<Exam | null>(null);
+  const [includeCredentialsInShare, setIncludeCredentialsInShare] = useState<boolean>(false);
+
   // Exam Form
   const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -60,6 +75,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [expectedResultDate, setExpectedResultDate] = useState('');
   const [laboratory, setLaboratory] = useState('');
   const [protocolNumber, setProtocolNumber] = useState('');
+  const [portalUrl, setPortalUrl] = useState('');
+  const [accessUser, setAccessUser] = useState('');
+  const [accessPassword, setAccessPassword] = useState('');
+  const [showFormPassword, setShowFormPassword] = useState(false);
+  const [accessCode, setAccessCode] = useState('');
   const [pickupInstructions, setPickupInstructions] = useState('');
   const [status, setStatus] = useState<ExamStatus>('solicitado');
   const [notes, setNotes] = useState('');
@@ -87,6 +107,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     fetchExamsAndDocs();
   }, [selectedPatient]);
 
+  const togglePasswordVisibility = (examId: string) => {
+    setRevealedPasswords((prev) => ({ ...prev, [examId]: !prev[examId] }));
+  };
+
   const resetForm = () => {
     setEditingExamId(null);
     setName('');
@@ -96,6 +120,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setExpectedResultDate('');
     setLaboratory('');
     setProtocolNumber('');
+    setPortalUrl('');
+    setAccessUser('');
+    setAccessPassword('');
+    setShowFormPassword(false);
+    setAccessCode('');
     setPickupInstructions('');
     setStatus('solicitado');
     setNotes('');
@@ -120,6 +149,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setExpectedResultDate(exam.expectedResultDate || '');
     setLaboratory(exam.laboratory || '');
     setProtocolNumber(exam.protocolNumber || '');
+    setPortalUrl(exam.portalUrl || '');
+    setAccessUser(exam.accessUser || '');
+    setAccessPassword(exam.accessPassword || '');
+    setShowFormPassword(false);
+    setAccessCode(exam.accessCode || '');
     setPickupInstructions(exam.pickupInstructions || '');
     setStatus(exam.status);
     setNotes(exam.notes || '');
@@ -138,35 +172,29 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
     try {
       setIsSubmitting(true);
+      const examPayload = {
+        name: name.trim(),
+        requestDate,
+        requestingDoctor: requestingDoctor.trim(),
+        executionDate: executionDate || undefined,
+        expectedResultDate: expectedResultDate || undefined,
+        laboratory: laboratory.trim() || undefined,
+        protocolNumber: protocolNumber.trim() || undefined,
+        portalUrl: portalUrl.trim() || undefined,
+        accessUser: accessUser.trim() || undefined,
+        accessPassword: accessPassword.trim() || undefined,
+        accessCode: accessCode.trim() || undefined,
+        pickupInstructions: pickupInstructions.trim() || undefined,
+        status,
+        notes: notes.trim() || undefined,
+        documentId: documentId || undefined,
+      };
+
       if (editingExamId) {
-        await api.updateExam(editingExamId, {
-          name,
-          requestDate,
-          requestingDoctor,
-          executionDate: executionDate || undefined,
-          expectedResultDate: expectedResultDate || undefined,
-          laboratory: laboratory || undefined,
-          protocolNumber: protocolNumber || undefined,
-          pickupInstructions: pickupInstructions || undefined,
-          status,
-          notes,
-          documentId: documentId || undefined,
-        });
+        await api.updateExam(editingExamId, examPayload);
         showToast('Exame atualizado com sucesso!', 'success');
       } else {
-        await api.createExam(selectedPatient.id, {
-          name,
-          requestDate,
-          requestingDoctor,
-          executionDate: executionDate || undefined,
-          expectedResultDate: expectedResultDate || undefined,
-          laboratory: laboratory || undefined,
-          protocolNumber: protocolNumber || undefined,
-          pickupInstructions: pickupInstructions || undefined,
-          status,
-          notes,
-          documentId: documentId || undefined,
-        });
+        await api.createExam(selectedPatient.id, examPayload);
         showToast('Exame cadastrado com sucesso!', 'success');
       }
 
@@ -182,71 +210,26 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
   const handleQuickStatusChange = async (exam: Exam, newStatus: ExamStatus) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const payload: Partial<Exam> = { status: newStatus };
+      const now = new Date().toISOString();
+      const updates: Partial<Exam> = { status: newStatus };
       if (newStatus === 'resultado_disponivel') {
-        payload.resultAvailableDate = today;
+        updates.resultAvailableDate = now.split('T')[0];
       } else if (newStatus === 'retirado') {
-        payload.resultConsultedDate = today;
+        updates.resultConsultedDate = now.split('T')[0];
       }
-      await api.updateExam(exam.id, payload);
-      const label =
-        newStatus === 'resultado_disponivel'
-          ? 'Resultado marcado como disponível!'
-          : 'Retirada / consulta do resultado confirmada!';
-      showToast(label, 'success');
+      await api.updateExam(exam.id, updates);
+      showToast(`Status atualizado para: ${newStatus}`, 'success');
       fetchExamsAndDocs();
     } catch (err: any) {
-      showToast(err.message || 'Erro ao atualizar situação do exame', 'error');
+      showToast(err.message || 'Erro ao atualizar status', 'error');
     }
-  };
-
-  const getExpectedDateInfo = (expectedDateStr?: string, examStatus?: ExamStatus) => {
-    if (!expectedDateStr || examStatus === 'retirado') return null;
-    const d = new Date(expectedDateStr);
-    if (isNaN(d.getTime())) return null;
-    const now = new Date();
-    const hoje = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dataAlvo = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const diffDays = Math.round((dataAlvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    const dateFormatted = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-
-    if (diffDays < 0) {
-      const atraso = Math.abs(diffDays);
-      return {
-        type: 'atrasado',
-        text: `Resultado atrasado (${atraso === 1 ? 'desde ontem' : `há ${atraso} dias`})`,
-        badgeClass: 'bg-rose-100 text-rose-800 border-rose-200',
-      };
-    }
-    if (diffDays === 0) {
-      return {
-        type: 'hoje',
-        text: 'Previsão de resultado: HOJE',
-        badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
-      };
-    }
-    if (diffDays <= 3) {
-      return {
-        type: 'chegando',
-        text: `Previsão de resultado: em ${diffDays} dia(s) (${dateFormatted})`,
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
-      };
-    }
-    return {
-      type: 'no_prazo',
-      text: `Previsão de resultado: ${dateFormatted}`,
-      badgeClass: 'bg-sky-50 text-sky-800 border-sky-200',
-    };
   };
 
   const handleDelete = async (id: string, examName: string) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o exame "${examName}"?`)) {
-      return;
-    }
+    if (!window.confirm(`Tem certeza que deseja excluir o exame "${examName}"?`)) return;
     try {
       await api.deleteExam(id);
-      showToast('Exame excluído com sucesso', 'success');
+      showToast('Exame excluído com sucesso.', 'info');
       fetchExamsAndDocs();
     } catch (err: any) {
       showToast(err.message || 'Erro ao excluir exame', 'error');
@@ -289,8 +272,67 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     }
   };
 
-  const handleShareExam = async (exam: Exam) => {
-    if (!selectedPatient) return;
+  const getExpectedDateInfo = (expectedDate?: string, currentStatus?: ExamStatus) => {
+    if (!expectedDate) return null;
+    if (currentStatus === 'retirado' || currentStatus === 'resultado_disponivel') return null;
+
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const exp = new Date(expectedDate);
+      exp.setHours(0, 0, 0, 0);
+
+      const diffDays = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return {
+          type: 'atrasado',
+          text: `Previsão vencida há ${Math.abs(diffDays)} dia(s) (${formatDate(expectedDate)})`,
+          badgeClass: 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+        };
+      } else if (diffDays === 0) {
+        return {
+          type: 'hoje',
+          text: 'Previsão de resultado: HOJE',
+          badgeClass: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+        };
+      } else if (diffDays <= 3) {
+        return {
+          type: 'chegando',
+          text: `Resultado previsto em ${diffDays} dia(s) (${formatDate(expectedDate)})`,
+          badgeClass: 'bg-amber-50 text-amber-800 border-amber-200 font-semibold',
+        };
+      } else {
+        return {
+          type: 'no_prazo',
+          text: `Previsão de resultado: ${formatDate(expectedDate)}`,
+          badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+        };
+      }
+    } catch {
+      return {
+        type: 'indefinido',
+        text: `Previsão: ${expectedDate}`,
+        badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+      };
+    }
+  };
+
+  // Open the secure sharing modal
+  const handleOpenShareModal = (exam: Exam) => {
+    setSharingExam(exam);
+    setIncludeCredentialsInShare(false); // Default seguro: sem senha
+  };
+
+  const handleCloseShareModal = () => {
+    setSharingExam(null);
+    setIncludeCredentialsInShare(false);
+  };
+
+  // Execute share from modal
+  const handleExecuteShare = async (copyOnly: boolean = false) => {
+    if (!sharingExam || !selectedPatient) return;
+
     const statusLabels: Record<ExamStatus, string> = {
       solicitado: 'Solicitado pelo médico',
       agendado: 'Agendado',
@@ -299,26 +341,46 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       retirado: 'Retirado / Concluído',
     };
 
-    const dateToUse = exam.executionDate
-      ? `${formatExecutionDateTime(exam.executionDate)} (Agendado/Realizado)`
-      : formatDate(exam.requestDate) || 'A definir';
+    const dateToUse = sharingExam.executionDate
+      ? `${formatExecutionDateTime(sharingExam.executionDate)}`
+      : formatDate(sharingExam.requestDate) || 'A definir';
 
     const { title, text } = buildExamShareText({
       patientName: selectedPatient.name,
-      examName: exam.name,
-      requestingDoctor: exam.requestingDoctor,
+      examName: sharingExam.name,
+      requestingDoctor: sharingExam.requestingDoctor,
       dateStr: dateToUse,
-      statusLabel: statusLabels[exam.status] || exam.status,
-      notes: exam.notes,
+      statusLabel: statusLabels[sharingExam.status] || sharingExam.status,
+      notes: sharingExam.notes,
+      laboratory: sharingExam.laboratory,
+      protocolNumber: sharingExam.protocolNumber,
+      expectedResultDate: sharingExam.expectedResultDate ? formatDate(sharingExam.expectedResultDate) : undefined,
+      portalUrl: sharingExam.portalUrl,
+      accessUser: sharingExam.accessUser,
+      accessPassword: sharingExam.accessPassword,
+      accessCode: sharingExam.accessCode,
+      includeCredentials: includeCredentialsInShare,
     });
+
+    if (copyOnly) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        showToast('Texto copiado para a área de transferência!', 'success');
+      } else {
+        showToast('Não foi possível copiar automaticamente.', 'error');
+      }
+      handleCloseShareModal();
+      return;
+    }
 
     const res = await shareContentNative(title, text);
     if (res.success) {
       if (res.method === 'clipboard') {
-        showToast('Texto copiado para a área de transferência! Cole no WhatsApp ou envie à família.', 'success');
+        showToast('Texto copiado! Cole no WhatsApp ou envie à família.', 'success');
       } else {
         showToast('Compartilhamento aberto com sucesso!', 'info');
       }
+      handleCloseShareModal();
     } else if (!res.cancelled && res.error) {
       showToast(res.error, 'error');
     }
@@ -328,6 +390,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     const matchesSearch =
       exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.requestingDoctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (exam.laboratory && exam.laboratory.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (exam.protocolNumber && exam.protocolNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (exam.notes && exam.notes.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (!matchesSearch) return false;
@@ -340,12 +404,12 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Activity className="w-6 h-6 text-blue-600" />
-            Exames Laboratoriais e de Imagem
+            <span>Exames & Resultados Laboratoriais</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Controle de pedidos, datas de coleta e laudos de {selectedPatient?.name}
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Gerencie pedidos, comprovantes de coleta, senhas de acesso aos portais e laudos de {selectedPatient?.name || 'paciente'}
           </p>
         </div>
 
@@ -357,7 +421,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4 text-amber-200" />
-            <span>Ler Comprovante de Coleta</span>
+            <span>Escanear Comprovante de Coleta</span>
           </button>
           <button
             type="button"
@@ -374,7 +438,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Registrar Pedido de Exame</span>
+            <span>Novo Exame Manual</span>
           </button>
         </div>
       </div>
@@ -475,48 +539,67 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             const isRealizado = exam.status === 'realizado';
             const isRetirado = exam.status === 'retirado';
             const expectedInfo = getExpectedDateInfo(exam.expectedResultDate, exam.status);
+            const hasCredentials = Boolean(exam.accessUser || exam.accessPassword || exam.accessCode || exam.portalUrl);
+            const isPasswordRevealed = Boolean(revealedPasswords[exam.id]);
 
             return (
               <div
                 key={exam.id}
                 id={`exam-card-${exam.id}`}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all p-5 flex flex-col justify-between"
+                className={`rounded-2xl border p-4 sm:p-5 transition-all flex flex-col justify-between ${
+                  isResultadoPronto
+                    ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
+                    : isRetirado
+                    ? 'bg-slate-50 border-slate-200 opacity-90'
+                    : isRealizado
+                    ? 'bg-white border-blue-200 shadow-xs'
+                    : isAgendado
+                    ? 'bg-white border-indigo-200 shadow-xs'
+                    : 'bg-white border-slate-200 shadow-xs'
+                }`}
               >
                 <div>
+                  {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-1.5 border ${
-                          isResultadoPronto
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            : isAgendado
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
-                            : isRealizado
-                            ? 'bg-blue-100 text-blue-800 border-blue-300'
-                            : isRetirado
-                            ? 'bg-slate-100 text-slate-700 border-slate-300'
-                            : 'bg-purple-50 text-purple-700 border-purple-200'
-                        }`}
-                      >
-                        {isResultadoPronto
-                          ? 'Resultado Disponível'
-                          : isAgendado
-                          ? 'Agendado'
-                          : isRealizado
-                          ? 'Coletado / Aguardando Resultado'
-                          : isRetirado
-                          ? 'Retirado / Concluído'
-                          : 'Solicitado'}
-                      </span>
-                      <h3 className="text-base font-bold text-slate-900 leading-snug">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                            exam.status === 'solicitado'
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              : exam.status === 'agendado'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              : exam.status === 'realizado'
+                              ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                              : exam.status === 'resultado_disponivel'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 font-bold'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          {exam.status === 'solicitado' && 'Solicitado (Sem Data)'}
+                          {exam.status === 'agendado' && 'Agendado'}
+                          {exam.status === 'realizado' && 'Coletado (Aguardando laudo)'}
+                          {exam.status === 'resultado_disponivel' && 'Resultado Disponível'}
+                          {exam.status === 'retirado' && 'Retirado / Concluído'}
+                        </span>
+
+                        {hasCredentials && (
+                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200 flex items-center gap-1">
+                            <KeyRound className="w-3 h-3 text-indigo-600" />
+                            <span>Acesso Online</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-base font-bold text-slate-900 leading-snug break-words">
                         {exam.name}
                       </h3>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         id={`share-exam-quick-${exam.id}`}
-                        onClick={() => handleShareExam(exam)}
+                        onClick={() => handleOpenShareModal(exam)}
                         className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                         title="Avisar Família / Compartilhar Exame"
                       >
@@ -589,6 +672,62 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       </div>
                     )}
 
+                    {/* Online Portal Credentials Box */}
+                    {hasCredentials && (
+                      <div className="mt-2.5 p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1.5 text-xs text-indigo-950">
+                        <div className="flex items-center justify-between font-bold text-indigo-900 text-[11px]">
+                          <span className="flex items-center gap-1">
+                            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Acesso ao Laudo Online</span>
+                          </span>
+                          {exam.portalUrl && (
+                            <a
+                              href={exam.portalUrl.startsWith('http') ? exam.portalUrl : `https://${exam.portalUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5 font-bold"
+                            >
+                              <span>Acessar Portal</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 font-mono text-[11px]">
+                          {exam.accessUser && (
+                            <div>
+                              <span className="text-slate-500 font-sans">Login: </span>
+                              <strong className="text-slate-800">{exam.accessUser}</strong>
+                            </div>
+                          )}
+
+                          {exam.accessPassword && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-500 font-sans">Senha: </span>
+                              <strong className="text-slate-800">
+                                {isPasswordRevealed ? exam.accessPassword : '••••••••'}
+                              </strong>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(exam.id)}
+                                className="p-0.5 text-indigo-600 hover:text-indigo-800"
+                                title={isPasswordRevealed ? 'Ocultar senha' : 'Ver senha'}
+                              >
+                                {isPasswordRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          )}
+
+                          {exam.accessCode && (
+                            <div className="sm:col-span-2">
+                              <span className="text-slate-500 font-sans">Chave: </span>
+                              <strong className="text-slate-800">{exam.accessCode}</strong>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {exam.pickupInstructions && (
                       <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 p-2 rounded-lg">
                         <strong>Instruções de Retirada:</strong> {exam.pickupInstructions}
@@ -596,7 +735,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     )}
 
                     {exam.notes && (
-                      <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5">
+                      <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5 line-clamp-3">
                         {exam.notes}
                       </p>
                     )}
@@ -667,7 +806,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                   <button
                     id={`share-exam-btn-${exam.id}`}
-                    onClick={() => handleShareExam(exam)}
+                    onClick={() => handleOpenShareModal(exam)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
                     title="Avisar família sobre este exame (WhatsApp / SMS)"
                   >
@@ -790,8 +929,74 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     placeholder="Ex: 2026-9812-FL"
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white font-mono"
                   />
+                </div>
+              </div>
+
+              {/* Online Results Access Credentials Section */}
+              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5 uppercase tracking-wider">
+                    <KeyRound className="w-4 h-4 text-indigo-600" />
+                    <span>Acesso aos Resultados Online</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-700 font-semibold">Opcional</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-700 font-medium mb-1">URL / Site do Portal</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: www.fleury.com.br/resultados"
+                      value={portalUrl}
+                      onChange={(e) => setPortalUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Login / Usuário</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: CPF ou código de usuário"
+                      value={accessUser}
+                      onChange={(e) => setAccessUser(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-slate-700 font-medium">Senha da Internet</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowFormPassword(!showFormPassword)}
+                        className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold"
+                      >
+                        {showFormPassword ? 'Ocultar' : 'Revelar'}
+                      </button>
+                    </div>
+                    <input
+                      type={showFormPassword ? 'text' : 'password'}
+                      placeholder="Ex: Senha do comprovante"
+                      value={accessPassword}
+                      onChange={(e) => setAccessPassword(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-700 font-medium mb-1">Código de Acesso / Chave Adicional</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Localizador de resultado"
+                      value={accessCode}
+                      onChange={(e) => setAccessCode(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -833,11 +1038,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Local / Instruções de Retirada
+                  Local / Instruções de Retirada Presencial
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Portal do laboratório fleury.com.br ou unidade Morumbi"
+                  placeholder="Ex: Retirar na unidade Centro ou levar documento com foto"
                   value={pickupInstructions}
                   onChange={(e) => setPickupInstructions(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
@@ -892,6 +1097,108 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SECURE SHARE MODAL WITH PREVIEW */}
+      {sharingExam && selectedPatient && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Avisar Família sobre Exame</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseShareModal}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Compartilhe informações claras com os familiares e cuidadores de <strong>{selectedPatient.name}</strong> para acompanhar a realização e os resultados do exame.
+            </p>
+
+            {/* Credential Inclusion Toggle */}
+            {(sharingExam.accessUser || sharingExam.accessPassword || sharingExam.accessCode) && (
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer font-semibold text-amber-950">
+                  <input
+                    type="checkbox"
+                    checked={includeCredentialsInShare}
+                    onChange={(e) => setIncludeCredentialsInShare(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 mt-0.5"
+                  />
+                  <span>
+                    Incluir dados de acesso online (Login e Senha do Portal) nesta mensagem
+                  </span>
+                </label>
+                <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
+                  {includeCredentialsInShare ? (
+                    <strong className="text-rose-700">
+                      ⚠️ Atenção: A senha será compartilhada. Envie apenas para contatos de confiança da família.
+                    </strong>
+                  ) : (
+                    'Por segurança, senhas e códigos são omitidos por padrão.'
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Real-time Message Preview */}
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Prévia da Mensagem:
+              </span>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 font-sans whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
+                {
+                  buildExamShareText({
+                    patientName: selectedPatient.name,
+                    examName: sharingExam.name,
+                    requestingDoctor: sharingExam.requestingDoctor,
+                    dateStr: sharingExam.executionDate
+                      ? `${formatExecutionDateTime(sharingExam.executionDate)}`
+                      : formatDate(sharingExam.requestDate) || 'A definir',
+                    statusLabel: sharingExam.status,
+                    notes: sharingExam.notes,
+                    laboratory: sharingExam.laboratory,
+                    protocolNumber: sharingExam.protocolNumber,
+                    expectedResultDate: sharingExam.expectedResultDate
+                      ? formatDate(sharingExam.expectedResultDate)
+                      : undefined,
+                    portalUrl: sharingExam.portalUrl,
+                    accessUser: sharingExam.accessUser,
+                    accessPassword: sharingExam.accessPassword,
+                    accessCode: sharingExam.accessCode,
+                    includeCredentials: includeCredentialsInShare,
+                  }).text
+                }
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => handleExecuteShare(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copiar Mensagem</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExecuteShare(false)}
+                className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Compartilhar (WhatsApp / Outros)</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

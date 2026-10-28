@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   UploadCloud,
@@ -11,12 +11,22 @@ import {
   Camera,
   Calendar,
   Building2,
-  UserCheck,
   FileText,
   Clock,
   MapPin,
   Barcode,
   Info,
+  KeyRound,
+  UserCheck,
+  Globe,
+  Eye,
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  RotateCcw,
+  ExternalLink,
+  Lock,
 } from 'lucide-react';
 import {
   Patient,
@@ -35,6 +45,7 @@ export interface ExamCollectionReceiptScannerModalProps {
 }
 
 type Step = 'upload' | 'processing' | 'review';
+type MobileReviewTab = 'form' | 'document';
 
 export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptScannerModalProps> = ({
   isOpen,
@@ -46,13 +57,26 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 }) => {
   const [step, setStep] = useState<Step>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Mobile navigation tab in review
+  const [mobileTab, setMobileTab] = useState<MobileReviewTab>('form');
+
+  // Zoom control for image preview
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isFullscreenPreviewOpen, setIsFullscreenPreviewOpen] = useState(false);
+
   // Extracted data for review
   const [laboratory, setLaboratory] = useState('');
   const [protocolNumber, setProtocolNumber] = useState('');
+  const [portalUrl, setPortalUrl] = useState('');
+  const [accessUser, setAccessUser] = useState('');
+  const [accessPassword, setAccessPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [accessCode, setAccessCode] = useState('');
   const [collectionDate, setCollectionDate] = useState('');
   const [expectedResultDate, setExpectedResultDate] = useState('');
   const [pickupDate, setPickupDate] = useState('');
@@ -75,21 +99,39 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     if (showToast) showToast(msg, type);
   };
 
-  const handleTriggerSuccess = () => {
-    if (onSuccess) onSuccess();
-    if (onSaved) onSaved();
-  };
+  // Manage preview object URL safely
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
 
   if (!isOpen) return null;
 
   const resetState = () => {
     setStep('upload');
     setSelectedFile(null);
+    setPreviewUrl(null);
     setIsDragging(false);
     setIsSaving(false);
     setErrorMessage(null);
+    setMobileTab('form');
+    setZoomLevel(1);
+    setIsFullscreenPreviewOpen(false);
+
     setLaboratory('');
     setProtocolNumber('');
+    setPortalUrl('');
+    setAccessUser('');
+    setAccessPassword('');
+    setShowPassword(false);
+    setAccessCode('');
     setCollectionDate('');
     setExpectedResultDate('');
     setPickupDate('');
@@ -106,6 +148,11 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const handleTriggerSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onSaved) onSaved();
   };
 
   const handleTriggerCamera = () => {
@@ -160,6 +207,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     }
     setErrorMessage(null);
     setSelectedFile(file);
+    setZoomLevel(1);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -197,6 +245,10 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
       setLaboratory(data.laboratory || '');
       setProtocolNumber(data.protocolNumber || '');
+      setPortalUrl(data.portalUrl || '');
+      setAccessUser(data.accessUser || '');
+      setAccessPassword(data.accessPassword || '');
+      setAccessCode(data.accessCode || '');
       setCollectionDate(data.collectionDate || new Date().toISOString().split('T')[0]);
       setExpectedResultDate(data.expectedResultDate || '');
       setPickupDate(data.pickupDate || '');
@@ -223,7 +275,8 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
       setPatientMismatchAcknowledged(!isMismatch);
 
       setStep('review');
-      safeToast('Comprovante de coleta lido com sucesso! Revise os dados abaixo.', 'info');
+      setMobileTab('form');
+      safeToast('Comprovante de coleta lido! Confira os dados contra a imagem original.', 'info');
     } catch (err: any) {
       console.error('[ReceiptScanner] Erro na extração:', err?.message);
       setErrorMessage(err.message || 'Erro ao processar comprovante de coleta com IA');
@@ -247,7 +300,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
   const handleRemoveExam = (index: number) => {
     if (exams.length <= 1) {
-      showToast('Mantenha pelo menos um exame no comprovante.', 'info');
+      safeToast('Mantenha pelo menos um exame no comprovante.', 'info');
       return;
     }
     setExams(exams.filter((_, i) => i !== index));
@@ -298,8 +351,11 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           const docNotes = [
             laboratory ? `Laboratório/Clínica: ${laboratory}` : '',
             protocolNumber ? `Protocolo/Atendimento: ${protocolNumber}` : '',
+            portalUrl ? `Portal de Resultados: ${portalUrl}` : '',
+            accessUser ? `Login/Usuário: ${accessUser}` : '',
+            accessCode ? `Código/Chave: ${accessCode}` : '',
             expectedResultDate ? `Previsão de Resultado: ${expectedResultDate}` : '',
-            pickupLocationOrInstructions ? `Instruções de Retirada: ${pickupLocationOrInstructions}` : '',
+            pickupLocationOrInstructions ? `Instruções: ${pickupLocationOrInstructions}` : '',
             generalNotes,
           ]
             .filter(Boolean)
@@ -322,12 +378,15 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
         }
       }
 
-      // 2. Register each exam from the collection receipt
+      // 2. Register each exam from the collection receipt with credentials
       let successCount = 0;
       for (const item of validExams) {
         const notesParts = [
           laboratory ? `Laboratório: ${laboratory}` : '',
           protocolNumber ? `Protocolo: ${protocolNumber}` : '',
+          portalUrl ? `Portal: ${portalUrl}` : '',
+          accessUser ? `Usuário/Login: ${accessUser}` : '',
+          accessCode ? `Código: ${accessCode}` : '',
           expectedResultDate ? `Previsão de Resultado: ${expectedResultDate}` : '',
           pickupDate ? `Data de Retirada: ${pickupDate}` : '',
           pickupLocationOrInstructions ? `Local/Instruções: ${pickupLocationOrInstructions}` : '',
@@ -342,6 +401,10 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           expectedResultDate: expectedResultDate || undefined,
           laboratory: laboratory.trim() || undefined,
           protocolNumber: protocolNumber.trim() || undefined,
+          portalUrl: portalUrl.trim() || undefined,
+          accessUser: accessUser.trim() || undefined,
+          accessPassword: accessPassword.trim() || undefined,
+          accessCode: accessCode.trim() || undefined,
           pickupInstructions: pickupLocationOrInstructions.trim() || undefined,
           requestingDoctor: requestingDoctor.trim() || patient?.primaryDoctor || 'Médico Assistente',
           status: 'realizado', // Coleta realizada, aguardando resultado
@@ -365,35 +428,38 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
     }
   };
 
+  const isPdf = selectedFile?.type === 'application/pdf';
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden border border-slate-200 flex flex-col max-h-[95vh] h-full sm:h-auto">
         {/* Header */}
-        <div className="px-5 py-4 bg-linear-to-r from-blue-700 via-indigo-700 to-sky-800 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-xs">
+        <div className="px-4 sm:px-6 py-3.5 bg-linear-to-r from-blue-700 via-indigo-700 to-sky-800 text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-xs shrink-0">
               <Sparkles className="w-5 h-5 text-sky-200" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                Leitura de Comprovante de Coleta com IA
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold flex items-center gap-2 truncate">
+                Leitor & Conferência de Comprovante de Coleta
               </h2>
-              <p className="text-xs text-sky-100">
-                Extração automática de exames, protocolo e previsão de resultado para {safePatientName}
+              <p className="text-xs text-sky-100 truncate">
+                Extração de login, senha, protocolo e exames para {safePatientName}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0"
+            title="Fechar"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 overflow-y-auto flex-1 space-y-5">
+        <div className="p-3 sm:p-5 overflow-y-auto flex-1 space-y-4">
           {errorMessage && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -413,10 +479,10 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-4">
-              <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-900 flex items-start gap-2.5">
+              <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-2xl text-xs text-sky-900 flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-                <p>
-                  Envie a foto ou PDF do <strong>comprovante de coleta, protocolo de atendimento ou recibo laboratorial</strong>. A IA identificará o laboratório, exames coletados, protocolo e datas de previsão de resultado.
+                <p className="leading-relaxed">
+                  Envie a foto ou PDF do <strong>comprovante de coleta ou protocolo laboratorial</strong>. A IA reconhecerá o laboratório, a lista de exames, dados de acesso ao portal (usuário e senha de internet) e previsões de liberação.
                 </p>
               </div>
 
@@ -518,239 +584,482 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-800">
-                  Analisando comprovante de coleta com IA...
+                  Lendo e estruturando comprovante com IA...
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Identificando laboratório, lista de exames, número de protocolo e previsão de entrega do resultado.
+                  Reconhecendo login, senha de acesso, protocolo, laboratório, datas de previsão e exames coletados.
                 </p>
               </div>
             </div>
           )}
 
-          {/* STEP 3: REVIEW & CONFIRMATION */}
+          {/* STEP 3: REVIEW & HUMAN VERIFICATION */}
           {step === 'review' && (
-            <div className="space-y-5">
-              {/* Warnings */}
-              {hasPatientMismatch && (
-                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 space-y-2">
-                  <div className="flex items-start gap-2.5 font-bold text-amber-950">
-                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                    <span>Divergência de Nome Identificada no Comprovante</span>
-                  </div>
-                  <p>
-                    O documento identifica o paciente como: <strong>"{patientIdentified}"</strong>, enquanto o paciente selecionado é <strong>"{safePatientName}"</strong>.
-                  </p>
-                  <label className="flex items-center gap-2 font-semibold pt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={patientMismatchAcknowledged}
-                      onChange={(e) => setPatientMismatchAcknowledged(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded-sm border-slate-300 focus:ring-blue-500"
-                    />
-                    <span>Confirmo que este comprovante pertence a {safePatientName} e desejo prosseguir.</span>
-                  </label>
-                </div>
-              )}
-
-              {confidenceWarning && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>Aviso da IA: {confidenceWarning}</span>
-                </div>
-              )}
-
-              {/* General Metadata Card */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-blue-600" />
-                  <span>Dados do Laboratório e Atendimento</span>
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1">Laboratório ou Clínica</label>
-                    <input
-                      type="text"
-                      value={laboratory}
-                      onChange={(e) => setLaboratory(e.target.value)}
-                      placeholder="Ex: Laboratório Fleury, Dasa, Hermes Pardini..."
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
-                      <Barcode className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Número de Protocolo / Atendimento</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={protocolNumber}
-                      onChange={(e) => setProtocolNumber(e.target.value)}
-                      placeholder="Ex: 2026-98741-B"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Data da Coleta / Realização</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={collectionDate}
-                      onChange={(e) => setCollectionDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Previsão de Disponibilização do Resultado</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={expectedResultDate}
-                      onChange={(e) => setExpectedResultDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500 font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1">Médico Solicitante</label>
-                    <input
-                      type="text"
-                      value={requestingDoctor}
-                      onChange={(e) => setRequestingDoctor(e.target.value)}
-                      placeholder="Ex: Dra. Mariana Costa"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Data Prevista para Retirada Física (se houver)</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={pickupDate}
-                      onChange={(e) => setPickupDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Local ou Instruções para Retirada / Consulta Online</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={pickupLocationOrInstructions}
-                      onChange={(e) => setPickupLocationOrInstructions(e.target.value)}
-                      placeholder="Ex: Retirar na Unidade Centro ou acessar site com senha do protocolo"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+            <div className="space-y-4">
+              {/* Informative Guidance Banner */}
+              <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex items-start gap-2.5 text-xs text-indigo-950">
+                <ShieldCheck className="w-4 h-4 text-indigo-700 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong>Conferência Humana Prioritária:</strong> Compare os dados extraídos diretamente com a imagem do documento original ao lado. Confirme especialmente <strong>Login e Senha da Internet</strong> antes de salvar para evitar divergências.
                 </div>
               </div>
 
-              {/* Exams list */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span>Exames Coletados ({exams.length})</span>
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={handleAddExam}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar outro exame</span>
-                  </button>
-                </div>
+              {/* Mobile Tab Switcher (Visible on mobile only) */}
+              <div className="flex md:hidden items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('form')}
+                  className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                    mobileTab === 'form'
+                      ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📝 Dados Extraídos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('document')}
+                  className={`flex-1 py-2 text-center rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    mobileTab === 'document'
+                      ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Ver Documento Original</span>
+                </button>
+              </div>
 
-                <div className="space-y-2">
-                  {exams.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3"
-                    >
-                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={item.examName}
-                          onChange={(e) => handleExamNameChange(idx, e.target.value)}
-                          placeholder="Nome do exame (ex: Hemograma Completo)"
-                          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-blue-500 focus:bg-white"
-                        />
-                        <input
-                          type="text"
-                          value={item.notes || ''}
-                          onChange={(e) => handleExamNotesChange(idx, e.target.value)}
-                          placeholder="Observações do exame (opcional)"
-                          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-600 focus:outline-none focus:border-blue-500 focus:bg-white"
-                        />
-                      </div>
+              {/* Main Content: 2-Column on Desktop (Side-by-Side), Tabbed on Mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                {/* COLUMN 1: ORIGINAL DOCUMENT PREVIEW (5 cols on md:) */}
+                <div
+                  className={`md:col-span-5 border border-slate-200 rounded-2xl bg-slate-900/5 p-3 flex flex-col gap-2.5 ${
+                    mobileTab === 'document' ? 'block' : 'hidden md:flex'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span>Comprovante Original</span>
+                    </span>
+
+                    {/* Zoom / Fullscreen toolbar */}
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleRemoveExam(idx)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        title="Remover exame"
+                        onClick={() => setZoomLevel((z) => Math.max(0.75, z - 0.25))}
+                        className="p-1 bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700"
+                        title="Diminuir Zoom"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <ZoomOut className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel(1)}
+                        className="p-1 bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700 text-[10px] font-mono px-1.5"
+                        title="Resetar Zoom"
+                      >
+                        {Math.round(zoomLevel * 100)}%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
+                        className="p-1 bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700"
+                        title="Aumentar Zoom"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsFullscreenPreviewOpen(true)}
+                        className="p-1 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 text-blue-700"
+                        title="Ver em tela ampliada"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* General Notes */}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Observações Gerais do Comprovante (opcional)
-                </label>
-                <textarea
-                  value={generalNotes}
-                  onChange={(e) => setGeneralNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Orientações adicionais, horários de atendimento ou instruções do protocolo..."
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white"
-                />
-              </div>
+                  {/* Viewer Box */}
+                  <div className="h-[340px] md:h-[540px] bg-white rounded-xl border border-slate-200 overflow-auto flex items-center justify-center p-2 relative shadow-inner">
+                    {previewUrl ? (
+                      isPdf ? (
+                        <iframe
+                          src={previewUrl}
+                          title="Comprovante de Coleta PDF"
+                          className="w-full h-full rounded border-0"
+                        />
+                      ) : (
+                        <img
+                          src={previewUrl}
+                          alt="Comprovante de Coleta Original"
+                          style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+                          className="max-w-full transition-transform duration-150 rounded shadow-xs"
+                        />
+                      )
+                    ) : (
+                      <div className="text-center text-xs text-slate-400">
+                        Nenhum arquivo disponível para prévia
+                      </div>
+                    )}
+                  </div>
 
-              {/* Archive in Documents Toggle */}
-              <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
-                <div className="flex items-center gap-2">
-                  <input
-                    id="archive-receipt-toggle"
-                    type="checkbox"
-                    checked={archiveInDocuments}
-                    onChange={(e) => setArchiveInDocuments(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded-sm border-slate-300 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <label htmlFor="archive-receipt-toggle" className="font-semibold cursor-pointer">
-                    Arquivar comprovante original em Documentos Médicos do paciente
-                  </label>
+                  <p className="text-[11px] text-slate-500 text-center">
+                    Dica: Use os controles de zoom ou toque em maximizar para conferir códigos e senhas miúdos.
+                  </p>
                 </div>
-                <span className="text-[11px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md font-medium">
-                  {selectedFile ? selectedFile.name : 'Arquivo'}
-                </span>
+
+                {/* COLUMN 2: STRUCTURED FORM & CREDENTIALS (7 cols on md:) */}
+                <div
+                  className={`md:col-span-7 space-y-4 ${
+                    mobileTab === 'form' ? 'block' : 'hidden md:block'
+                  }`}
+                >
+                  {/* Patient Divergence Alert */}
+                  {hasPatientMismatch && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 space-y-1.5">
+                      <div className="flex items-start gap-2 font-bold text-amber-950">
+                        <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                        <span>Divergência de Nome Identificada no Comprovante</span>
+                      </div>
+                      <p>
+                        O comprovante identifica: <strong>"{patientIdentified}"</strong>, mas o paciente selecionado é <strong>"{safePatientName}"</strong>.
+                      </p>
+                      <label className="flex items-center gap-2 font-semibold pt-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={patientMismatchAcknowledged}
+                          onChange={(e) => setPatientMismatchAcknowledged(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                        <span>Confirmo que este comprovante pertence a {safePatientName} e desejo continuar.</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {confidenceWarning && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>Aviso da IA: {confidenceWarning}</span>
+                    </div>
+                  )}
+
+                  {/* SECTION A: ACCESS CREDENTIALS (HIGHLIGHTED CARD) */}
+                  <div className="p-4 bg-linear-to-br from-indigo-50/90 via-sky-50/70 to-blue-50/90 border-2 border-indigo-200 rounded-2xl space-y-3.5 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                        <KeyRound className="w-4 h-4 text-indigo-600" />
+                        <span>Acesso aos Resultados Online (Portal do Laboratório)</span>
+                      </h3>
+                      <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
+                        Campos Críticos
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      {/* Portal URL */}
+                      <div className="sm:col-span-2">
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Endereço / URL do Portal de Laudos</span>
+                          </span>
+                          {portalUrl && (
+                            <a
+                              href={portalUrl.startsWith('http') ? portalUrl : `https://${portalUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1"
+                            >
+                              <span>Testar link</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={portalUrl}
+                          onChange={(e) => setPortalUrl(e.target.value)}
+                          placeholder="Ex: www.fleury.com.br/resultados ou portal.delboni.com.br"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
+                        />
+                      </div>
+
+                      {/* Login / User */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1.5">
+                          <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Login / Usuário do Portal</span>
+                          {!accessUser && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
+                              não detectado
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={accessUser}
+                          onChange={(e) => setAccessUser(e.target.value)}
+                          placeholder="Ex: CPF, nº do pedido ou usuário"
+                          className={`w-full px-3 py-2 bg-white border rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono text-xs ${
+                            accessUser ? 'border-indigo-300 font-bold bg-indigo-50/20' : 'border-slate-200'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Password */}
+                      <div>
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Senha de Acesso / Internet</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold flex items-center gap-1"
+                          >
+                            {showPassword ? (
+                              <>
+                                <EyeOff className="w-3 h-3" />
+                                <span>Ocultar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-3 h-3" />
+                                <span>Revelar</span>
+                              </>
+                            )}
+                          </button>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={accessPassword}
+                            onChange={(e) => setAccessPassword(e.target.value)}
+                            placeholder="Ex: 849204 ou senha impressa"
+                            className={`w-full px-3 py-2 bg-white border rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono text-xs pr-8 ${
+                              accessPassword
+                                ? 'border-indigo-300 font-bold bg-indigo-50/20'
+                                : 'border-slate-200'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Access Code / Locator */}
+                      <div className="sm:col-span-2">
+                        <label className="block text-slate-700 font-semibold mb-1 flex items-center gap-1.5">
+                          <Barcode className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Código de Acesso Adicional / Localizador (se houver)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={accessCode}
+                          onChange={(e) => setAccessCode(e.target.value)}
+                          placeholder="Ex: Chave de acesso ou identificador adicional"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION B: LABORATORY & SERVICE DATA */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                      <span>Laboratório e Atendimento</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1">Laboratório ou Posto</label>
+                        <input
+                          type="text"
+                          value={laboratory}
+                          onChange={(e) => setLaboratory(e.target.value)}
+                          placeholder="Ex: Fleury, Dasa, Lavoisier, Posto SUS..."
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
+                          <Barcode className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Número de Protocolo / Atendimento / OS</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={protocolNumber}
+                          onChange={(e) => setProtocolNumber(e.target.value)}
+                          placeholder="Ex: 2026-98741-B"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1">Médico Solicitante</label>
+                        <input
+                          type="text"
+                          value={requestingDoctor}
+                          onChange={(e) => setRequestingDoctor(e.target.value)}
+                          placeholder="Ex: Dra. Mariana Costa"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Data da Coleta / Realização</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={collectionDate}
+                          onChange={(e) => setCollectionDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Previsão de Liberação do Laudo</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={expectedResultDate}
+                          onChange={(e) => setExpectedResultDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500 font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Data para Retirada Física (se houver)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={pickupDate}
+                          onChange={(e) => setPickupDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-slate-600 font-medium mb-1 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Instruções Presenciais de Retirada Física</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={pickupLocationOrInstructions}
+                          onChange={(e) => setPickupLocationOrInstructions(e.target.value)}
+                          placeholder="Ex: Retirar na Unidade Centro com documento com foto"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION C: EXAMS LIST */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span>Exames Coletados no Comprovante ({exams.length})</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={handleAddExam}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar outro exame</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {exams.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3"
+                        >
+                          <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={item.examName}
+                              onChange={(e) => handleExamNameChange(idx, e.target.value)}
+                              placeholder="Nome do exame (ex: Hemograma Completo)"
+                              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-blue-500 focus:bg-white"
+                            />
+                            <input
+                              type="text"
+                              value={item.notes || ''}
+                              onChange={(e) => handleExamNotesChange(idx, e.target.value)}
+                              placeholder="Observações do exame (opcional)"
+                              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-600 focus:outline-none focus:border-blue-500 focus:bg-white"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExam(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Remover exame"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* General Notes */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Observações Gerais do Comprovante (opcional)
+                    </label>
+                    <textarea
+                      value={generalNotes}
+                      onChange={(e) => setGeneralNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Orientações adicionais, horários de atendimento ou instruções do protocolo..."
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white"
+                    />
+                  </div>
+
+                  {/* Archive in Documents Toggle */}
+                  <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="archive-receipt-toggle"
+                        type="checkbox"
+                        checked={archiveInDocuments}
+                        onChange={(e) => setArchiveInDocuments(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <label htmlFor="archive-receipt-toggle" className="font-semibold cursor-pointer">
+                        Arquivar comprovante original em Documentos Médicos do paciente
+                      </label>
+                    </div>
+                    <span className="text-[11px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md font-medium">
+                      {selectedFile ? selectedFile.name : 'Arquivo'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
           {step === 'upload' ? (
             <>
               <button
@@ -803,7 +1112,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirmar e Salvar Exame(s)</span>
+                      <span>Aprovar e Salvar Exames ({exams.length})</span>
                     </>
                   )}
                 </button>
@@ -812,6 +1121,66 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           ) : null}
         </div>
       </div>
+
+      {/* FULLSCREEN PREVIEW MODAL */}
+      {isFullscreenPreviewOpen && previewUrl && (
+        <div className="fixed inset-0 z-60 bg-black/90 backdrop-blur-sm flex flex-col p-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between text-white pb-3 border-b border-white/20">
+            <span className="font-bold text-sm">Visualização Ampliada do Comprovante</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(0.75, z - 0.25))}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white"
+                title="Diminuir Zoom"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-mono">{Math.round(zoomLevel * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.min(3.5, z + 0.25))}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white"
+                title="Aumentar Zoom"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1)}
+                className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white"
+                title="Resetar Zoom"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFullscreenPreviewOpen(false)}
+                className="p-1.5 bg-rose-600 hover:bg-rose-700 rounded-lg text-white ml-2"
+                title="Fechar ampliação"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+            {isPdf ? (
+              <iframe
+                src={previewUrl}
+                title="Comprovante de Coleta PDF Fullscreen"
+                className="w-full h-full rounded border-0"
+              />
+            ) : (
+              <img
+                src={previewUrl}
+                alt="Comprovante Ampliado"
+                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+                className="max-w-full max-h-full object-contain transition-transform duration-150"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

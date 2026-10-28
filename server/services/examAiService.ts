@@ -28,29 +28,40 @@ DIRETRIZES FUNDAMENTAIS:
 6. O retorno DEVE ser estritamente em formato JSON em conformidade com o schema definido.`;
 
 const RECEIPT_SYSTEM_INSTRUCTION = `Você é um especialista em documentação clínica e atendimento laboratorial de alta precisão.
-Sua missão é analisar cuidadosamente a imagem ou PDF do comprovante de coleta, protocolo de atendimento ou recibo de exames laboratoriais/gráficos e extrair com rigor factual todos os exames realizados, datas e dados de retirada para o acompanhamento do paciente.
+Sua missão é analisar cuidadosamente a imagem ou PDF do comprovante de coleta, protocolo de atendimento ou recibo de exames laboratoriais/gráficos e extrair com rigor factual todos os exames realizados, dados de acesso ao portal de resultados, datas e orientações para o acompanhamento do paciente.
 
 DIRETRIZES FUNDAMENTAIS:
-1. ZERO ALUCINAÇÃO: Extraia estritamente as informações presentes e legíveis no comprovante. Jamais invente ou estime datas, protocolos, nomes ou instruções ausentes.
-2. DADOS DO ATENDIMENTO:
-   - laboratory: Nome do laboratório, clínica ou posto de coleta emitente.
-   - protocolNumber: Número de protocolo, número de atendimento, OS ou código de rastreamento do pedido.
+1. ZERO ALUCINAÇÃO: Extraia estritamente as informações presentes e legíveis no comprovante. Jamais invente ou estime credenciais, senhas, protocolos, datas ou exames. Se um campo não estiver presente ou for ilegível, mantenha-o vazio.
+2. DADOS DO ATENDIMENTO E CREDENCIAIS DE ACESSO:
+   - laboratory: Nome do laboratório, clínica ou posto de coleta emitente (ex: Fleury, Lavoisier, Delboni, Hermes Pardini, Sabin, laboratório municipal/SUS).
+   - protocolNumber: Número do protocolo de atendimento, ordem de serviço (OS), código de requisição ou senha de atendimento.
+   - portalUrl: URL ou endereço web impresso para acesso online aos resultados (ex: "www.laboratorio.com.br/resultados").
+   - accessUser: Login, identificador, usuário web, número de carteirinha ou identificação usada para login no portal de resultados.
+   - accessPassword: Senha de internet, chave de acesso ao laudo, PIN ou código alfanumérico confidencial fornecido para visualização dos resultados online.
+   - accessCode: Código de acesso ou localizador do exame quando fornecido como um campo adicional distinto do login e da senha.
    - collectionDate: Data da coleta ou realização do exame (formato YYYY-MM-DD se possível).
    - expectedResultDate: Data prevista informada no comprovante para liberação/disponibilização do laudo/resultado (formato YYYY-MM-DD se possível).
-   - pickupDate: Data prevista específica para retirada física do laudo, se informada explicitamente no documento (formato YYYY-MM-DD se possível).
-   - pickupLocationOrInstructions: Unidade de retirada, endereço, site/portal para consulta online, senha de internet ou instruções presentes no comprovante.
+   - pickupDate: Data específica para retirada física presencial do laudo, se informada no documento (formato YYYY-MM-DD se possível).
+   - pickupLocationOrInstructions: Unidade de retirada física, endereço do posto ou instruções presenciais. Não misture com o portal web nem com senhas.
    - requestingDoctor: Médico solicitante indicado no comprovante, se legível.
    - patientNameIdentified: Nome completo do paciente impresso no comprovante.
    - generalNotes: Orientações de preparo subsequente, jejum, horário de atendimento ou advertências constantes no comprovante.
-3. EXAMES COLETADOS (exams):
+3. DISTINÇÃO SEMÂNTICA OBRIGATÓRIA:
+   - Diferencie rigorosamente:
+     * protocolNumber: número de atendimento/OS.
+     * accessUser: nome de usuário ou login web.
+     * accessPassword: senha de consulta de resultado na internet.
+     * accessCode: chave/localizador adicional.
+   - NUNCA junte ou confunda login e senha no mesmo campo!
+4. EXAMES COLETADOS (exams):
    - Liste cada exame ou painel individual presente no comprovante (ex: "Hemograma Completo", "Glicemia de Jejum", "Perfil Lipídico", "Urina Tipo I", "Urocultura").
    - Para cada exame, preencha:
      * examName: Nome claro do exame.
      * notes: Observações ou prazo específico daquele exame se diferente do geral.
-4. ILEGIBILIDADE OU AUSÊNCIA:
+5. ILEGIBILIDADE OU AUSÊNCIA:
    - Se uma informação não constar no documento ou estiver ilegível, mantenha o campo como string vazia ou omisso.
    - Caso a imagem esteja borrada, cortada ou de difícil leitura, informe um aviso claro em "confidenceWarning".
-5. O retorno DEVE ser estritamente em formato JSON em conformidade com o schema definido.`;
+6. O retorno DEVE ser estritamente em formato JSON em conformidade com o schema definido.`;
 
 export class ExamAiService {
   private ai: GoogleGenAI;
@@ -163,6 +174,10 @@ export class ExamAiService {
           properties: {
             laboratory: { type: Type.STRING },
             protocolNumber: { type: Type.STRING },
+            accessUser: { type: Type.STRING },
+            accessPassword: { type: Type.STRING },
+            accessCode: { type: Type.STRING },
+            portalUrl: { type: Type.STRING },
             collectionDate: { type: Type.STRING },
             expectedResultDate: { type: Type.STRING },
             pickupDate: { type: Type.STRING },

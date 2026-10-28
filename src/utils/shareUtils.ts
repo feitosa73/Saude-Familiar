@@ -23,6 +23,14 @@ export interface ShareExamData {
   dateStr: string;
   statusLabel?: string;
   notes?: string;
+  laboratory?: string;
+  protocolNumber?: string;
+  expectedResultDate?: string;
+  portalUrl?: string;
+  accessUser?: string;
+  accessPassword?: string;
+  accessCode?: string;
+  includeCredentials?: boolean;
 }
 
 /**
@@ -56,9 +64,13 @@ export function buildAppointmentShareText(data: ShareAppointmentData): { title: 
 
 /**
  * Monta mensagem estruturada e acolhedora com emojis para avisar a família sobre Exame.
+ * Por padrão seguro, NUNCA inclui senhas ou dados confidenciais a menos que includeCredentials seja explicitamente true.
  */
 export function buildExamShareText(data: ShareExamData): { title: string; text: string } {
   const title = `Exame de ${data.patientName}: ${data.examName}`;
+
+  const hasCredentials = Boolean(data.accessUser || data.accessPassword || data.accessCode);
+  const shouldIncludeCredentials = Boolean(data.includeCredentials && hasCredentials);
 
   const lines: string[] = [
     `🔬 *Lembrete de Exame - Saúde Familiar*`,
@@ -66,17 +78,33 @@ export function buildExamShareText(data: ShareExamData): { title: string; text: 
     `Olá família! Seguem as informações do exame de *${data.patientName}*:`,
     ``,
     `🧪 *Exame:* ${data.examName}`,
+    data.laboratory ? `🏢 *Laboratório:* ${data.laboratory}` : '',
+    data.protocolNumber ? `🔢 *Protocolo:* ${data.protocolNumber}` : '',
     data.requestingDoctor ? `👨‍⚕️ *Médico Solicitante:* ${data.requestingDoctor}` : '',
-    `📅 *Data:* ${data.dateStr}`,
+    `📅 *Data da Coleta/Execução:* ${data.dateStr}`,
+    data.expectedResultDate ? `⏳ *Previsão de Resultado:* ${data.expectedResultDate}` : '',
     data.statusLabel ? `📊 *Status Atual:* ${data.statusLabel}` : '',
-    data.notes ? `💡 *Recomendações / Preparo:* ${data.notes}` : '',
-    ``,
-    `_Mensagem compartilhada via App Saúde Familiar_`,
-  ].filter((line) => line !== '');
+    data.portalUrl && !shouldIncludeCredentials ? `🌐 *Portal de Resultados:* ${data.portalUrl}` : '',
+    data.notes ? `💡 *Recomendações / Observações:* ${data.notes}` : '',
+  ];
+
+  if (shouldIncludeCredentials) {
+    lines.push(
+      ``,
+      `🔐 *Dados de Acesso aos Resultados Online:*`,
+      data.portalUrl ? `🌐 *Portal:* ${data.portalUrl}` : '',
+      data.accessUser ? `👤 *Usuário / Login:* ${data.accessUser}` : '',
+      data.accessPassword ? `🔑 *Senha de Acesso:* ${data.accessPassword}` : '',
+      data.accessCode ? `🏷️ *Código / Localizador:* ${data.accessCode}` : '',
+      `⚠️ _Atenção: Informações confidenciais. Compartilhe apenas com pessoas de confiança da família._`
+    );
+  }
+
+  lines.push(``, `_Mensagem compartilhada via App Saúde Familiar_`);
 
   return {
     title,
-    text: lines.join('\n'),
+    text: lines.filter((line) => line !== '').join('\n'),
   };
 }
 

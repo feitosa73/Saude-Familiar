@@ -244,6 +244,10 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
         dateStr: item.dataExibicao ? `${item.dataExibicao} ${item.horarioExibicao ? `às ${item.horarioExibicao}` : ''}` : 'Data a definir',
         statusLabel: item.statusRotulo,
         notes: item.observacoes,
+        laboratory: item.laboratorio,
+        protocolNumber: item.numeroProtocolo,
+        expectedResultDate: item.dataPrevisaoResultado,
+        portalUrl: item.portalUrl,
       });
       shareTitle = title;
       shareText = text;
