@@ -439,7 +439,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         {mode !== 'forgot_password' && (
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label htmlFor="auth-password" className="block text-xs font-semibold text-slate-700">
+              <label htmlFor="auth-password" className="block text-sm font-bold text-slate-700">
                 Senha
               </label>
               {mode === 'login' && (
@@ -448,7 +448,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                   id="btn-goto-forgot"
                   onClick={() => switchMode('forgot_password')}
                   tabIndex={-1}
-                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 transition cursor-pointer"
                 >
                   Esqueci minha senha
                 </button>

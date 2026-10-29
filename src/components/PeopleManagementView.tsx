@@ -296,7 +296,7 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                   <UserPlus className="w-4 h-4 text-blue-600" />
                   <span>Solicitações</span>
                   {pendingRequestsCount > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-extrabold">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-extrabold">
                       {pendingRequestsCount}
                     </span>
                   )}
@@ -517,7 +517,7 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                                 type="button"
                                 id={`btn-regularize-patient-table-${patient.id}`}
                                 onClick={onOpenRegularization}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition cursor-pointer"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg border border-amber-300 transition cursor-pointer"
                               >
                                 Regularizar
                               </button>
@@ -738,7 +738,7 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
 
                       {/* Patient Access List */}
                       <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
                           Acesso aos Prontuários:
                         </span>
 
@@ -840,7 +840,7 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                           inv.role === 'CAREGIVER'
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                             : 'bg-blue-100 text-blue-800 border border-blue-200'
@@ -851,22 +851,22 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
 
                       {/* Status */}
                       {isPending && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                          <Clock className="w-3 h-3" /> Pendente
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                          <Clock className="w-3.5 h-3.5" /> Pendente
                         </span>
                       )}
                       {isAccepted && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" /> Aceito
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Aceito
                         </span>
                       )}
                       {isExpired && (
-                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
                           Expirado
                         </span>
                       )}
                       {isRevoked && (
-                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                        <span className="text-xs font-bold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
                           Revogado
                         </span>
                       )}
@@ -876,21 +876,21 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                       <div className="font-bold text-slate-900 truncate">
                         {inv.invitedName ? `${inv.invitedName}` : inv.invitedEmail}
                       </div>
-                      <div className="text-[11px] text-slate-500 truncate">
+                      <div className="text-xs text-slate-600 truncate">
                         {inv.invitedEmail} {inv.invitedPhone && `• ${inv.invitedPhone}`}
                       </div>
-                      <div className="text-[11px] text-slate-600 mt-1">
+                      <div className="text-xs sm:text-sm text-slate-700 mt-1">
                         Paciente: <strong>{inv.patientName}</strong>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                       <span>Enviado em {formatDate(inv.createdAt)}</span>
                       {isPending && (
                         <button
                           type="button"
                           onClick={() => handleRevokeInvitation(inv.id)}
-                          className="text-xs font-semibold text-rose-600 hover:text-rose-800"
+                          className="text-xs font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
                         >
                           Revogar
                         </button>
@@ -918,13 +918,14 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Editar Dados Cadastrais</h3>
-                  <p className="text-xs text-slate-500">Membro da Família</p>
+                  <p className="text-sm text-slate-600">Membro da Família</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingMember(null)}
-                className="text-slate-400 hover:text-slate-700 p-1"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                aria-label="Fechar edição de dados cadastrais"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -978,14 +979,14 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                   value={editingMember.email}
                   className="w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-xl px-3 py-2 text-xs cursor-not-allowed select-all"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   O e-mail é vinculado à identidade Google e ao histórico de convite.
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-2.5">
                 <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                <div className="text-[11px] text-slate-600 leading-relaxed">
+                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   <span className="font-bold text-slate-800">Proteção do CPF:</span> O CPF do usuário é sigiloso e imutável pelo painel administrativo familiar.
                 </div>
               </div>

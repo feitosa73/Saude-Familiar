@@ -294,15 +294,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                     id="patient-dropdown-menu"
                     className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-20"
                   >
-                    <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                    <div className="px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
                       Familiares Cadastrados
                     </div>
 
                     <div className="max-h-60 overflow-y-auto py-1">
                       {patients.length === 0 ? (
                         <div className="px-3 py-4 text-center text-xs text-slate-500">
-                          <p className="font-medium text-slate-700">Nenhum familiar cadastrado</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">Cadastre o primeiro familiar para iniciar o prontuário.</p>
+                          <p className="font-semibold text-slate-800 text-sm">Nenhum familiar cadastrado</p>
+                          <p className="text-sm text-slate-600 mt-1">Cadastre o primeiro familiar para iniciar o prontuário.</p>
                         </div>
                       ) : (
                         patients.map((patient) => {
@@ -414,7 +414,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span
-                      className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded border ${currentRoleUI.classes}`}
+                      className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border ${currentRoleUI.classes}`}
                     >
                       {currentRoleUI.icon}
                       {currentRoleUI.label}
@@ -443,11 +443,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                     {/* User Identity Info */}
                     <div className="px-3.5 py-2 border-b border-slate-100">
                       <div className="text-sm font-bold text-slate-900">{user?.name}</div>
-                      <div className="text-xs text-slate-400 truncate">{user?.email}</div>
+                      <div className="text-xs text-slate-500 truncate">{user?.email}</div>
                       <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-[11px] text-slate-500">Função no paciente atual:</span>
+                        <span className="text-sm text-slate-600 font-medium">Função no paciente:</span>
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border ${currentRoleUI.classes}`}
+                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-md border ${currentRoleUI.classes}`}
                         >
                           {currentRoleUI.icon}
                           {currentRoleUI.label}
@@ -498,7 +498,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                             <span>Solicitações de Acesso</span>
                           </div>
                           {pendingRequestsCount > 0 && (
-                            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">
                               {pendingRequestsCount}
                             </span>
                           )}

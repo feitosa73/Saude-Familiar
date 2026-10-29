@@ -214,16 +214,16 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-1 border-t border-amber-200/60">
-                    <span className="text-[11px] text-amber-700 truncate max-w-[200px]">
+                    <span className="text-xs text-amber-800 truncate max-w-[200px]">
                       Conectado como: <strong>{user?.email}</strong>
                     </span>
                     <button
                       type="button"
                       id="btn-switch-account"
                       onClick={onLogout}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer"
                     >
-                      <LogOut className="w-3 h-3" />
+                      <LogOut className="w-3.5 h-3.5" />
                       Trocar de conta
                     </button>
                   </div>
@@ -526,27 +526,27 @@ export const FamilyOnboardingView: React.FC<FamilyOnboardingViewProps> = ({
                           <p className="font-semibold text-slate-800">
                             {req.familyName || 'Família'}
                           </p>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-xs text-slate-600">
                             Solicitado em {new Date(req.requestedAt).toLocaleDateString('pt-BR')}
                             {req.patientName ? ` • Paciente: ${req.patientName}` : ''}
                           </p>
                         </div>
                         <div>
                           {req.status === 'pending' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium text-[11px]">
-                              <Clock className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-semibold text-xs">
+                              <Clock className="w-3.5 h-3.5" />
                               Pendente
                             </span>
                           )}
                           {req.status === 'approved' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium text-[11px]">
-                              <CheckCircle className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 font-semibold text-xs">
+                              <CheckCircle className="w-3.5 h-3.5" />
                               Aprovado
                             </span>
                           )}
                           {req.status === 'rejected' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-medium text-[11px]">
-                              <XCircle className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-100 text-rose-900 font-semibold text-xs">
+                              <XCircle className="w-3.5 h-3.5" />
                               Recusado
                             </span>
                           )}

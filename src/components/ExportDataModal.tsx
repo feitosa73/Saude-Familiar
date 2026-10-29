@@ -102,7 +102,9 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
             type="button"
             id="close-export-modal-btn"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
+            title="Fechar"
+            aria-label="Fechar modal de exportação"
           >
             <X className="w-5 h-5" />
           </button>
@@ -134,12 +136,12 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Download className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-sm font-bold text-slate-900">Baixar meus dados (.xlsx)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Baixar meus dados (.xlsx)</h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   Exporte os dados de saúde que você possui permissão para visualizar.
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-sm text-slate-600">
                   Inclui fichas dos pacientes autorizados ({patients.length}), medicamentos, consultas, exames, metadados de documentos e eventos manuais.
                 </p>
               </div>
@@ -150,11 +152,11 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
                 id="btn-download-user-data-xlsx"
                 onClick={handleDownloadUserData}
                 disabled={isExportingData || patients.length === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-colors cursor-pointer"
               >
                 {isExportingData ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>
                       {exportProgress && exportProgress.total > 0
                         ? `Exportando (${exportProgress.current}/${exportProgress.total})...`
@@ -163,7 +165,7 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
                   </>
                 ) : (
                   <>
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-4 h-4" />
                     <span>Baixar Meus Dados</span>
                   </>
                 )}
@@ -177,12 +179,12 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-sm font-bold text-slate-900">Baixar modelo para preenchimento (.xlsx)</h3>
+                  <h3 className="text-base font-bold text-slate-900">Baixar modelo para preenchimento (.xlsx)</h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   Baixe uma planilha vazia que poderá ser preenchida e futuramente importada para o Saúde Familiar.
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-sm text-slate-600">
                   Arquivo com 8 abas padronizadas, regras de preenchimento e cabeçalhos fixos do Contrato V1.
                 </p>
               </div>
@@ -192,25 +194,25 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
                 type="button"
                 id="btn-download-template-xlsx"
                 onClick={handleDownloadTemplate}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 shadow-xs transition-colors cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className="w-4 h-4" />
                 <span>Baixar Modelo Vazio</span>
               </button>
             </div>
           </div>
 
           {/* Orientação & Aviso de Privacidade */}
-          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-semibold text-amber-950">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-950">
               <Info className="w-4 h-4 text-amber-700 shrink-0" />
               <span>Orientações de Preenchimento e Segurança</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-amber-900/90">
+            <p className="text-sm leading-relaxed text-amber-950 font-medium">
               Você poderá preencher o modelo manualmente ou utilizar uma ferramenta de sua confiança para ajudá-lo. Sempre revise as informações antes de importar.
             </p>
-            <p className="text-[11px] leading-relaxed text-amber-800/80 pt-1 border-t border-amber-200/60 flex items-start gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-sm leading-relaxed text-amber-900 pt-1 border-t border-amber-200/60 flex items-start gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
               <span>
                 Este arquivo pode conter informações pessoais e de saúde. Armazene-o em local seguro e compartilhe somente com pessoas ou serviços de sua confiança.
               </span>

@@ -156,8 +156,10 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
             Cadastrar Novo Familiar / Paciente
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+            aria-label="Fechar modal"
           >
             ✕
           </button>
@@ -171,8 +173,8 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
               <p className="text-amber-800 leading-relaxed">
                 {duplicateConflict}
               </p>
-              <div className="pt-1 flex items-center gap-1.5 text-slate-600 text-[11px]">
-                <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <div className="pt-1 flex items-center gap-1.5 text-slate-700 text-sm">
+                <Info className="w-4 h-4 text-slate-500 shrink-0" />
                 <span>Para garantir a integridade do histórico de saúde, o sistema não permite pacientes duplicados. Solicite ao administrador da família atual que compartilhe o acesso com você.</span>
               </div>
             </div>
@@ -227,7 +229,7 @@ export const NewPatientModal: React.FC<NewPatientModalProps> = ({ isOpen, onClos
                     : 'border-slate-200 focus:border-teal-500'
                 } rounded-xl focus:outline-none focus:bg-white`}
               />
-              <p className="mt-1 text-[11px] text-slate-400 leading-tight">
+              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
                 Protegido como ***.***.***-XX. Imutável após o cadastro para conformidade regulatória.
               </p>
               {cpfError && (

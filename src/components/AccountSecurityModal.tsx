@@ -302,7 +302,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 Segurança da Conta
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-600">
                 Gerencie sua senha, verificação de e-mail e autenticação em duas etapas (MFA)
               </p>
             </div>
@@ -312,7 +312,8 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             type="button"
             id="btn-close-security-modal"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer"
+            aria-label="Fechar configurações de segurança"
           >
             <X className="w-5 h-5" />
           </button>
@@ -397,16 +398,16 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
               </div>
 
               {/* Email Verification Status */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm pt-1">
                 <div className="flex items-center gap-2">
                   <span className="text-slate-600">Confirmação de e-mail:</span>
                   {isEmailVerified ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       Verificado
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                       Não verificado
                     </span>
@@ -420,7 +421,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       id="btn-send-email-verification"
                       onClick={handleSendVerificationEmail}
                       disabled={isSendingVerification}
-                      className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition shadow-2xs disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs sm:text-sm font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg transition shadow-2xs disabled:opacity-50 cursor-pointer"
                     >
                       {isSendingVerification ? 'Enviando...' : 'Enviar e-mail'}
                     </button>
@@ -429,10 +430,10 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       id="btn-refresh-email-status"
                       onClick={handleRefreshEmailStatus}
                       disabled={isLoading}
-                      className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition"
+                      className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                       title="Atualizar status"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
                   </div>
                 )}
@@ -466,7 +467,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
               <form onSubmit={handleChangePassword} className="space-y-3">
                 <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-sm font-bold text-slate-700">
                     Senha atual
                   </label>
                   <div className="relative">
@@ -478,22 +479,23 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Sua senha atual"
                       disabled={isChangingPassword}
-                      className="w-full pr-10 pl-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                      className="w-full pr-11 pl-3.5 py-2.5 min-h-[44px] text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       tabIndex={-1}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] absolute inset-y-0 right-0 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      aria-label="Alternar visibilidade da senha"
                     >
-                      {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-700">
+                    <label className="block text-sm font-bold text-slate-700">
                       Nova senha
                     </label>
                     <div className="relative">
@@ -505,21 +507,22 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Mínimo 6 caracteres"
                         disabled={isChangingPassword}
-                        className="w-full pr-10 pl-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                        className="w-full pr-11 pl-3.5 py-2.5 min-h-[44px] text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                         tabIndex={-1}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] absolute inset-y-0 right-0 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                        aria-label="Alternar visibilidade da nova senha"
                       >
-                        {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-700">
+                    <label className="block text-sm font-bold text-slate-700">
                       Confirmar nova senha
                     </label>
                     <div className="relative">
@@ -531,15 +534,16 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
                         placeholder="Repita a nova senha"
                         disabled={isChangingPassword}
-                        className="w-full pr-10 pl-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                        className="w-full pr-11 pl-3.5 py-2.5 min-h-[44px] text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
                         tabIndex={-1}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] absolute inset-y-0 right-0 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                        aria-label="Alternar visibilidade da confirmação"
                       >
-                        {showConfirmNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {showConfirmNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -550,7 +554,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     type="submit"
                     id="btn-submit-change-password"
                     disabled={isChangingPassword || !currentPassword || !newPassword || !confirmNewPassword}
-                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-2.5 min-h-[44px] text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                   >
                     {isChangingPassword ? 'Salvando...' : 'Salvar Nova Senha'}
                   </button>
@@ -576,10 +580,10 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-base font-bold text-slate-900">
                     Autenticação em Duas Etapas (MFA)
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs sm:text-sm text-slate-600">
                     Proteja sua conta solicitando um código temporário de 6 dígitos no login
                   </p>
                 </div>
@@ -587,12 +591,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
               <div>
                 {isMfaActive ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     Ativada (TOTP)
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full">
                     Desativada
                   </span>
                 )}
@@ -600,14 +604,14 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             </div>
 
             {mfaError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-start gap-2">
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs sm:text-sm text-rose-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <div className="flex-1 leading-relaxed">{mfaError}</div>
               </div>
             )}
 
             {mfaSuccess && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-start gap-2">
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm text-emerald-800 flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="flex-1 font-medium">{mfaSuccess}</div>
               </div>
@@ -616,11 +620,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             {/* If MFA is active, show enrolled factors and unenroll option */}
             {isMfaActive && !unenrollConfirmFactor && (
               <div className="space-y-3">
-                <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2">
+                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Smartphone className="w-4 h-4 text-indigo-600" />
-                      <span className="text-xs font-bold text-slate-900">
+                      <span className="text-sm font-bold text-slate-900">
                         {mfaFactors[0]?.displayName || 'Aplicativo Autenticador (TOTP)'}
                       </span>
                     </div>
@@ -628,13 +632,13 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       type="button"
                       id="btn-start-unenroll-mfa"
                       onClick={() => setUnenrollConfirmFactor(mfaFactors[0])}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                       <span>Remover</span>
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Você precisará do seu aplicativo autenticador sempre que realizar login na plataforma.
                   </p>
                 </div>
@@ -647,17 +651,17 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-xs font-bold text-rose-900">
+                    <h4 className="text-sm font-bold text-rose-900">
                       Confirmar desativação do autenticador
                     </h4>
-                    <p className="text-xs text-rose-700 leading-relaxed mt-0.5">
+                    <p className="text-xs sm:text-sm text-rose-700 leading-relaxed mt-0.5">
                       Sua conta perderá a camada de proteção adicional em duas etapas.
                     </p>
                   </div>
                 </div>
 
                 {isOnlyGoogle && (
-                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 space-y-2">
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-600 space-y-2">
                     <p className="leading-relaxed">
                       Para desativar a autenticação em duas etapas, confirme sua identidade com sua Conta Google.
                     </p>
@@ -666,7 +670,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
                 {isPasswordAccount && (
                   <div className="space-y-1 pt-1">
-                    <label className="block text-[11px] font-semibold text-slate-700">
+                    <label className="block text-sm font-bold text-slate-700">
                       Confirme sua senha atual para desativar:
                     </label>
                     <input
@@ -675,7 +679,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       value={unenrollPassword}
                       onChange={(e) => setUnenrollPassword(e.target.value)}
                       placeholder="Sua senha atual"
-                      className="w-full px-3 py-1.5 text-xs bg-white border border-rose-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                      className="w-full px-3.5 py-2.5 min-h-[44px] text-sm bg-white border border-rose-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                     />
                   </div>
                 )}
@@ -688,7 +692,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       setUnenrollPassword('');
                     }}
                     disabled={isUnenrolling}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition cursor-pointer"
+                    className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -699,7 +703,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       id="btn-confirm-unenroll-mfa-google"
                       onClick={() => handleUnenrollMfa('google')}
                       disabled={isUnenrolling}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                     >
                       {isUnenrolling ? 'Confirmando...' : 'Confirmar com Google e Desativar'}
                     </button>
@@ -710,7 +714,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         id="btn-confirm-unenroll-mfa-google"
                         onClick={() => handleUnenrollMfa('google')}
                         disabled={isUnenrolling}
-                        className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition cursor-pointer"
+                        className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition cursor-pointer"
                       >
                         Confirmar com Google
                       </button>
@@ -719,7 +723,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         id="btn-confirm-unenroll-mfa"
                         onClick={() => handleUnenrollMfa('password')}
                         disabled={isUnenrolling || !unenrollPassword}
-                        className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                        className="px-4 py-2 min-h-[44px] text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                       >
                         {isUnenrolling ? 'Removendo...' : 'Desativar com Senha'}
                       </button>
@@ -730,7 +734,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       id="btn-confirm-unenroll-mfa"
                       onClick={() => handleUnenrollMfa('password')}
                       disabled={isUnenrolling || !unenrollPassword}
-                      className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                      className="px-4 py-2 min-h-[44px] text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                     >
                       {isUnenrolling ? 'Removendo...' : 'Desativar Autenticador'}
                     </button>
@@ -741,12 +745,12 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
 
             {/* Information on Lost Authenticator */}
             {/* MFA_RECOVERY = FUTURE_FEATURE */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5 text-xs">
+            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5 text-xs sm:text-sm">
               <div className="flex items-center gap-2 text-slate-800 font-semibold">
                 <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
                 <span>Perdeu acesso ao seu aplicativo autenticador?</span>
               </div>
-              <p className="text-slate-600 leading-relaxed text-[11px]">
+              <p className="text-slate-600 leading-relaxed text-xs">
                 Por segurança, redefinir sua senha não remove a autenticação em duas etapas. Caso perca acesso ao seu autenticador, será necessário utilizar o processo de recuperação de conta disponibilizado pelo Saúde Familiar.
               </p>
             </div>
@@ -754,7 +758,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             {/* If MFA is not active and not enrolling, show setup CTA */}
             {!isMfaActive && !isEnrollingMfa && (
               <div className="space-y-3">
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   Utilize aplicativos como <strong>Google Authenticator</strong>, <strong>Microsoft Authenticator</strong>, <strong>1Password</strong> ou qualquer app TOTP padrão para gerar códigos seguros de acesso.
                 </p>
 
@@ -764,14 +768,14 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                     id="btn-start-totp-enrollment"
                     onClick={handleStartTotpEnrollment}
                     disabled={isLoading || !isEmailVerified}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                   >
                     <Smartphone className="w-4 h-4" />
                     <span>Configurar Aplicativo Autenticador</span>
                   </button>
 
                   {!isEmailVerified && (
-                    <span className="text-[11px] text-amber-600 font-medium">
+                    <span className="text-xs text-amber-700 font-medium">
                       * Confirme seu e-mail para ativar
                     </span>
                   )}
@@ -783,11 +787,11 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
             {!isMfaActive && isEnrollingMfa && (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-in fade-in">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                     <QrCode className="w-4 h-4 text-indigo-600" />
                     1. Escaneie o QR Code no seu aplicativo autenticador
                   </h4>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-600">
                     Abra o Google Authenticator ou similar e aponte a câmera para o código abaixo:
                   </p>
                 </div>
@@ -806,7 +810,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                   )}
 
                   <div className="space-y-2 w-full">
-                    <span className="text-[11px] font-semibold text-slate-600 block">
+                    <span className="text-xs font-bold text-slate-700 block">
                       Não consegue escanear? Digite a chave manualmente:
                     </span>
                     <div className="flex items-center gap-2">
@@ -817,13 +821,13 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         type="button"
                         id="btn-copy-mfa-secret"
                         onClick={handleCopySecretKey}
-                        className="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-md transition shrink-0"
+                        className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition shrink-0 cursor-pointer"
                         title="Copiar chave"
                       >
                         {copiedKey ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Tipo: Baseado em tempo (TOTP) • 6 dígitos
                     </p>
                   </div>
@@ -832,7 +836,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                 {/* Verification Code Input */}
                 <form onSubmit={handleFinalizeTotpEnrollment} className="space-y-3 pt-2">
                   <div className="space-y-1">
-                    <label className="block text-xs font-bold text-slate-900">
+                    <label className="block text-sm font-bold text-slate-900">
                       2. Digite o código de 6 dígitos gerado pelo aplicativo
                     </label>
                     <input
@@ -858,7 +862,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                         setMfaSecret(null);
                       }}
                       disabled={isLoading}
-                      className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition"
+                      className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -866,7 +870,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
                       type="submit"
                       id="btn-confirm-mfa-enroll"
                       disabled={isLoading || mfaVerificationCode.length !== 6}
-                      className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition disabled:opacity-50 cursor-pointer"
+                      className="px-5 py-2 min-h-[44px] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
                     >
                       {isLoading ? 'Verificando...' : 'Confirmar e Ativar'}
                     </button>
@@ -882,7 +886,7 @@ export const AccountSecurityModal: React.FC<AccountSecurityModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200/70 rounded-lg transition"
+            className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-700 hover:bg-slate-200/70 rounded-xl transition cursor-pointer"
           >
             Fechar
           </button>

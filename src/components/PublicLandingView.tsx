@@ -67,11 +67,11 @@ export const PublicLandingView: React.FC = () => {
                 <span className="font-bold text-base sm:text-lg text-slate-900 tracking-tight">
                   Saúde Familiar
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
                   BETA
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block">
+              <p className="text-sm text-slate-600 hidden sm:block">
                 Cuidado e Acompanhamento Clínico
               </p>
             </div>
@@ -121,7 +121,7 @@ export const PublicLandingView: React.FC = () => {
                 <span className="font-bold text-amber-900 text-sm sm:text-base">
                   Versão Beta
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
                   Fase de Avaliação
                 </span>
               </div>
@@ -346,7 +346,7 @@ export const PublicLandingView: React.FC = () => {
           <p className="font-semibold text-slate-700">
             Saúde Familiar • Sistema de Cuidado e Acompanhamento Clínico
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-sm text-slate-600">
             Versão Beta • Destinada a testes com dados fictícios.
           </p>
         </div>

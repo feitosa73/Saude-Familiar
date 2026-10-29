@@ -15,12 +15,12 @@ export const LoginView: React.FC = () => {
           </div>
           <div>
             <div className="font-bold text-base tracking-tight text-slate-900">Saúde Familiar</div>
-            <div className="text-[11px] text-slate-500 font-medium">Gestão de Saúde & Cuidado Contínuo</div>
+            <div className="text-sm text-slate-600 font-medium">Gestão de Saúde & Cuidado Contínuo</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-200/60 text-slate-700 text-xs font-semibold">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/60 text-slate-700 text-xs font-semibold">
+          <ShieldCheck className="w-4 h-4 text-blue-600" />
           <span>Ambiente Seguro</span>
         </div>
       </header>
@@ -36,7 +36,7 @@ export const LoginView: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Acesso à Área Privada
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-sm mx-auto">
+            <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto font-medium">
               Plataforma restrita para familiares e cuidadores autorizados acompanharem o plano de saúde e rotina médica.
             </p>
           </div>
@@ -46,7 +46,7 @@ export const LoginView: React.FC = () => {
 
           {/* Security Notice */}
           <div className="pt-4 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed">
               Os dados médicos e familiares são protegidos e confidenciais. O acesso aos prontuários requer autorização pelo administrador do grupo familiar.
             </p>
           </div>

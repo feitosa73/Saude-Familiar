@@ -355,11 +355,11 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                 Leitura de Agendamento com IA
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
                   Zero Storage
                 </span>
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-600">
                 Cadastro automático para {safePatientName}
               </p>
             </div>
@@ -367,7 +367,8 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Fechar scanner de agendamentos"
           >
             <X className="w-5 h-5" />
           </button>
@@ -443,29 +444,30 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                       <p className="text-xs font-bold text-slate-900 truncate">
                         {selectedFile.name}
                       </p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-xs text-slate-600">
                         {(selectedFile.size / 1024).toFixed(1)} KB • Pronto para leitura
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedFile(null)}
-                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg"
+                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                      aria-label="Remover arquivo selecionado"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Zero Storage Note */}
-              <div className="p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex items-start gap-3 text-xs text-purple-950">
+              <div className="p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-purple-950">
                 <ShieldCheck className="w-5 h-5 text-purple-700 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <span className="font-bold text-purple-900 block">
                     Zero Storage & Descarte Imediato da Memória
                   </span>
-                  <p className="text-[11px] text-purple-900/80 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-purple-950/80 leading-relaxed">
                     Fotos de mensagens privadas e comprovantes de consultas são processados diretamente na memória RAM e descartados imediatamente. Nenhuma foto do seu celular é mantida em disco.
                   </p>
                 </div>
@@ -475,7 +477,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="px-4 py-2.5 min-h-[44px] text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -483,7 +485,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                   type="button"
                   disabled={!selectedFile}
                   onClick={handleStartExtraction}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer ${
                     selectedFile
                       ? 'bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -511,11 +513,11 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                 <h3 className="text-base font-bold text-slate-900">
                   Lendo Comprovante de Agendamento...
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm">
+                <p className="text-sm text-slate-600 max-w-sm">
                   Identificando médicos, clínicas, datas, horários e instruções de preparo/jejum...
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[11px] font-bold text-purple-800">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-bold text-purple-800">
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                 <span>Processamento Efêmero em RAM (Zero Storage)</span>
               </div>
@@ -527,11 +529,11 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
             <div className="space-y-6">
               {/* Confidence Alert */}
               {confidenceWarning && (
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-amber-900">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <span className="font-bold block">Aviso de Leitura da IA:</span>
-                    <p className="text-[11px] leading-relaxed text-amber-800">
+                    <p className="text-xs sm:text-sm leading-relaxed text-amber-800">
                       {confidenceWarning}
                     </p>
                   </div>
@@ -549,9 +551,9 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
               {/* Schedules List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <span>Agendamentos Encontrados</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800">
                       {schedules.length}
                     </span>
                   </h4>
@@ -559,9 +561,9 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                   <button
                     type="button"
                     onClick={handleAddManualSchedule}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-800 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-purple-700 hover:text-purple-800 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     <span>Adicionar Agendamento</span>
                   </button>
                 </div>
@@ -625,7 +627,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                           {/* Title */}
                           <div className="lg:col-span-2">
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                               Título do Agendamento *
                             </label>
                             <input
@@ -633,13 +635,13 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                               value={item.title}
                               onChange={(e) => handleScheduleChange(idx, 'title', e.target.value)}
                               placeholder="Ex: Consulta Cardiológica"
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-slate-800"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-slate-800"
                             />
                           </div>
 
                           {/* Date and Time */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                               Data do Agendamento *
                             </label>
                             <input
@@ -653,14 +655,14 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                                   : '08:00';
                                 handleScheduleChange(idx, 'dateTime', newDate ? `${newDate}T${currentTime}` : '');
                               }}
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-semibold text-slate-800"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-semibold text-slate-800"
                             />
                           </div>
 
                           <div>
-                            <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1 flex items-center justify-between">
                               <span>Horário *</span>
-                              <span className="text-[10px] text-purple-600 font-medium">Hora exata</span>
+                              <span className="text-xs text-purple-700 font-semibold">Hora exata</span>
                             </label>
                             <input
                               type="time"
@@ -671,13 +673,13 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                                 const currentDate = item.dateTime ? item.dateTime.split('T')[0] : new Date().toISOString().split('T')[0];
                                 handleScheduleChange(idx, 'dateTime', `${currentDate}T${newTime}`);
                               }}
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-purple-900"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-purple-900"
                             />
                           </div>
 
                           {/* Specialty / Category */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                               Especialidade / Categoria
                             </label>
                             <input
@@ -685,13 +687,13 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                               value={item.specialtyOrCategory}
                               onChange={(e) => handleScheduleChange(idx, 'specialtyOrCategory', e.target.value)}
                               placeholder="Ex: Cardiologia"
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
                             />
                           </div>
 
                           {/* Professional / Establishment */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                               Profissional / Clínica
                             </label>
                             <input
@@ -699,13 +701,13 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                               value={item.professional || ''}
                               onChange={(e) => handleScheduleChange(idx, 'professional', e.target.value)}
                               placeholder="Ex: Dr. Fernando Costa"
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
                             />
                           </div>
 
                           {/* Location */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                               Local / Endereço
                             </label>
                             <input
@@ -713,14 +715,14 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                               value={item.location || ''}
                               onChange={(e) => handleScheduleChange(idx, 'location', e.target.value)}
                               placeholder="Ex: Hospital Samaritano - Bloco A"
-                              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-slate-800"
                             />
                           </div>
 
                           {/* Preparation Instructions */}
                           <div className="sm:col-span-2 lg:col-span-3">
-                            <label className="text-[11px] font-bold text-amber-800 block mb-1 flex items-center gap-1">
-                              <AlertCircle className="w-3.5 h-3.5" />
+                            <label className="text-xs sm:text-sm font-bold text-amber-900 block mb-1 flex items-center gap-1.5">
+                              <AlertCircle className="w-4 h-4" />
                               <span>Instruções de Preparo Obrigatórias (Jejum, Medicamentos, etc.):</span>
                             </label>
                             <input
@@ -728,7 +730,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                               value={item.preparationInstructions || ''}
                               onChange={(e) => handleScheduleChange(idx, 'preparationInstructions', e.target.value)}
                               placeholder="Ex: Jejum absoluto de 8 horas; chegar 20 minutos antes."
-                              className="w-full px-3 py-2 text-xs bg-amber-50/50 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 text-slate-800 font-medium"
+                              className="w-full px-3 py-2 text-sm min-h-[44px] bg-amber-50/50 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 text-slate-800 font-medium"
                             />
                           </div>
                         </div>
@@ -756,7 +758,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setStep('upload')}
-                  className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Voltar / Enviar Outro Arquivo
                 </button>
@@ -765,7 +767,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                    className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   >
                     Descartar
                   </button>
@@ -773,7 +775,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                     type="button"
                     disabled={isSaving}
                     onClick={handleApproveAndSave}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                   >
                     {isSaving ? (
                       <>

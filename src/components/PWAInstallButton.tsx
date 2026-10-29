@@ -59,40 +59,42 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
                     <Download className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">Instalar Saúde Familiar</h3>
-                    <p className="text-[11px] text-slate-500">Tela cheia sem barra do navegador</p>
+                    <h3 className="font-bold text-slate-900 text-base">Instalar Saúde Familiar</h3>
+                    <p className="text-sm text-slate-600">Tela cheia sem barra do navegador</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                  title="Fechar"
+                  aria-label="Fechar guia de instalação"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-700">
-                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div className="space-y-3 text-sm text-slate-700">
+                <div className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
                   <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
                     1
                   </span>
                   <div className="space-y-1">
                     <p className="font-semibold text-slate-900">Toque no botão Compartilhar</p>
-                    <p className="text-slate-500 text-[11px] flex items-center gap-1">
-                      No menu inferior do Safari <Share className="w-3.5 h-3.5 text-blue-600 inline" />
+                    <p className="text-slate-600 text-sm flex items-center gap-1.5">
+                      No menu inferior do Safari <Share className="w-4 h-4 text-blue-600 inline" />
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
                   <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
                     2
                   </span>
                   <div className="space-y-1">
                     <p className="font-semibold text-slate-900">Selecione "Adicionar à Tela de Início"</p>
-                    <p className="text-slate-500 text-[11px] flex items-center gap-1">
-                      Role a lista até encontrar <PlusSquare className="w-3.5 h-3.5 text-blue-600 inline" />
+                    <p className="text-slate-600 text-sm flex items-center gap-1.5">
+                      Role a lista até encontrar <PlusSquare className="w-4 h-4 text-blue-600 inline" />
                     </p>
                   </div>
                 </div>
@@ -101,7 +103,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
               <button
                 type="button"
                 onClick={() => setShowIOSGuide(false)}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
+                className="w-full min-h-[44px] py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition cursor-pointer"
               >
                 Entendi
               </button>

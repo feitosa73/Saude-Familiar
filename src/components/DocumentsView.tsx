@@ -597,34 +597,35 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Detalhes do Registro Clínico</h3>
-                  <p className="text-[11px] text-slate-500">{selectedPatient?.name}</p>
+                  <h3 className="font-bold text-slate-900 text-base">Detalhes do Registro Clínico</h3>
+                  <p className="text-sm text-slate-600">{selectedPatient?.name}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 text-sm font-semibold"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+                aria-label="Fechar modal"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-700">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div className="space-y-3 text-sm text-slate-700">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="font-semibold text-slate-500">Título:</span>
+                  <span className="font-semibold text-slate-600">Título:</span>
                   <span className="font-bold text-slate-900">{previewDoc.title}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="font-semibold text-slate-500">Categoria:</span>
+                  <span className="font-semibold text-slate-600">Categoria:</span>
                   <span className="font-bold text-slate-800">
                     {categoryLabels[previewDoc.category]?.label || previewDoc.category}
                   </span>
                 </div>
                 {previewDoc.date && (
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="font-semibold text-slate-500">Data:</span>
+                    <span className="font-semibold text-slate-600">Data:</span>
                     <span className="font-bold text-slate-800">
                       {new Date(previewDoc.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                     </span>
@@ -632,13 +633,13 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                 )}
                 {previewDoc.doctor && (
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="font-semibold text-slate-500">Profissional / CRM:</span>
+                    <span className="font-semibold text-slate-600">Profissional / CRM:</span>
                     <span className="font-bold text-slate-800">{previewDoc.doctor}</span>
                   </div>
                 )}
                 {previewDoc.extractedByAi && (
                   <div className="py-1 flex items-center gap-1.5 text-indigo-700 font-semibold">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-4 h-4" />
                     <span>Processado via IA (Zero Storage / Transcrição Concluída)</span>
                   </div>
                 )}
@@ -646,8 +647,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
               {previewDoc.notes && (
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 block">Conteúdo / Orientações Registradas:</span>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto font-mono text-[11px]">
+                  <span className="font-bold text-slate-800 block">Conteúdo / Orientações Registradas:</span>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto font-mono text-sm">
                     {previewDoc.notes}
                   </div>
                 </div>

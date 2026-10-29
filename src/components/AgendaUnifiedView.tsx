@@ -857,7 +857,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
                     Data e Hora de Realização
                   </label>
                   <input
@@ -866,7 +866,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     onChange={(e) => setExamExecutionDate(e.target.value)}
                     className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  <span className="text-sm text-slate-600 mt-1 block">
                     Deixe em branco se ainda aguarda liberação/vaga
                   </span>
                 </div>

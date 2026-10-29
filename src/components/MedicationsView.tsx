@@ -512,7 +512,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   resetForm();
                   onCloseModal();
                 }}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1 cursor-pointer"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer text-base font-bold"
                 aria-label="Fechar modal"
               >
                 ✕
@@ -576,7 +576,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   onChange={(e) => setTimesInput(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
                 />
-                <span className="text-[11px] text-slate-400 mt-0.5 block">
+                <span className="text-sm text-slate-600 mt-1 block">
                   Defina os horários do dia em que a dose deve ser administrada.
                 </span>
               </div>

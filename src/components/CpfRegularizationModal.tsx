@@ -180,8 +180,9 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
             type="button"
             id="btn-close-regularization-modal"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
             title="Fechar ou regularizar mais tarde"
+            aria-label="Fechar ou regularizar mais tarde"
           >
             <X className="w-5 h-5" />
           </button>
@@ -190,16 +191,16 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Informative Explanation */}
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 text-amber-900 text-xs sm:text-sm space-y-1.5 leading-relaxed">
-            <p className="font-semibold flex items-center gap-1.5">
+          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 text-amber-900 text-sm space-y-1.5 leading-relaxed">
+            <p className="font-semibold flex items-center gap-1.5 text-base">
               <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
               Por que regularizar o CPF dos pacientes?
             </p>
-            <p className="text-xs text-amber-800">
+            <p className="text-sm text-amber-800">
               O CPF é o identificador único para prevenir prontuários duplicados e garantir a segurança médica dos registros de saúde.
               <strong> Seus dados existentes (medicamentos, consultas e exames) estão preservados.</strong>
             </p>
-            <p className="text-[11px] text-amber-700">
+            <p className="text-sm text-amber-900">
               Após informado, o CPF é validado pelos dígitos verificadores, exibido de forma protegida (***.***.***-XX) e fixado como imutável.
             </p>
           </div>
@@ -264,7 +265,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                             </p>
                           </div>
                         </div>
-                        <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                        <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
                           Sem CPF
                         </span>
                       </div>
@@ -340,7 +341,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                     Opcional: você pode vincular seu próprio CPF ao seu perfil de cuidador/familiar agora ou mais tarde.
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full uppercase">
+                <span className="text-xs font-bold text-slate-600 bg-slate-200 px-2.5 py-0.5 rounded-full uppercase">
                   Opcional
                 </span>
               </div>
@@ -397,7 +398,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <p className="text-[11px] text-slate-500">
+          <p className="text-sm text-slate-600 font-medium">
             {remainingPatients.length > 0
               ? `${remainingPatients.length} paciente(s) ainda pendente(s)`
               : 'Tudo pronto'}

@@ -115,14 +115,14 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
                       <h3 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-blue-700 transition-colors">
                         {opt.title}
                       </h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${opt.badgeColor}`}>
+                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${opt.badgeColor}`}>
                         {opt.badge}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-600">
+                    <p className="text-sm font-semibold text-slate-700">
                       {opt.description}
                     </p>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                    <p className="text-sm text-slate-600 leading-relaxed">
                       {opt.details}
                     </p>
                   </div>
@@ -139,11 +139,11 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
           </div>
 
           {/* Privacy Note */}
-          <div className="mt-5 p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl flex items-start gap-2.5 text-xs text-blue-950">
+          <div className="mt-5 p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl flex items-start gap-2.5 text-sm text-blue-950">
             <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <div className="space-y-0.5 text-[11px] leading-relaxed">
+            <div className="space-y-0.5 text-sm leading-relaxed">
               <span className="font-bold text-blue-900 block">Arquitetura Zero Storage & Privacidade LGPD</span>
-              <p className="text-blue-800/90">
+              <p className="text-blue-900/90">
                 Seus arquivos (PDF ou imagem) são analisados diretamente na memória RAM e descartados imediatamente após a extração estruturada. Nenhum arquivo original sensível fica gravado em servidores externos.
               </p>
             </div>

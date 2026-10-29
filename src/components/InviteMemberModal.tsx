@@ -189,7 +189,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
             type="button"
             id="close-invite-modal-btn"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            title="Fechar"
+            aria-label="Fechar modal de convite"
           >
             <X className="w-5 h-5" />
           </button>
@@ -234,12 +236,12 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               <div className="space-y-5 animate-in fade-in">
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div className="text-xs">
-                    <h4 className="font-bold text-emerald-900 text-sm">Convite Gerado com Sucesso!</h4>
-                    <p className="text-emerald-700 mt-1">
+                  <div className="text-sm">
+                    <h4 className="font-bold text-emerald-900 text-base">Convite Gerado com Sucesso!</h4>
+                    <p className="text-emerald-800 mt-1">
                       O convite foi registrado para <strong>{createdResult.invitation.invitedEmail}</strong> acessar o prontuário de <strong>{createdResult.invitation.patientName}</strong> como <strong>{createdResult.invitation.role === 'CAREGIVER' ? 'Cuidador(a)' : 'Visualizador(a)'}</strong>.
                     </p>
-                    <p className="text-emerald-600 text-[11px] mt-1">
+                    <p className="text-emerald-700 text-sm mt-1 font-medium">
                       Validade: 7 dias (expira em {new Date(createdResult.invitation.expiresAt).toLocaleDateString('pt-BR')})
                     </p>
                   </div>
@@ -410,31 +412,31 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-sm text-slate-600">
                     O convidado utilizará a conta Google com este e-mail para acessar o prontuário compartilhado com segurança.
                   </p>
                 </div>
 
                 {/* 3. Role Selection */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     3. Papel de Acesso
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* VIEWER Option */}
                     <div
                       onClick={() => setRole('VIEWER')}
-                      className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
+                      className={`cursor-pointer p-4 rounded-xl border transition-all ${
                         role === 'VIEWER'
                           ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-400/20'
                           : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
                         <Eye className="w-4 h-4 text-amber-600" />
                         <span>Visualizador(a) (VIEWER)</span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      <p className="text-sm text-slate-600 mt-1 leading-relaxed">
                         Apenas leitura. Visualiza medicamentos, consultas agendadas, resultados de exames e linha do tempo.
                       </p>
                     </div>
@@ -442,17 +444,17 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     {/* CAREGIVER Option */}
                     <div
                       onClick={() => setRole('CAREGIVER')}
-                      className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
+                      className={`cursor-pointer p-4 rounded-xl border transition-all ${
                         role === 'CAREGIVER'
                           ? 'bg-blue-50/70 border-blue-400 ring-2 ring-blue-400/20'
                           : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
                         <HeartPulse className="w-4 h-4 text-blue-600" />
                         <span>Cuidador(a) (CAREGIVER)</span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      <p className="text-sm text-slate-600 mt-1 leading-relaxed">
                         Pode registrar medicações tomadas, agendar consultas e cadastrar novos exames do paciente.
                       </p>
                     </div>
@@ -535,37 +537,37 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               {inv.invitedName ? `${inv.invitedName} (${inv.invitedEmail})` : inv.invitedEmail}
                             </span>
                             {inv.invitedPhone && (
-                              <span className="text-[10px] text-slate-500 font-mono">
+                              <span className="text-xs text-slate-600 font-mono">
                                 • {inv.invitedPhone}
                               </span>
                             )}
                             {/* Status Badge */}
                             {isPending && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                                <Clock className="w-3 h-3" /> Pendente
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                                <Clock className="w-3.5 h-3.5" /> Pendente
                               </span>
                             )}
                             {isAccepted && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <CheckCircle2 className="w-3 h-3" /> Aceito
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Aceito
                               </span>
                             )}
                             {isExpired && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
                                 Expirado
                               </span>
                             )}
                             {isRevoked && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200">
-                                <XCircle className="w-3 h-3" /> Revogado
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200">
+                                <XCircle className="w-3.5 h-3.5" /> Revogado
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
+                          <div className="text-sm text-slate-700 mt-1">
                             Paciente: <strong>{inv.patientName}</strong> • Papel:{' '}
                             <strong>{inv.role === 'CAREGIVER' ? 'Cuidador(a)' : 'Visualizador(a)'}</strong>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
+                          <div className="text-xs text-slate-500 mt-0.5">
                             Enviado em {new Date(inv.createdAt).toLocaleDateString('pt-BR')}
                             {isPending && ` • Expira em ${new Date(inv.expiresAt).toLocaleDateString('pt-BR')}`}
                             {isAccepted && inv.acceptedAt && ` • Aceito em ${new Date(inv.acceptedAt).toLocaleDateString('pt-BR')}`}

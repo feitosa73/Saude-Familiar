@@ -359,15 +359,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badge.color}`}>
+                        <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${badge.color}`}>
                           {badge.label}
                         </span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                           {ev.category}
                         </span>
                         {ev.important && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Evento Marcante
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" /> Evento Marcante
                           </span>
                         )}
                       </div>

@@ -189,12 +189,12 @@ export const AppHistoryView: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-md border border-indigo-200 shadow-2xs">
-            <Cpu className="w-3 h-3 text-indigo-600" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-white px-3 py-1 rounded-md border border-indigo-200 shadow-2xs">
+            <Cpu className="w-3.5 h-3.5 text-indigo-600" />
             Gemini 3.8 Flash
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-md border border-emerald-200 shadow-2xs">
-            <Smartphone className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-white px-3 py-1 rounded-md border border-emerald-200 shadow-2xs">
+            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
             Câmera & PDF
           </span>
         </div>
@@ -227,7 +227,7 @@ export const AppHistoryView: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-slate-900">{entry.tagline}</span>
                     {entry.isCurrent && (
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                         Versão Vigente
                       </span>
                     )}

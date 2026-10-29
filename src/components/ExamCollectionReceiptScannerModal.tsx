@@ -449,8 +449,8 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0"
-            title="Fechar"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+            aria-label="Fechar scanner de comprovante"
           >
             <X className="w-5 h-5" />
           </button>
@@ -564,7 +564,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
               </div>
 
               {/* Zero Storage Notice */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 flex items-center gap-2">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-600 flex items-center gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
                   Privacidade Garantida: O arquivo é processado na memória em trânsito e jamais armazenado sem a sua confirmação explícita.
@@ -656,7 +656,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                       <button
                         type="button"
                         onClick={() => setZoomLevel(1)}
-                        className="p-1 bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700 text-[10px] font-mono px-1.5"
+                        className="p-1 bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700 text-xs font-mono px-2"
                         title="Resetar Zoom"
                       >
                         {Math.round(zoomLevel * 100)}%
@@ -704,7 +704,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                     )}
                   </div>
 
-                  <p className="text-[11px] text-slate-500 text-center">
+                  <p className="text-xs text-slate-600 text-center">
                     Dica: Use os controles de zoom ou toque em maximizar para conferir códigos e senhas miúdos.
                   </p>
                 </div>
@@ -747,16 +747,16 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                   {/* SECTION A: ACCESS CREDENTIALS (HIGHLIGHTED CARD) */}
                   <div className="p-4 bg-linear-to-br from-indigo-50/90 via-sky-50/70 to-blue-50/90 border-2 border-indigo-200 rounded-2xl space-y-3.5 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                      <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
                         <KeyRound className="w-4 h-4 text-indigo-600" />
                         <span>Acesso aos Resultados Online (Portal do Laboratório)</span>
                       </h3>
-                      <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
+                      <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full border border-indigo-200">
                         Campos Críticos
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
                       {/* Portal URL */}
                       <div className="sm:col-span-2">
                         <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
@@ -791,7 +791,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                           <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
                           <span>Login / Usuário do Portal</span>
                           {!accessUser && (
-                            <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-normal">
+                            <span className="text-xs text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
                               não detectado
                             </span>
                           )}
@@ -817,7 +817,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold flex items-center gap-1"
+                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1 cursor-pointer"
                           >
                             {showPassword ? (
                               <>
@@ -1046,7 +1046,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                         Arquivar comprovante original em Documentos Médicos do paciente
                       </label>
                     </div>
-                    <span className="text-[11px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md font-medium">
+                    <span className="text-xs text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-lg font-medium">
                       {selectedFile ? selectedFile.name : 'Arquivo'}
                     </span>
                   </div>
@@ -1063,7 +1063,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors"
+                className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1071,7 +1071,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                 type="button"
                 disabled={!selectedFile}
                 onClick={handleStartExtraction}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Processar com IA</span>
@@ -1083,7 +1083,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                 type="button"
                 onClick={() => setStep('upload')}
                 disabled={isSaving}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors"
+                className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
               >
                 Voltar / Trocar Arquivo
               </button>
@@ -1092,7 +1092,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                   type="button"
                   onClick={handleClose}
                   disabled={isSaving}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors"
+                  className="px-4 py-2 min-h-[44px] text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1100,7 +1100,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
                   type="button"
                   disabled={isSaving || (hasPatientMismatch && !patientMismatchAcknowledged)}
                   onClick={handleApproveAndSave}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>

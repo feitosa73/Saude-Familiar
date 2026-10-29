@@ -31,8 +31,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <HeartPulse className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-sm text-slate-900 tracking-tight">Saúde Familiar</span>
-              <span className="block text-[10px] text-slate-500 font-medium">Área de Acesso</span>
+              <span className="font-bold text-base text-slate-900 tracking-tight">Saúde Familiar</span>
+              <span className="block text-sm text-slate-600 font-medium">Área de Acesso</span>
             </div>
           </div>
 
@@ -40,10 +40,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             type="button"
             id="btn-close-auth-modal"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
             title="Fechar"
+            aria-label="Fechar modal de acesso"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -54,11 +55,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onSuccess={onClose}
         />
 
-
-
         {/* Security badge note */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-sm text-slate-600 font-medium">
+          <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
           <span>Autenticação segura via Firebase Authentication</span>
         </div>
       </div>

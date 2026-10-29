@@ -175,7 +175,7 @@ const MainContent: React.FC = () => {
   const hasNoPatients = patients.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
       {/* Top Navbar */}
       <Navbar onOpenNewPatient={() => setIsNewPatientModalOpen(true)} />
 

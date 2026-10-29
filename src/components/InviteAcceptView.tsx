@@ -204,7 +204,7 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
                   {acceptSuccess.patientName && ` ao prontuário de ${acceptSuccess.patientName}`}.
                 </p>
               </div>
-              <p className="text-[11px] text-slate-400 pt-2">
+              <p className="text-sm text-slate-600 pt-2 font-medium">
                 Redirecionando para o prontuário...
               </p>
             </div>
@@ -213,35 +213,35 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
             <div className="space-y-5">
               {/* Header Title */}
               <div className="text-center">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full mb-3">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Convite de Acesso
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full mb-3">
+                  <ShieldCheck className="w-4 h-4" /> Convite de Acesso
                 </span>
                 <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">
                   Você recebeu um convite para o Saúde Familiar
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-sm text-slate-600 mt-1.5">
                   Acesse para visualizar ou gerenciar os cuidados de saúde compartilhados.
                 </p>
               </div>
 
               {/* Privacy Shield Banner (No clinical data before auth) */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5">
-                <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                <div className="text-[11px] text-slate-600 leading-relaxed">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5">
+                <Lock className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-700 leading-relaxed">
                   <strong>Privacidade Médica:</strong> Dados clínicos, medicamentos e exames só serão exibidos após a confirmação segura da sua identidade Google.
                 </div>
               </div>
 
               {/* Invited Target Information */}
               <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Destinatário do convite:</span>
+                <div className="flex items-center justify-between text-xs sm:text-sm">
+                  <span className="text-slate-600">Destinatário do convite:</span>
                   <span className="font-bold text-slate-900 font-mono">
                     {invitationInfo.invitedEmailMasked}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Papel concedido:</span>
+                <div className="flex items-center justify-between text-xs sm:text-sm">
+                  <span className="text-slate-600">Papel concedido:</span>
                   <span className="font-bold text-blue-700">
                     {invitationInfo.role === 'CAREGIVER'
                       ? 'Cuidador(a) (CAREGIVER)'
@@ -249,7 +249,7 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
                   </span>
                 </div>
                 {invitationInfo.expiresAt && (
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-blue-100">
+                  <div className="flex items-center justify-between text-xs text-slate-600 pt-1.5 border-t border-blue-100">
                     <span>Validade do convite:</span>
                     <span>{new Date(invitationInfo.expiresAt).toLocaleDateString('pt-BR')}</span>
                   </div>
@@ -258,7 +258,7 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
 
               {/* Mismatch Error Warning */}
               {acceptError && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 space-y-2">
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs sm:text-sm text-rose-900 space-y-2">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
@@ -271,9 +271,9 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
                       <button
                         type="button"
                         onClick={handleSwitchAccount}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold text-[11px] hover:bg-rose-700 transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-600 text-white font-bold text-xs sm:text-sm hover:bg-rose-700 transition cursor-pointer"
                       >
-                        <LogOut className="w-3.5 h-3.5" />
+                        <LogOut className="w-4 h-4" />
                         <span>Trocar de Conta Google</span>
                       </button>
                     </div>
@@ -324,16 +324,16 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
                     <span>Entrar ou Criar conta com E-mail</span>
                   </button>
 
-                  <p className="text-[11px] text-slate-400 text-center">
+                  <p className="text-sm text-slate-600 text-center">
                     Faça login com a conta correspondente ao e-mail convidado ({invitationInfo.invitedEmailMasked}).
                   </p>
                 </div>
               ) : (
                 /* Authenticated State -> Confirm & Accept */
                 <div className="space-y-3 pt-2">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs sm:text-sm">
                     <div>
-                      <div className="text-[10px] uppercase font-bold text-slate-400">
+                      <div className="text-xs uppercase font-bold text-slate-600">
                         Conectado atualmente como
                       </div>
                       <div className="font-bold text-slate-800">{user.email}</div>
@@ -341,7 +341,7 @@ export const InviteAcceptView: React.FC<InviteAcceptViewProps> = ({
                     <button
                       type="button"
                       onClick={handleSwitchAccount}
-                      className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
+                      className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:underline cursor-pointer font-medium"
                     >
                       Trocar conta
                     </button>

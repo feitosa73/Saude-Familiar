@@ -346,11 +346,11 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                 Leitura de Laudo com IA
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
                   Zero Storage
                 </span>
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-600">
                 Extração de resultados e analitos para o prontuário de {safePatientName}
               </p>
             </div>
@@ -358,7 +358,8 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Fechar scanner de laudo"
           >
             <X className="w-5 h-5" />
           </button>
@@ -450,29 +451,30 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                       <p className="text-xs font-bold text-slate-900 truncate">
                         {selectedFile.name}
                       </p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-xs text-slate-600">
                         {(selectedFile.size / 1024).toFixed(1)} KB • Pronto para processamento
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedFile(null)}
-                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg"
+                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                      aria-label="Remover arquivo selecionado"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Zero Storage Architecture Banner */}
-              <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-start gap-3 text-xs text-emerald-950">
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-emerald-950">
                 <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <span className="font-bold text-emerald-900 block">
                     Garantia de Privacidade Médica & Zero Storage
                   </span>
-                  <p className="text-[11px] text-emerald-900/80 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-emerald-950/80 leading-relaxed">
                     O laudo é lido de forma volátil diretamente na memória RAM pelo modelo Gemini. Nenhuma imagem ou PDF é persistido em servidores intermediários ou repositórios de arquivos sem o seu consentimento.
                   </p>
                 </div>
@@ -482,7 +484,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="px-4 py-2.5 min-h-[44px] text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -490,7 +492,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   type="button"
                   disabled={!selectedFile}
                   onClick={handleStartExtraction}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer ${
                     selectedFile
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -518,11 +520,11 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 <h3 className="text-base font-bold text-slate-900">
                   Processando Laudo Médico...
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm">
+                <p className="text-sm text-slate-600 max-w-sm">
                   Transcrevendo parâmetros clínicos, comparando com referências laboratoriais e gerando resumo...
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Processamento Efêmero em RAM (Zero Storage)</span>
               </div>
@@ -538,7 +540,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <span className="font-bold block">Aviso de Leitura da IA:</span>
-                    <p className="text-[11px] leading-relaxed text-amber-800">
+                    <p className="text-xs sm:text-sm leading-relaxed text-amber-800">
                       {confidenceWarning}
                     </p>
                   </div>
@@ -547,14 +549,14 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
 
               {/* General Metadata Card */}
               <div className="bg-slate-50/80 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">
                   <Info className="w-4 h-4 text-emerald-600" />
                   <span>Identificação do Exame</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                       Nome do Exame / Painel *
                     </label>
                     <input
@@ -562,12 +564,12 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                       value={examName}
                       onChange={(e) => setExamName(e.target.value)}
                       placeholder="Ex: Hemograma Completo"
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-semibold text-slate-800"
+                      className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-semibold text-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                       Laboratório / Clínica
                     </label>
                     <input
@@ -575,24 +577,24 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                       value={laboratory}
                       onChange={(e) => setLaboratory(e.target.value)}
                       placeholder="Ex: Laboratório Fleury"
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
+                      className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                       Data da Coleta / Realização
                     </label>
                     <input
                       type="date"
                       value={examDate}
                       onChange={(e) => setExamDate(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
+                      className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    <label className="text-xs sm:text-sm font-bold text-slate-700 block mb-1">
                       Médico Solicitante
                     </label>
                     <input
@@ -600,14 +602,14 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                       value={requestingDoctor}
                       onChange={(e) => setRequestingDoctor(e.target.value)}
                       placeholder="Ex: Dr. Roberto Lima"
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
+                      className="w-full px-3 py-2 text-sm min-h-[44px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800"
                     />
                   </div>
                 </div>
 
                 {patientIdentified && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/80">
-                    <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 bg-white p-3 rounded-xl border border-slate-200/80">
+                    <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>Nome identificado no laudo: <strong>{patientIdentified}</strong></span>
                   </div>
                 )}
@@ -616,11 +618,11 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
               {/* Clinical Summary */}
               <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200/60 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <label className="text-xs sm:text-sm font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
                     <span>Resumo Clínico Gerado pela IA (Editável):</span>
                   </label>
-                  <span className="text-[10px] text-emerald-800 font-medium">
+                  <span className="text-xs text-emerald-800 font-medium">
                     Explicação didática para a família
                   </span>
                 </div>
@@ -629,7 +631,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   value={clinicalSummary}
                   onChange={(e) => setClinicalSummary(e.target.value)}
                   placeholder="Resumo dos achados e observações clínicas..."
-                  className="w-full px-3 py-2 text-xs bg-white border border-emerald-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800 leading-relaxed"
+                  className="w-full px-3 py-2 text-sm bg-white border border-emerald-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800 leading-relaxed"
                 />
               </div>
 
@@ -637,9 +639,9 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <span>Parâmetros e Analitos Extraídos</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
                         {results.length}
                       </span>
                     </h4>
@@ -674,7 +676,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 items-center">
                           {/* Parameter Name */}
                           <div className="sm:col-span-4">
-                            <label className="text-[10px] font-bold text-slate-500 block sm:hidden">
+                            <label className="text-xs font-bold text-slate-600 block sm:hidden">
                               Parâmetro
                             </label>
                             <input
@@ -682,13 +684,13 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                               value={item.parameter}
                               onChange={(e) => handleResultChange(idx, 'parameter', e.target.value)}
                               placeholder="Nome do Analito"
-                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
+                              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
                             />
                           </div>
 
                           {/* Value */}
                           <div className="sm:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-500 block sm:hidden">
+                            <label className="text-xs font-bold text-slate-600 block sm:hidden">
                               Resultado
                             </label>
                             <input
@@ -696,13 +698,13 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                               value={item.value}
                               onChange={(e) => handleResultChange(idx, 'value', e.target.value)}
                               placeholder="Valor"
-                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 font-semibold text-slate-900"
+                              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 font-semibold text-slate-900"
                             />
                           </div>
 
                           {/* Unit */}
                           <div className="sm:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-500 block sm:hidden">
+                            <label className="text-xs font-bold text-slate-600 block sm:hidden">
                               Unidade
                             </label>
                             <input
@@ -710,13 +712,13 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                               value={item.unit || ''}
                               onChange={(e) => handleResultChange(idx, 'unit', e.target.value)}
                               placeholder="Unidade (ex: mg/dL)"
-                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-600"
+                              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-600"
                             />
                           </div>
 
                           {/* Reference */}
                           <div className="sm:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-500 block sm:hidden">
+                            <label className="text-xs font-bold text-slate-600 block sm:hidden">
                               Referência
                             </label>
                             <input
@@ -724,7 +726,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                               value={item.referenceRange || ''}
                               onChange={(e) => handleResultChange(idx, 'referenceRange', e.target.value)}
                               placeholder="Referência"
-                              className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-500"
+                              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-500"
                             />
                           </div>
 
@@ -733,7 +735,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                             <select
                               value={item.status}
                               onChange={(e) => handleResultChange(idx, 'status', e.target.value as ExamResultStatus)}
-                              className={`px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none ${
+                              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border focus:outline-none ${
                                 item.status === 'altered'
                                   ? 'bg-rose-100 text-rose-800 border-rose-300'
                                   : item.status === 'inconclusive'
@@ -796,7 +798,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setStep('upload')}
-                  className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Voltar / Enviar Outro Arquivo
                 </button>
@@ -805,7 +807,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                    className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   >
                     Descartar
                   </button>
@@ -813,7 +815,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                     type="button"
                     disabled={isSaving}
                     onClick={handleApproveAndSave}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                   >
                     {isSaving ? (
                       <>

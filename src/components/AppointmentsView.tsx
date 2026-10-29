@@ -391,7 +391,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         {apt.professional}
                       </h3>
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
                           isAgendada
                             ? 'bg-blue-100 text-blue-800'
                             : isRealizada
@@ -399,14 +399,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             : 'bg-rose-100 text-rose-800'
                         }`}
                       >
-                        {isAgendada && <Clock3 className="w-3 h-3" />}
-                        {isRealizada && <CheckCircle2 className="w-3 h-3" />}
-                        {isCancelada && <XCircle className="w-3 h-3" />}
+                        {isAgendada && <Clock3 className="w-3.5 h-3.5" />}
+                        {isRealizada && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {isCancelada && <XCircle className="w-3.5 h-3.5" />}
                         {isAgendada ? 'Agendada' : isRealizada ? 'Realizada' : 'Cancelada'}
                       </span>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                         <span className="font-semibold text-slate-800">
@@ -419,19 +419,19 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-2.5 text-xs text-slate-600">
+                    <div className="mt-2.5 text-sm text-slate-700">
                       <strong>Motivo:</strong> {apt.reason}
                     </div>
 
                     {apt.notes && (
-                      <p className="text-xs text-slate-500 italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <p className="text-sm text-slate-700 italic mt-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                         {apt.notes}
                       </p>
                     )}
 
                     {/* Post-Consultation Guidance Section if available */}
                     {(apt.postConsultationGuidance || apt.postConsultationNotes) && (
-                      <div className="mt-3.5 p-3.5 bg-emerald-50/70 border border-emerald-200/90 rounded-xl text-xs space-y-1">
+                      <div className="mt-3.5 p-3.5 bg-emerald-50/70 border border-emerald-200/90 rounded-xl text-sm space-y-1.5">
                         <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
                           <BookOpen className="w-4 h-4 text-emerald-700" />
                           <span>Orientações & Recomendações da Consulta:</span>
@@ -442,7 +442,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           </p>
                         )}
                         {apt.postConsultationNotes && (
-                          <p className="text-emerald-800 text-[11px] pt-1 border-t border-emerald-200/60">
+                          <p className="text-emerald-900 text-sm pt-1.5 border-t border-emerald-200/60">
                             <strong>Resumo Clínico:</strong> {apt.postConsultationNotes}
                           </p>
                         )}

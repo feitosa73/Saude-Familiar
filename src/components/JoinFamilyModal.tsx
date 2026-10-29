@@ -86,7 +86,9 @@ export const JoinFamilyModal: React.FC<JoinFamilyModalProps> = ({
             type="button"
             id="btn-close-join-family-modal"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+            title="Fechar"
+            aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -128,12 +130,12 @@ export const JoinFamilyModal: React.FC<JoinFamilyModalProps> = ({
             <div className="space-y-1.5">
               <label
                 htmlFor="input-family-identifier"
-                className="block text-xs font-bold text-slate-700"
+                className="block text-sm font-bold text-slate-700"
               >
                 Identificador, e-mail do titular ou código de convite
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -144,21 +146,21 @@ export const JoinFamilyModal: React.FC<JoinFamilyModalProps> = ({
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="Ex: titular@email.com, ID da família ou código de convite"
                   disabled={isLoading}
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-slate-900 placeholder:text-slate-400 transition"
+                  className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-slate-900 placeholder:text-slate-400 transition"
                 />
               </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
+              <p className="text-sm text-slate-600 leading-relaxed">
                 Informe o e-mail do titular responsável pela família à qual deseja se juntar ou o identificador fornecido por ele.
               </p>
             </div>
 
             {/* Info Box about approval process */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-600">
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-sm text-slate-700">
               <div className="flex items-center gap-1.5 font-bold text-slate-800">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
                 <span>Fluxo de Aprovação Segura</span>
               </div>
-              <p className="text-[11px] leading-relaxed">
+              <p className="text-sm text-slate-600 leading-relaxed">
                 Por motivos de privacidade e conformidade LGPD, você não é adicionado automaticamente. O titular da família receberá a solicitação e definirá seu papel (Cuidador ou Visualizador) e os pacientes aos quais terá acesso.
               </p>
             </div>

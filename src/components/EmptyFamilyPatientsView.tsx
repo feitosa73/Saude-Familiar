@@ -94,21 +94,21 @@ export const EmptyFamilyPatientsView: React.FC<EmptyFamilyPatientsViewProps> = (
 
         {/* Helpful bullet hints */}
         <div className="mt-10 pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-xs font-bold text-slate-800 block mb-1">Medicamentos & Doses</span>
-            <span className="text-[11px] text-slate-500 leading-tight block">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-sm font-bold text-slate-800 block mb-1">Medicamentos & Doses</span>
+            <span className="text-sm text-slate-600 leading-relaxed block">
               Horários, posologia contínua e controle diário de administração.
             </span>
           </div>
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-xs font-bold text-slate-800 block mb-1">Consultas & Exames</span>
-            <span className="text-[11px] text-slate-500 leading-tight block">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-sm font-bold text-slate-800 block mb-1">Consultas & Exames</span>
+            <span className="text-sm text-slate-600 leading-relaxed block">
               Agendamentos, orientações pós-consulta e histórico de resultados.
             </span>
           </div>
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-xs font-bold text-slate-800 block mb-1">Prontuário Seguro</span>
-            <span className="text-[11px] text-slate-500 leading-tight block">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-sm font-bold text-slate-800 block mb-1">Prontuário Seguro</span>
+            <span className="text-sm text-slate-600 leading-relaxed block">
               Acesso compartilhado com outros familiares e cuidadores com RBAC.
             </span>
           </div>

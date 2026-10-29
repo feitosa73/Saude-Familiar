@@ -154,7 +154,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="font-bold">Modo Familiar (Apoio):</span> Acompanhamento do prontuário de <strong>{patient.name}</strong>. Você pode agendar consultas, cadastrar exames e anexar laudos. A administração de medicamentos é exclusiva do cuidador designado.
             </div>
           </div>
-          <span className="text-[11px] font-bold px-2.5 py-0.5 bg-amber-200/80 text-amber-900 rounded-md uppercase tracking-wider shrink-0 hidden sm:inline-block border border-amber-300">
+          <span className="text-xs font-bold px-2.5 py-0.5 bg-amber-200/80 text-amber-900 rounded-md uppercase tracking-wider shrink-0 hidden sm:inline-block border border-amber-300">
             Familiar
           </span>
         </div>
@@ -280,7 +280,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">
                   Gestão da Família, Cuidadores e Pacientes
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
                   Acessos & Cadastros
                 </span>
               </div>
@@ -477,15 +477,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <AlertTriangle className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-amber-950">
+                        <div className="text-sm font-bold text-amber-950">
                           {data.agendaUnificada.itensPendentes.length} agendamentos aguardando liberação ou data
                         </div>
-                        <div className="text-[11px] text-amber-800">
+                        <div className="text-sm text-amber-900 font-medium">
                           Toque para visualizar e agendar
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-amber-700 shrink-0" />
+                    <ArrowRight className="w-5 h-5 text-amber-700 shrink-0" />
                   </button>
                 ) : (
                   /* 1 ou 2 Pendências exibidas diretamente em cards amarelos */
@@ -495,28 +495,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       role="button"
                       tabIndex={0}
                       onClick={() => setActiveTab('agenda')}
-                      className="p-3 rounded-xl bg-amber-50/95 border border-amber-300 text-xs text-amber-950 flex items-start justify-between gap-2 shadow-2xs cursor-pointer hover:bg-amber-100/70 transition-colors ring-1 ring-amber-200/60"
+                      className="p-3.5 rounded-xl bg-amber-50/95 border border-amber-300 text-sm text-amber-950 flex items-start justify-between gap-2 shadow-2xs cursor-pointer hover:bg-amber-100/70 transition-colors ring-1 ring-amber-200/60"
                     >
                       <div className="space-y-0.5 min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-900">
                           <span>{item.tipo === 'consulta' ? 'Consulta' : 'Exame'}</span>
                           <span>·</span>
                           <span>{item.statusRotulo}</span>
                         </div>
-                        <div className="font-bold text-sm text-slate-900 truncate">
+                        <div className="font-bold text-base text-slate-900 truncate">
                           {item.titulo}
                         </div>
-                        <div className="text-slate-600 truncate">
+                        <div className="text-slate-700 text-sm truncate">
                           {item.subtitulo}
                         </div>
                         {item.motivoAlerta && (
-                          <div className="text-[11px] text-amber-900 font-medium pt-0.5">
+                          <div className="text-sm text-amber-950 font-medium pt-0.5">
                             {item.motivoAlerta}
                           </div>
                         )}
                       </div>
                       <div className="shrink-0 text-right">
-                        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-md text-xs font-bold">
                           Data a definir
                         </span>
                       </div>
@@ -569,18 +569,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       onClick={() => setActiveTab('agenda')}
                       className={itemCardClass}
                     >
-                      <div className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center font-bold text-xs shrink-0 ${itemBadgeClass}`}>
-                        <span className="uppercase text-[9px] leading-tight font-semibold">
+                      <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center font-bold text-xs shrink-0 ${itemBadgeClass}`}>
+                        <span className="uppercase text-xs leading-tight font-bold">
                           {item.dataHora ? new Date(item.dataHora).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') : ''}
                         </span>
-                        <span className="text-sm leading-tight">
+                        <span className="text-base leading-tight font-extrabold">
                           {item.dataHora ? new Date(item.dataHora).getDate() : ''}
                         </span>
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-800">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
                             {item.tipo === 'consulta' ? 'Consulta' : 'Exame'}
                           </span>
                           <span className="text-slate-300">·</span>
@@ -590,7 +590,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           {item.prazoRotulo && (
                             <>
                               <span className="text-slate-300">·</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border ${prazoBadgeClass}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-md border ${prazoBadgeClass}`}>
                                 {item.prazoRotulo}
                               </span>
                             </>
@@ -677,11 +677,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-semibold text-slate-100 truncate">{exam.name}</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                         {exam.status === 'solicitado' ? 'Solicitado' : 'Agendado'}
                       </span>
                     </div>
-                    <div className="text-slate-400 text-[11px] mt-1">
+                    <div className="text-slate-300 text-sm mt-1">
                       {exam.requestingDoctor} • Pedido: {formatDate(exam.requestDate)}
                     </div>
                   </div>
@@ -765,7 +765,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
                           {med.dosage}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-200/70 text-slate-700 rounded uppercase">
+                        <span className="text-xs font-bold px-2 py-0.5 bg-slate-200/70 text-slate-700 rounded-md uppercase">
                           Contínuo
                         </span>
                       </div>
@@ -809,7 +809,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 ))}
 
-                <p className="text-[11px] text-slate-400 mt-2 text-center">
+                <p className="text-sm text-slate-600 mt-2 text-center">
                   Conferência diária de administração. Registro de apoio ao cuidador de turno.
                 </p>
               </div>
@@ -887,19 +887,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     aria-label={`Documento ${doc.title}. Toque para ver.`}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-800 truncate">{doc.title}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{doc.title}</p>
+                      <p className="text-sm text-slate-600">
                         {formatDate(doc.date)} • {doc.fileSize}
                       </p>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 shrink-0">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 shrink-0">
                       {doc.category === 'resultado_exame' ? 'Laudo' : doc.category}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 py-6 text-center">Nenhum documento anexado</p>
+              <p className="text-sm text-slate-500 py-6 text-center">Nenhum documento anexado</p>
             )}
           </div>
 
@@ -959,7 +959,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <p className="font-semibold text-slate-800 leading-tight truncate">
                       {event.title}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-sm text-slate-600 mt-0.5">
                       {formatDate(event.date)} • {event.category}
                     </p>
                   </div>
