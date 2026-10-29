@@ -1,43 +1,87 @@
-# Relatório de Ajustes e Resolução das Ressalvas Técnicas
+# Saúde Familiar | Relatório de Conclusão UX-01 & UX-02
+## Redesign de Legibilidade e Aproveitamento de Tela
 
-## 1. Minimização de Credenciais no Servidor e no Cliente
-
-- **Minimização Total em Consultas Comuns:** A função `sanitizeExamForClient` em `server/routes/api.ts` agora omite completamente `accessUser` e `accessCode` (`undefined`) e mascara a senha (`accessPassword: '••••••••'`) em todas as rotas de listagem e detalhe padrão (`GET /patients/:patientId/exams` e `GET /exams/:id`).
-- **Sinalização Transparente sem Vazamento:** Foram implementadas as flags booleanas `hasAccessUser: boolean`, `hasAccessPassword: boolean` e `hasAccessCode: boolean`. Isso permite que o frontend saiba se o exame possui dados de acesso cadastrados sem jamais trafegar credenciais em texto claro na inicialização da tela ou na listagem da agenda.
-- **Endpoint de Revelação sob Demanda Autorizado:** As rotas `POST /exams/:id/reveal-credentials` (e o alias retrocompatível `POST /exams/:id/reveal-password`) realizam checagem estrita de autorização (`authzService.canViewPatient` ou papel `owner`). Somente usuários autorizados recebem o objeto `ExamCredentialsResponse` contendo as credenciais completas.
-- **Preservação de Dados Ocultos na Edição (`PUT /exams/:id`):** O backend agora verifica se `accessUser`, `accessPassword` ou `accessCode` vieram indefinidos ou mascarados com `'••••••••'`, deletando-os do `updatePayload` antes de persistir. No frontend (`src/components/ExamsView.tsx`), o formulário de edição não envia valores vazios para apagar credenciais salvas caso o usuário edite apenas outros campos (como médico, status ou data).
+**Data:** 29 de Outubro de 2026  
+**Status:** Concluído com Sucesso e Testado (92/92 testes aprovados)
 
 ---
 
-## 2. Limpeza de Credenciais Reveladas no Frontend
+## 1. Fundamentação da Tipografia de Referência (Meu SUS Digital / Gov.br)
 
-- **Ciclo de Vida em Memória Estrita:** As credenciais consultadas sob demanda são armazenadas unicamente no estado React local (`revealedCredentialsMap`).
-- **Limpeza na Troca de Paciente:** O hook `useEffect([selectedPatient])` zera explicitamente os mapas de credenciais e de visibilidade (`setRevealedCredentialsMap({})` e `setRevealedVisibilityState({})`).
-- **Limpeza no Desmonte da Tela:** A função de cleanup retornada pelo `useEffect` garante que ao sair da tela de exames ou fechar a visualização, todas as credenciais reveladas sejam descartadas da memória imediatamente.
-- **Zero Armazenamento no Navegador:** Nenhuma credencial revelada é gravada em `localStorage`, `sessionStorage` ou `IndexedDB`.
+### Investigação e Seleção Tipográfica
+O **Meu SUS Digital** é desenvolvido sobre o **Design System do Governo Federal do Brasil (Padrão Digital de Governo - Gov.br)**, cuja diretriz oficial estipula:
+- **Família Tipográfica Primária:** **Open Sans** (composta com **Inter** e **Rawline** como alternativas do ecossistema federal).
+- **Justificativa Técnica de Saúde e Acessibilidade:**
+  - **Altura-x generosa (x-height elevado):** Facilita o reconhecimento imediato de caracteres e números críticos em doses de remédios e horários de exames, mesmo em telas com brilho reduzido ou para usuários idosos e pessoas com baixa acuidade visual.
+  - **Aberturas amplas (open apertures):** Evitam a confusão entre algarismos e letras semelhantes (ex.: `3`, `8`, `B`, `0`, `O`).
+  - **Legibilidade em múltiplos pesos:** Do regular (400) ao extra-bold (800), mantendo nitidez em fundo claro e escuro.
+
+### Implementação Centralizada
+1. **`index.html`:**
+   - Adicionada pré-conexão com `https://fonts.googleapis.com` e `https://fonts.gstatic.com`.
+   - Carregadas as famílias **Open Sans** (400, 500, 600, 700, 800) e **Inter** (400, 500, 600, 700, 800).
+2. **`src/index.css`:**
+   - Base global definida em `html { font-size: 16px; font-family: 'Open Sans', 'Inter', system-ui, ... }`.
+   - Tokens utilitários de escala tipográfica:
+     - Page Title: 28px–32px (`app-page-title`).
+     - Section Title: 22px–26px (`app-section-title`).
+     - Card Title: 18px–20px (`app-card-title`).
+     - Body Primário: 16px (`app-body`).
+     - Body Secundário: 15px–16px (`app-secondary`).
+     - Metadados Mínimos: 14px (`app-meta`) — **eliminadas todas as classes `text-[10px]` e `text-[11px]`**.
+     - Inputs / Selects / Labels: base de 16px com alvos de toque $\ge 44\text{px}$ a $48\text{px}$.
+     - Proteção de contraste: classes de texto atenuado (`.text-slate-400`, `.text-slate-500`) ajustadas para contraste acessível WCAG AAA (#475569 e #334155).
 
 ---
 
-## 3. Idempotência Concorrente no Repositório
+## 2. Aproveitamento de Tela e Layout Responsivo (UX-02)
 
-- **Firestore Real (`FirestoreHealthRepository.ts`):** 
-  - A operação `createExamReceiptBatch` foi convertida para executar dentro de uma transação Firestore atômica (`this.db.runTransaction(async (transaction) => { ... })`).
-  - A leitura de `idempotencyRef` ocorre atomicamente dentro da transação antes de qualquer escrita.
-  - Graças ao mecanismo de Optimistic Concurrency Control (OCC) do Firestore, requisições simultâneas com a mesma chave têm colisão detectada no commit, fazendo com que a transação concorrente seja automaticamente refeita. No retry, ela lê a chave recém-persistida e retorna o snapshot cacheado com `isIdempotentReplay: true`, garantindo que jamais sejam criados documentos ou exames duplicados.
-- **Repositório em Memória (`MemoryRepositories.ts`):**
-  - Implementado o controle de concorrência com mapa de promessas em voo (`inFlightBatches`). Requisições concorrentes disparadas simultaneamente via `Promise.all` compartilham a mesma execução assíncrona, evitando duplicidade e retornando replay idempotente seguro.
+### Eliminação de Gargalos de Largura
+- **`src/App.tsx`:** O container principal foi expandido de `max-w-7xl` para `max-w-[1600px] w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12`.
+- **`src/components/Navbar.tsx` & `src/components/TabNavigation.tsx`:** Containers alinhados rigorosamente à mesma largura fluida de `max-w-[1600px]`.
+- **`src/components/AgendaUnifiedView.tsx`:** Removida a restrição anterior `max-w-6xl mx-auto`, tornando a área de trabalho 100% fluida.
+
+### Reestruturação dos Grids em Desktop
+Em vez de uma única coluna vertical estreita centralizada:
+- **Agenda Unificada (Pendências e Confirmados):** Reestruturada para `grid grid-cols-1 lg:grid-cols-2 gap-4`, permitindo que duas colunas confortáveis preencham o monitor desktop preservando a largura de leitura recomendada.
+- **Exames Diagnósticos & Laboratoriais (`ExamsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
+- **Medicamentos (`MedicationsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
+- **Documentos & Prontuário (`DocumentsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
+- **Cadastros e Pessoas (`PeopleManagementView.tsx`):** Grids de Pacientes, Cuidadores e Convites expandidos para 2 e 3 colunas (`xl:grid-cols-3`).
+- **Dashboard (`DashboardView.tsx`):** Banner do próximo medicamento com tipografia generosa (até 36px–40px), resumo clínico acessível, barra de ações rápidas com alvos $\ge 72\text{px}$ e grid de 3 colunas no desktop.
 
 ---
 
-## 4. Testes de Regressão e Validação
+## 3. Telas e Componentes Refatorados
 
-### Testes Executados em Ambiente de Teste (Runner Nativo / Repositório em Memória)
-- **Teste 8:** Comprova que consultas comuns não retornam login, senha ou código de acesso em texto claro, mas apenas as flags booleanas `hasAccess*`.
-- **Teste 10:** Comprova que a rota de revelação bloqueia usuários não autorizados com HTTP 403 e permite acesso apenas a usuários autorizados com HTTP 200.
-- **Teste 11 (`Promise.all` concorrente):** Executa duas chamadas rigorosamente simultâneas com a mesma chave de idempotência. Comprova que ambas retornam sucesso, uma como original e outra como replay (`isIdempotentReplay: true`), e que apenas 1 documento e 2 exames foram gravados no banco.
-- **Teste 12:** Comprova que a atualização via `PUT /exams/:id` com dados mascarados/indefinidos preserva intactos o login, senha e código de acesso originais no banco.
-- **Teste 13:** Comprova que o desmonte do componente e a troca de paciente limpam integralmente as credenciais reveladas da memória.
+1. **`index.html`:** Fontes do Padrão Digital (Open Sans / Inter).
+2. **`src/index.css`:** Tokens do design system, escala tipográfica centralizada e contrastes.
+3. **`src/App.tsx`:** Container `max-w-[1600px]`, faixas de aviso com fontes acessíveis.
+4. **`src/components/Navbar.tsx`:** Identidade, seletor de paciente e botões com alvos $\ge 44\text{px}$ e texto legível.
+5. **`src/components/TabNavigation.tsx`:** Abas desktop e gaveta mobile com alvos confortáveis $\ge 44\text{px}$ a $54\text{px}$ e textos ampliados.
+6. **`src/components/AgendaUnifiedView.tsx`:** Grid responsivo de 2 colunas, botões diretos de ação sem dropdown, títulos de seção ampliados.
+7. **`src/components/AgendaCard.tsx`:** Títulos de 18–20px, badges de 14px em bold, alertas contextuais ampliados e botões de ação confortáveis ($\ge 44\text{px}$).
+8. **`src/components/ExamsView.tsx`:** Grid de 3 colunas em telas largas, títulos de 18–20px, caixa de credenciais reveladas com mono legível e botões $\ge 44\text{px}$.
+9. **`src/components/MedicationsView.tsx`:** Grid de 3 colunas, posologia e horários com destaque, botões de ação e status acessíveis.
+10. **`src/components/DocumentsView.tsx`:** Grid de 3 colunas, metadados legíveis e destaque da política de Zero Storage.
+11. **`src/components/DashboardView.tsx`:** Hero banner de alto impacto para remédios do dia, barra clínica com contraste e cartões em 3 colunas.
+12. **`src/components/PeopleManagementView.tsx`:** Grids de pacientes, cuidadores e convites com tipografia clara e CPF mascarado legível.
 
-### Validação Arquitetural contra Firestore Real
-- A transação foi desenhada em estrita conformidade com as regras do Firestore SDK (`transaction.get` de todas as chaves antes de `transaction.set`), sem exceder limites de 500 operações por batch/transação (um comprovante típico tem de 1 a 10 exames).
-- A separação de ambientes está documentada: testes de unidade/integração rodam via `npm test` sobre o repositório em memória com simulação assíncrona de I/O, enquanto em produção/Cloud Run o driver do Firestore assume a autoridade transacional.
+---
+
+## 4. Garantias Funcionais e de Segurança Preservadas
+
+- **Nenhuma alteração** nas regras de autorização, permissões ou isolamento de pacientes.
+- **Nenhuma alteração** na criptografia/mascaramento de senhas no backend, idempotência de salvamento ou Zero Storage de fotos/arquivos.
+- **Nenhuma dependência desnecessária adicionada** (apenas importação oficial de fontes do sistema visual Meu SUS Digital / Gov.br via CSS/HTML).
+- **Sem regressões funcionais.**
+
+---
+
+## 5. Resultados de Verificação e Testes
+
+- **`tsc --noEmit` (Linting):** Aprovado sem erros de tipagem.
+- **`vite build` (Compilação):** Compilado com sucesso em 14.88s.
+- **Suite Automatizada de Testes (`npm test`):**
+  - **15 suítes de teste** executadas.
+  - **92 testes executados e 92 testes aprovados** (0 falhas, 0 cancelados, 0 pendentes).

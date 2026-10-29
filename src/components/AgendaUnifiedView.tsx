@@ -385,17 +385,17 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-6xl mx-auto">
+    <div className="space-y-6 pb-20 w-full">
       {/* 1. TOPO ACESSÍVEL: Dois Botões de Ação Direta (Sem dropdowns, >= 44px) */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-5 sm:p-6 lg:p-7 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <CalendarCheck2 className="w-6 h-6 text-blue-600" />
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+          <div className="flex items-center gap-2.5">
+            <CalendarCheck2 className="w-7 h-7 text-blue-600" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
               Consultas e Exames
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Agenda médica unificada de {selectedPatient?.name || 'paciente'} com alertas de prazos e pendências
           </p>
         </div>
@@ -407,38 +407,38 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               <button
                 id="btn-agenda-escanear-ia"
                 onClick={() => setIsScannerModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-3.5 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl font-bold text-xs sm:text-sm transition-all min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
                 title="Ler comprovante ou print de agendamento com IA"
               >
-                <Sparkles className="w-4 h-4 text-purple-600" />
+                <Sparkles className="w-4.5 h-4.5 text-purple-600" />
                 <span>Escanear Comprovante</span>
               </button>
 
               <button
                 id="btn-agenda-coleta-ia"
                 onClick={() => setIsReceiptScannerModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-3.5 py-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl font-bold text-xs sm:text-sm transition-all min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
                 title="Ler comprovante ou protocolo de coleta laboratorial com IA"
               >
-                <FileCheck className="w-4 h-4 text-sky-600" />
+                <FileCheck className="w-4.5 h-4.5 text-sky-600" />
                 <span>Ler Comprovante de Coleta</span>
               </button>
 
               <button
                 id="btn-agenda-nova-consulta"
                 onClick={handleOpenNovaConsulta}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-all min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 px-4.5 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl font-bold text-sm sm:text-base shadow-xs transition-all min-h-[48px]"
               >
-                <Stethoscope className="w-4 h-4 shrink-0" />
+                <Stethoscope className="w-4.5 h-4.5 shrink-0" />
                 <span>+ Nova Consulta</span>
               </button>
 
               <button
                 id="btn-agenda-novo-exame"
                 onClick={handleOpenNovoExame}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-all min-h-[44px]"
+                className="inline-flex items-center justify-center gap-2 px-4.5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl font-bold text-sm sm:text-base shadow-xs transition-all min-h-[48px]"
               >
-                <Activity className="w-4 h-4 shrink-0" />
+                <Activity className="w-4.5 h-4.5 shrink-0" />
                 <span>+ Novo Exame</span>
               </button>
             </>
@@ -447,10 +447,10 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200"
+            className="p-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center border border-slate-200"
             title="Atualizar lista"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4.5 h-4.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -513,62 +513,64 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
 
       {/* 3. ALERTA E PENDÊNCIAS SEM DATA (AMARELO) */}
       {pendencias.length > 0 && (
-        <section aria-labelledby="secao-pendencias-sem-data" className="space-y-3">
+        <section aria-labelledby="secao-pendencias-sem-data" className="space-y-4">
           {temMuitasPendencias ? (
             /* Acordeon Condensado para > 2 Pendências (Anti-Poluição Visual) */
             <div className="rounded-2xl border border-amber-300 bg-amber-50/90 overflow-hidden shadow-xs ring-1 ring-amber-200">
               <button
                 type="button"
                 onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-                className="w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-amber-100/70 transition-colors"
+                className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-amber-100/70 transition-colors"
                 aria-expanded={isAccordionOpen}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-200/90 flex items-center justify-center text-amber-800 shrink-0 shadow-2xs">
+                  <div className="w-9 h-9 rounded-xl bg-amber-200/90 flex items-center justify-center text-amber-800 shrink-0 shadow-2xs">
                     <AlertCircle className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 id="secao-pendencias-sem-data" className="text-sm font-bold text-amber-950">
+                    <h2 id="secao-pendencias-sem-data" className="text-base sm:text-lg font-bold text-amber-950">
                       {tituloPendencias}
                     </h2>
-                    <p className="text-xs text-amber-800/90">
+                    <p className="text-sm text-amber-900 font-medium">
                       {subtituloPendencias}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-900 shrink-0">
+                <div className="flex items-center gap-2 text-sm font-bold text-amber-950 shrink-0">
                   <span>{isAccordionOpen ? 'Ocultar' : 'Ver pendências'}</span>
                   {isAccordionOpen ? (
-                    <ChevronUp className="w-4 h-4" />
+                    <ChevronUp className="w-5 h-5" />
                   ) : (
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-5 h-5" />
                   )}
                 </div>
               </button>
 
               {isAccordionOpen && (
-                <div className="p-4 pt-2 space-y-3 border-t border-amber-200 bg-amber-50/50">
-                  {pendencias.map((item) => (
-                    <AgendaCard
-                      key={item.id}
-                      item={item}
-                      onEdit={handleEditItem}
-                      onDelete={handleDeleteItem}
-                      onShare={handleShareItem}
-                      onViewDocument={() => setActiveTab('documentos')}
-                    />
-                  ))}
+                <div className="p-4 pt-3 border-t border-amber-200 bg-amber-50/50">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {pendencias.map((item) => (
+                      <AgendaCard
+                        key={item.id}
+                        item={item}
+                        onEdit={handleEditItem}
+                        onDelete={handleDeleteItem}
+                        onShare={handleShareItem}
+                        onViewDocument={() => setActiveTab('documentos')}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           ) : (
             /* Se houver até 2 pendências, exibe diretamente no topo */
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-900 uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
+              <div className="flex items-center gap-2 text-sm font-bold text-amber-950 uppercase tracking-wider">
+                <AlertCircle className="w-4.5 h-4.5 text-amber-600" />
                 <h2 id="secao-pendencias-sem-data">{rotuloSecaoPequena}</h2>
               </div>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {pendencias.map((item) => (
                   <AgendaCard
                     key={item.id}
@@ -586,13 +588,13 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
       )}
 
       {/* 4. COMPROMISSOS CONFIRMADOS (ORDENADOS CRONOLOGICAMENTE) */}
-      <section aria-labelledby="secao-compromissos-confirmados" className="space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-          <h2 id="secao-compromissos-confirmados" className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-blue-600" />
+      <section aria-labelledby="secao-compromissos-confirmados" className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+          <h2 id="secao-compromissos-confirmados" className="text-base sm:text-lg font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2.5">
+            <Calendar className="w-5 h-5 text-blue-600" />
             <span>Compromissos Confirmados ({confirmados.length})</span>
           </h2>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs sm:text-sm text-slate-500 font-medium">
             Em ordem cronológica
           </span>
         </div>
@@ -600,10 +602,10 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
         {confirmados.length === 0 ? (
           <div className="py-12 px-4 text-center bg-white rounded-2xl border border-dashed border-slate-200 shadow-2xs">
             <CalendarCheck2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-slate-800">
+            <h3 className="text-base sm:text-lg font-bold text-slate-800">
               Nenhum compromisso confirmado
             </h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
               {searchTerm
                 ? 'Nenhum agendamento encontrado para o termo pesquisado.'
                 : 'Cadastre a primeira consulta médica ou exame para acompanhar a agenda da família.'}
@@ -612,13 +614,13 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={handleOpenNovaConsulta}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700"
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 min-h-[44px]"
                 >
                   + Nova Consulta
                 </button>
                 <button
                   onClick={handleOpenNovoExame}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 min-h-[44px]"
                 >
                   + Novo Exame
                 </button>
@@ -626,7 +628,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {confirmados.map((item) => (
               <AgendaCard
                 key={item.id}

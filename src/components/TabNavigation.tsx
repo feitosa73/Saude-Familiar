@@ -53,8 +53,8 @@ export const TabNavigation: React.FC = () => {
         className="hidden md:block bg-white border-b border-slate-200/90 sticky top-16 sm:top-20 z-30 shadow-xs"
         aria-label="Navegação Principal"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto py-2.5">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
+          <div className="flex space-x-1.5 sm:space-x-2.5 overflow-x-auto py-3">
             {DESKTOP_TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -63,14 +63,14 @@ export const TabNavigation: React.FC = () => {
                   key={tab.id}
                   id={`tab-desktop-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-sm sm:text-base font-bold whitespace-nowrap transition-all min-h-[44px] ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -169,7 +169,7 @@ export const TabNavigation: React.FC = () => {
                   setActiveTab(tab.id);
                   setIsMoreMenuOpen(false);
                 }}
-                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[52px] select-none active:scale-[0.96] ${
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] ${
                   isActive
                     ? 'text-blue-700 bg-blue-50/90 font-bold'
                     : 'text-slate-600 hover:text-slate-900 font-semibold'
@@ -181,8 +181,8 @@ export const TabNavigation: React.FC = () => {
                     isActive ? 'text-blue-600 stroke-[2.5] scale-110' : 'text-slate-500 stroke-2'
                   }`}
                 />
-                <span className={`text-[11px] leading-tight truncate max-w-full tracking-tight ${
-                  isActive ? 'text-blue-700 font-bold' : 'text-slate-700'
+                <span className={`text-xs leading-tight truncate max-w-full tracking-tight ${
+                  isActive ? 'text-blue-700 font-extrabold' : 'text-slate-700 font-semibold'
                 }`}>
                   {tab.shortLabel}
                 </span>
@@ -195,7 +195,7 @@ export const TabNavigation: React.FC = () => {
             id="tab-mobile-more"
             type="button"
             onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-            className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[52px] select-none active:scale-[0.96] ${
+            className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] ${
               isMoreActive || isMoreMenuOpen
                 ? 'text-blue-700 bg-blue-50/90 font-bold'
                 : 'text-slate-600 hover:text-slate-900 font-semibold'
@@ -209,8 +209,8 @@ export const TabNavigation: React.FC = () => {
                   : 'text-slate-500 stroke-2'
               }`}
             />
-            <span className={`text-[11px] leading-tight truncate max-w-full tracking-tight ${
-              isMoreActive || isMoreMenuOpen ? 'text-blue-700 font-bold' : 'text-slate-700'
+            <span className={`text-xs leading-tight truncate max-w-full tracking-tight ${
+              isMoreActive || isMoreMenuOpen ? 'text-blue-700 font-extrabold' : 'text-slate-700 font-semibold'
             }`}>
               Mais
             </span>

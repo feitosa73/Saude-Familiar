@@ -173,83 +173,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               setActiveTab('medicamentos');
             }
           }}
-          className="bg-[#315F54] hover:bg-[#274C43] active:scale-[0.99] rounded-2xl p-5 sm:p-6 text-white flex items-center justify-between shadow-md shadow-[#315F54]/10 cursor-pointer touch-manipulation transition-all focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
+          className="bg-[#315F54] hover:bg-[#274C43] active:scale-[0.99] rounded-2xl p-6 sm:p-7 text-white flex items-center justify-between shadow-md shadow-[#315F54]/10 cursor-pointer touch-manipulation transition-all focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-hidden"
           aria-label={`Próximo Medicamento do Dia: ${nextMed.name} ${nextMed.dosage}. Horário: ${isTomorrow ? 'Amanhã às' : 'Hoje às'} ${nextMedTime}. Toque para ver medicamentos.`}
         >
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#DCEBE4] text-xs sm:text-sm font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-[#DCEBE4] text-xs sm:text-sm font-bold uppercase tracking-wider">
                 Próximo Medicamento do Dia
               </span>
               <span className="text-white/40">·</span>
-              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
-                <Clock className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                <Clock className="w-3.5 h-3.5" />
                 {isTomorrow ? 'Amanhã' : 'Hoje'} às {nextMedTime}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold mt-1 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 tracking-tight">
               {nextMed.name} {nextMed.dosage}
             </h2>
-            <p className="mt-1 text-[#DCEBE4] text-xs sm:text-sm">
+            <p className="mt-1.5 text-[#DCEBE4] text-sm sm:text-base font-medium">
               Horários: {nextMed.times.join(' • ')} ({nextMed.frequency})
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white/15 backdrop-blur-xs rounded-2xl flex items-center justify-center text-2xl sm:text-3xl border border-white/20">
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white/15 backdrop-blur-xs rounded-2xl flex items-center justify-center text-3xl sm:text-4xl border border-white/20">
               💊
             </div>
-            <ArrowRight className="w-5 h-5 text-[#DCEBE4] hidden sm:block" />
+            <ArrowRight className="w-6 h-6 text-[#DCEBE4] hidden sm:block" />
           </div>
         </section>
       )}
 
-      {/* Resumo Clínico de Contexto Rápido (Compacto, sem redundância de nome/avatar que já estão na barra superior) */}
+      {/* Resumo Clínico de Contexto Rápido */}
       <section
         id="clinical-summary-bar"
-        className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+        className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
       >
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-slate-700 font-medium">
-            <span className="text-slate-400">Tipo Sanguíneo:</span>
-            <span className="font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-200">
+        <div className="flex items-center gap-3.5 flex-wrap">
+          <div className="flex items-center gap-2 text-slate-700 font-medium">
+            <span className="text-slate-500 font-semibold">Tipo Sanguíneo:</span>
+            <span className="font-bold px-2.5 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-200 text-sm">
               {patient.bloodType || 'Não informado'}
             </span>
           </div>
 
           <span className="text-slate-300 hidden sm:inline">·</span>
 
-          <div className="flex items-center gap-1.5 text-slate-700">
-            <span className="text-slate-400">Alergias:</span>
+          <div className="flex items-center gap-2 text-slate-700">
+            <span className="text-slate-500 font-semibold">Alergias:</span>
             {patient.allergies && patient.allergies.length > 0 ? (
-              <span className="font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 inline-flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-amber-600" />
+              <span className="font-semibold px-2.5 py-0.5 rounded bg-amber-50 text-amber-950 border border-amber-200 inline-flex items-center gap-1.5 text-sm">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                 {patient.allergies.join(', ')}
               </span>
             ) : (
-              <span className="text-slate-500">Nenhuma conhecida</span>
+              <span className="text-slate-600 font-medium">Nenhuma conhecida</span>
             )}
           </div>
 
           {patient.primaryDoctor && (
             <>
               <span className="text-slate-300 hidden md:inline">·</span>
-              <div className="text-slate-600 hidden md:flex items-center gap-1">
-                <span className="text-slate-400">Acompanhamento:</span>
-                <span className="font-medium text-slate-800">{patient.primaryDoctor}</span>
+              <div className="text-slate-700 hidden md:flex items-center gap-1.5">
+                <span className="text-slate-500 font-semibold">Acompanhamento:</span>
+                <span className="font-bold text-slate-900">{patient.primaryDoctor}</span>
               </div>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {primaryEmergency && (
             <a
               id="emergency-call-btn"
               href={`tel:${primaryEmergency.phone.replace(/[^0-9]/g, '')}`}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-[0.98] transition-all cursor-pointer touch-manipulation min-h-[36px]"
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-[0.98] transition-all cursor-pointer touch-manipulation min-h-[40px]"
               title={`Ligar para emergência: ${primaryEmergency.name} (${primaryEmergency.phone})`}
             >
-              <Phone className="w-3.5 h-3.5 text-rose-600" />
+              <Phone className="w-4 h-4 text-rose-600" />
               <span>SOS: {primaryEmergency.relation}</span>
             </a>
           )}
@@ -257,9 +257,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             type="button"
             id="view-full-file-btn"
             onClick={() => setOpenPatientProfile(true)}
-            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-50 text-slate-700 hover:bg-slate-100 active:scale-[0.98] border border-slate-200 transition-all cursor-pointer touch-manipulation min-h-[36px]"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-50 text-slate-700 hover:bg-slate-100 active:scale-[0.98] border border-slate-200 transition-all cursor-pointer touch-manipulation min-h-[40px]"
           >
-            <User className="w-3.5 h-3.5 text-slate-500" />
+            <User className="w-4 h-4 text-slate-500" />
             <span>Ver Ficha Completa</span>
           </button>
         </div>
@@ -343,24 +343,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Quick Access Action Bar (Ações Rápidas Acessíveis) */}
       <section
         id="quick-actions-bar"
-        className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-3.5"
       >
         <button
           type="button"
           id="quick-add-agenda-btn"
           onClick={() => setActiveTab('agenda')}
-          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[64px]"
+          className="w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[72px]"
           aria-label="Agendar consulta ou exame"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
-              <CalendarCheck2 className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
+              <CalendarCheck2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
+              <div className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                 + Consulta ou Exame
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
                 Agendar compromisso médico
               </div>
             </div>
@@ -377,18 +377,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               setActiveTab('medicamentos');
             }
           }}
-          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[64px]"
+          className="w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[72px]"
           aria-label={permissions?.canCreateRecord ? 'Cadastrar novo medicamento' : 'Ver lista de medicamentos'}
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
-              <Pill className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
+              <Pill className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
+              <div className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                 {permissions?.canCreateRecord ? '+ Medicamento' : 'Medicamentos'}
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
                 {permissions?.canCreateRecord ? 'Cadastrar posologia' : 'Consultar lista'}
               </div>
             </div>
@@ -405,18 +405,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               setActiveTab('documentos');
             }
           }}
-          className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[64px]"
+          className="w-full flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-[#315F54] hover:bg-[#DCEBE4]/20 active:scale-[0.98] transition-all text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-[#315F54] focus-visible:outline-hidden min-h-[72px]"
           aria-label="Adicionar laudo, receita ou exame"
         >
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
-              <FileText className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-[#DCEBE4] text-[#315F54] flex items-center justify-center group-hover:bg-[#315F54] group-hover:text-white transition-colors shrink-0">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
+              <div className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                 + Laudo ou Receita
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
                 Ler com IA ou anexar arquivo
               </div>
             </div>
@@ -436,28 +436,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('agenda')}
-                className="flex items-center gap-2.5 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
+                className="flex items-center gap-3 text-left group cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden rounded-lg p-1 -m-1"
                 aria-label="Ir para página de Consultas e Exames"
               >
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <CalendarCheck2 className="w-5 h-5" />
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <CalendarCheck2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
+                  <h2 className="font-bold text-lg sm:text-xl text-slate-900 group-hover:text-blue-600 transition-colors">
                     Próximas Consultas e Exames
                   </h2>
-                  <p className="text-xs text-slate-500">Compromissos agendados e pendências</p>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium">Compromissos agendados e pendências</p>
                 </div>
               </button>
               <button
                 type="button"
                 id="view-all-agenda-btn"
                 onClick={() => setActiveTab('agenda')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1.5 px-2.5 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 py-1.5 px-3 rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer touch-manipulation min-h-[38px]"
                 aria-label="Ver agenda completa"
               >
                 Ver agenda
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 

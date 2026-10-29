@@ -182,9 +182,9 @@ const MainContent: React.FC = () => {
       {/* Authenticated Beta Notice Strip */}
       <div
         id="authenticated-beta-strip"
-        className="bg-amber-50/90 border-b border-amber-200/80 px-3 py-1.5 text-center text-xs font-medium text-amber-900 flex items-center justify-center gap-1.5 shadow-2xs"
+        className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm font-semibold text-amber-950 flex items-center justify-center gap-2 shadow-2xs"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
         <span>Ambiente Beta • Utilize somente dados fictícios</span>
       </div>
 
@@ -192,10 +192,10 @@ const MainContent: React.FC = () => {
       {unregularizedPatients.length > 0 && (
         <div
           id="cpf-regularization-alert-strip"
-          className="bg-amber-600 text-white px-3.5 py-2 text-xs sm:text-sm font-medium flex items-center justify-between gap-3 shadow-xs border-b border-amber-700/40"
+          className="bg-amber-600 text-white px-4 py-2.5 text-sm sm:text-base font-medium flex items-center justify-between gap-4 shadow-xs border-b border-amber-700/40"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <ShieldAlert className="w-4 h-4 shrink-0 text-amber-200" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ShieldAlert className="w-5 h-5 shrink-0 text-amber-200" />
             <span className="truncate">
               <strong>Regularização de CPF necessária:</strong> Há {unregularizedPatients.length} paciente(s) vinculado(s) sem CPF.
             </span>
@@ -204,7 +204,7 @@ const MainContent: React.FC = () => {
             type="button"
             id="btn-open-regularization-strip"
             onClick={() => setIsRegularizationModalOpen(true)}
-            className="px-3 py-1 rounded-lg bg-white text-amber-900 font-bold hover:bg-amber-50 transition active:scale-[0.98] shrink-0 text-xs shadow-2xs cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-white text-amber-950 font-bold hover:bg-amber-50 transition active:scale-[0.98] shrink-0 text-sm shadow-xs cursor-pointer min-h-[38px]"
           >
             Regularizar Agora
           </button>
@@ -214,8 +214,8 @@ const MainContent: React.FC = () => {
       {/* Navigation Tabs (Desktop Top & Mobile Bottom) */}
       <TabNavigation />
 
-      {/* Main View Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-28 sm:pb-16 md:pb-12">
+      {/* Main View Area (Aproveitamento Expandido no Desktop até 1600px) */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-5 sm:pt-7 pb-28 sm:pb-16 md:pb-12">
         {hasNoPatients && activeTab !== 'pessoas' ? (
           <EmptyFamilyPatientsView
             onOpenNewPatient={() => setIsNewPatientModalOpen(true)}

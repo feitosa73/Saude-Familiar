@@ -509,40 +509,40 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2.5">
+            <Activity className="w-7 h-7 text-blue-600" />
             <span>Exames & Resultados Laboratoriais</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Gerencie pedidos, comprovantes de coleta, senhas de acesso aos portais e laudos de {selectedPatient?.name || 'paciente'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
             id="exam-collection-receipt-scan-header-btn"
             onClick={() => setIsReceiptScannerModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98] min-h-[44px]"
           >
-            <Sparkles className="w-4 h-4 text-amber-200" />
+            <Sparkles className="w-4.5 h-4.5 text-amber-200" />
             <span>Escanear Comprovante de Coleta</span>
           </button>
           <button
             type="button"
             id="exam-scan-ai-header-btn"
             onClick={() => setIsExamAiModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-[0.98] min-h-[44px]"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4.5 h-4.5" />
             <span>Ler Laudo com IA</span>
           </button>
           <button
             id="add-exam-main-btn"
             onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-xl shadow-xs transition-colors min-h-[44px]"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
+            <Plus className="w-4.5 h-4.5 stroke-[3]" />
             <span>Novo Exame Manual</span>
           </button>
         </div>
@@ -636,7 +636,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       {loading ? (
         <div className="p-8 text-center text-slate-500 text-sm">Carregando exames...</div>
       ) : filteredExams.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredExams.map((exam) => {
             const linkedDoc = documents.find((d) => d.id === exam.documentId || d.relatedExamId === exam.id);
             const isResultadoPronto = exam.status === 'resultado_disponivel';
@@ -660,7 +660,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
               <div
                 key={exam.id}
                 id={`exam-card-${exam.id}`}
-                className={`rounded-2xl border p-4 sm:p-5 transition-all flex flex-col justify-between ${
+                className={`rounded-2xl border p-5 sm:p-6 transition-all flex flex-col justify-between ${
                   isResultadoPronto
                     ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
                     : isRetirado
@@ -675,10 +675,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 <div>
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1 min-w-0">
+                    <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
                             exam.status === 'solicitado'
                               ? 'bg-amber-100 text-amber-800 border-amber-200'
                               : exam.status === 'agendado'
@@ -698,14 +698,14 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         </span>
 
                         {hasCredentials && (
-                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200 flex items-center gap-1">
-                            <KeyRound className="w-3 h-3 text-indigo-600" />
+                          <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
                             <span>Acesso Online</span>
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-900 leading-snug break-words">
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug break-words">
                         {exam.name}
                       </h3>
                     </div>
@@ -714,7 +714,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       <button
                         id={`share-exam-quick-${exam.id}`}
                         onClick={() => handleOpenShareModal(exam)}
-                        className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                         title="Avisar Família / Compartilhar Exame"
                       >
                         <Share2 className="w-4 h-4 text-blue-600" />
@@ -739,48 +739,48 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   </div>
 
                   {/* Details */}
-                  <div className="mt-3.5 space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Solicitado por: <strong className="text-slate-700">{exam.requestingDoctor}</strong></span>
+                  <div className="mt-4 space-y-2.5 text-sm text-slate-700">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>Solicitado por: <strong className="text-slate-900 font-bold">{exam.requestingDoctor}</strong></span>
                     </div>
 
                     {(exam.laboratory || exam.protocolNumber) && (
                       <div className="flex items-center gap-2 flex-wrap">
                         {exam.laboratory && (
-                          <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-medium">
-                            <Building2 className="w-3 h-3 text-slate-500 shrink-0" />
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md text-xs sm:text-sm font-semibold">
+                            <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <span>{exam.laboratory}</span>
                           </div>
                         )}
                         {exam.protocolNumber && (
-                          <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">
-                            <Barcode className="w-3 h-3 text-slate-500 shrink-0" />
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md text-xs sm:text-sm font-mono font-semibold">
+                            <Barcode className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                             <span>Prot: {exam.protocolNumber}</span>
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                         <span>Data do Pedido: {formatDate(exam.requestDate)}</span>
                       </div>
                       {exam.executionDate && (
-                        <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-md font-semibold text-[11px]">
-                          <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-950 border border-amber-200/80 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
+                          <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                           <span>Execução / Coleta: {formatExecutionDateTime(exam.executionDate)}</span>
                         </div>
                       )}
                     </div>
 
                     {expectedInfo && (
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${expectedInfo.badgeClass}`}>
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border ${expectedInfo.badgeClass}`}>
                         {expectedInfo.type === 'atrasado' ? (
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                         ) : (
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <Clock className="w-4 h-4 shrink-0" />
                         )}
                         <span>{expectedInfo.text}</span>
                       </div>
@@ -788,10 +788,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                     {/* Online Portal Credentials Box */}
                     {hasCredentials && (
-                      <div className="mt-2.5 p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1.5 text-xs text-indigo-950">
-                        <div className="flex items-center justify-between font-bold text-indigo-900 text-[11px]">
-                          <span className="flex items-center gap-1">
-                            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                      <div className="mt-3 p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2 text-sm text-indigo-950">
+                        <div className="flex items-center justify-between font-bold text-indigo-950 text-xs sm:text-sm">
+                          <span className="flex items-center gap-1.5">
+                            <KeyRound className="w-4 h-4 text-indigo-600" />
                             <span>Acesso ao Laudo Online</span>
                           </span>
 
@@ -806,19 +806,19 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                                 type="button"
                                 onClick={() => toggleCredentialsVisibility(exam.id)}
                                 disabled={loadingPasswordId === exam.id}
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-2xs transition-colors"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors min-h-[32px]"
                                 title={isCredsRevealed ? 'Ocultar credenciais' : 'Revelar credenciais sob demanda'}
                               >
                                 {loadingPasswordId === exam.id ? (
                                   <span className="animate-pulse">Consultando...</span>
                                 ) : isCredsRevealed ? (
                                   <>
-                                    <EyeOff className="w-3 h-3 text-indigo-600" />
+                                    <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
                                     <span>Ocultar</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Eye className="w-3 h-3 text-indigo-600" />
+                                    <Eye className="w-3.5 h-3.5 text-indigo-600" />
                                     <span>Revelar</span>
                                   </>
                                 )}
@@ -830,20 +830,20 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                                 href={exam.portalUrl.startsWith('http') ? exam.portalUrl : `https://${exam.portalUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5 font-bold"
+                                className="text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 font-bold text-xs sm:text-sm hover:underline"
                               >
                                 <span>Acessar Portal</span>
-                                <ExternalLink className="w-3 h-3" />
+                                <ExternalLink className="w-3.5 h-3.5" />
                               </a>
                             )}
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 font-mono text-[11px]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs sm:text-sm">
                           {(exam.hasAccessUser || exam.accessUser) && (
                             <div>
                               <span className="text-slate-500 font-sans">Login: </span>
-                              <strong className="text-slate-800">
+                              <strong className="text-slate-900 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessUser || '—') : '••••••••'}
                               </strong>
                             </div>
@@ -852,7 +852,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                           {(exam.hasAccessPassword || exam.accessPassword) && (
                             <div>
                               <span className="text-slate-500 font-sans">Senha: </span>
-                              <strong className="text-slate-800">
+                              <strong className="text-slate-900 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessPassword || '••••••••') : '••••••••'}
                               </strong>
                             </div>
@@ -861,7 +861,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                           {(exam.hasAccessCode || exam.accessCode) && (
                             <div className="sm:col-span-2">
                               <span className="text-slate-500 font-sans">Chave: </span>
-                              <strong className="text-slate-800">
+                              <strong className="text-slate-900 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessCode || '—') : '••••••••'}
                               </strong>
                             </div>
@@ -871,13 +871,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     )}
 
                     {exam.pickupInstructions && (
-                      <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 p-2 rounded-lg">
-                        <strong>Instruções de Retirada:</strong> {exam.pickupInstructions}
+                      <p className="text-xs sm:text-sm text-slate-700 bg-slate-50 border border-slate-100 p-2.5 rounded-lg leading-relaxed">
+                        <strong className="text-slate-900 font-bold">Instruções de Retirada:</strong> {exam.pickupInstructions}
                       </p>
                     )}
 
                     {exam.notes && (
-                      <p className="p-2 bg-slate-50 rounded-lg text-slate-600 border border-slate-100 italic mt-1.5 line-clamp-3">
+                      <p className="p-2.5 bg-slate-50 rounded-lg text-slate-700 border border-slate-100 italic mt-2 line-clamp-3 leading-relaxed text-xs sm:text-sm">
                         {exam.notes}
                       </p>
                     )}
