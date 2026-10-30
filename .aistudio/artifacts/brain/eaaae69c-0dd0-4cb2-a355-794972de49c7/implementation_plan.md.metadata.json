@@ -1,6 +1,6 @@
 {
-  "summary":  "Relatório de Conclusão e Documentação das Melhorias UX-01 e UX-02 (Redesign de Legibilidade e Aproveitamento de Tela no Saúde Familiar). Documenta a fundamentação tipográfica do Meu SUS Digital / Padrão Digital de Governo (Gov.br - Open Sans / Inter), as melhorias de tipografia e escala em todas as telas, a expansão de viewport de max-w-7xl para max-w-[1600px], a reformulação dos grids para 2 e 3 colunas, e os resultados de compilação e teste (92 testes aprovados com 0 regressões).",
-  "updatedAt":  "2026-10-29T09:20:46.454419124Z",
+  "summary":  "Relatório técnico detalhado da correção P0 funcional: separação estrita entre Solicitação de Exame (pedido/guia), Agendamento de Exame e Consulta Médica, com prevenção de datas fictícias, suporte a transições manuais e diretas, pré-visualização do documento com zoom, adaptação da Agenda Unificada e 10 testes de regressão automatizados.",
+  "updatedAt":  "2026-10-30T07:53:14.883774662Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

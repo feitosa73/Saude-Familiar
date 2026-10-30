@@ -75,6 +75,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
   const [name, setName] = useState('');
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
   const [requestingDoctor, setRequestingDoctor] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
   const [executionDate, setExecutionDate] = useState('');
   const [expectedResultDate, setExpectedResultDate] = useState('');
   const [laboratory, setLaboratory] = useState('');
@@ -161,6 +162,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setName('');
     setRequestDate(new Date().toISOString().split('T')[0]);
     setRequestingDoctor(selectedPatient?.primaryDoctor || '');
+    setScheduledDate('');
     setExecutionDate('');
     setExpectedResultDate('');
     setLaboratory('');
@@ -186,6 +188,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
     setName(exam.name);
     setRequestDate(exam.requestDate || '');
     setRequestingDoctor(exam.requestingDoctor || '');
+    let schedDate = exam.scheduledDate || '';
+    if (schedDate.length > 16 && schedDate.includes('T')) {
+      schedDate = schedDate.slice(0, 16);
+    }
+    setScheduledDate(schedDate);
     let execDate = exam.executionDate || '';
     if (execDate.length > 16 && execDate.includes('T')) {
       execDate = execDate.slice(0, 16);
@@ -218,6 +225,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       return;
     }
 
+    if (status === 'agendado' && !scheduledDate.trim()) {
+      showToast('Para o status Agendado, a Data do Agendamento é obrigatória.', 'error');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const existingExam = editingExamId ? exams.find((e) => e.id === editingExamId) : null;
@@ -226,6 +238,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         name: name.trim(),
         requestDate,
         requestingDoctor: requestingDoctor.trim(),
+        scheduledDate: status === 'agendado' ? scheduledDate.trim() : (status === 'solicitado' ? undefined : (scheduledDate.trim() || undefined)),
         executionDate: executionDate || undefined,
         expectedResultDate: expectedResultDate || undefined,
         laboratory: laboratory.trim() || undefined,
@@ -444,9 +457,19 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       retirado: 'Retirado / Concluído',
     };
 
-    const dateToUse = sharingExam.executionDate
-      ? `${formatExecutionDateTime(sharingExam.executionDate)}`
-      : formatDate(sharingExam.requestDate) || 'A definir';
+    let dateLabel = 'Data do Pedido';
+    let dateToUse = formatDate(sharingExam.requestDate) || 'A definir';
+
+    if (sharingExam.status === 'agendado' && (sharingExam.scheduledDate || sharingExam.executionDate)) {
+      dateLabel = 'Data do Agendamento';
+      dateToUse = formatExecutionDateTime(sharingExam.scheduledDate || sharingExam.executionDate);
+    } else if (sharingExam.executionDate) {
+      dateLabel = 'Data da Realização';
+      dateToUse = formatExecutionDateTime(sharingExam.executionDate);
+    } else if (sharingExam.status === 'solicitado') {
+      dateLabel = 'Data da Solicitação';
+      dateToUse = formatDate(sharingExam.requestDate) || 'A definir';
+    }
 
     const revealedCreds = revealedCredentialsMap[sharingExam.id];
 
@@ -455,6 +478,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       examName: sharingExam.name,
       requestingDoctor: sharingExam.requestingDoctor,
       dateStr: dateToUse,
+      dateLabel,
       statusLabel: statusLabels[sharingExam.status] || sharingExam.status,
       notes: sharingExam.notes,
       laboratory: sharingExam.laboratory,
@@ -767,6 +791,12 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                         <span>Data do Pedido: {formatDate(exam.requestDate)}</span>
                       </div>
+                      {exam.scheduledDate && (
+                        <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-950 border border-blue-200/80 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
+                          <Calendar className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                          <span>Agendamento: {formatExecutionDateTime(exam.scheduledDate)}</span>
+                        </div>
+                      )}
                       {exam.executionDate && (
                         <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-950 border border-amber-200/80 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
                           <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
@@ -1142,40 +1172,68 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data da Solicitação
-                  </label>
-                  <input
-                    type="date"
-                    value={requestDate}
-                    onChange={(e) => setRequestDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Data da Solicitação *
+                    </label>
+                    <input
+                      type="date"
+                      value={requestDate}
+                      onChange={(e) => setRequestDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    />
+                  </div>
+
+                  {status === 'agendado' && (
+                    <div>
+                      <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">
+                        Data do Agendamento *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white"
+                      />
+                    </div>
+                  )}
+
+                  {(status === 'realizado' || status === 'resultado_disponivel' || status === 'retirado') && (
+                    <div>
+                      <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                        Data de Realização / Coleta
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={executionDate}
+                        onChange={(e) => setExecutionDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 border border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Previsão do Resultado
+                    </label>
+                    <input
+                      type="date"
+                      value={expectedResultDate}
+                      onChange={(e) => setExpectedResultDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data de Realização
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={executionDate}
-                    onChange={(e) => setExecutionDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Previsão do Resultado
-                  </label>
-                  <input
-                    type="date"
-                    value={expectedResultDate}
-                    onChange={(e) => setExpectedResultDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
-                </div>
+
+                {status === 'solicitado' && (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-lg">
+                    <strong>Status Solicitado:</strong> O exame foi prescrito pelo médico e aguarda agendamento. Nenhuma data futura fictícia é gerada.
+                  </p>
+                )}
               </div>
 
               <div>

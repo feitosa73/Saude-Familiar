@@ -68,6 +68,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   const [examName, setExamName] = useState('');
   const [examRequestDate, setExamRequestDate] = useState('');
   const [examRequestingDoctor, setExamRequestingDoctor] = useState('');
+  const [examScheduledDate, setExamScheduledDate] = useState('');
   const [examExecutionDate, setExamExecutionDate] = useState('');
   const [examStatus, setExamStatus] = useState<ExamStatus>('solicitado');
   const [examNotes, setExamNotes] = useState('');
@@ -197,6 +198,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
     const today = new Date().toISOString().split('T')[0];
     setExamRequestDate(today);
     setExamRequestingDoctor('');
+    setExamScheduledDate('');
     setExamExecutionDate('');
     setExamStatus('solicitado');
     setExamNotes('');
@@ -228,6 +230,11 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
           setExamName(exam.name);
           setExamRequestDate(exam.requestDate || '');
           setExamRequestingDoctor(exam.requestingDoctor || '');
+          let schedDt = exam.scheduledDate || '';
+          if (schedDt.length > 16 && schedDt.includes('T')) {
+            schedDt = schedDt.slice(0, 16);
+          }
+          setExamScheduledDate(schedDt);
           let execDt = exam.executionDate || '';
           if (execDt.length > 16 && execDt.includes('T')) {
             execDt = execDt.slice(0, 16);
@@ -353,28 +360,29 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   const handleSubmitExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatient) return;
+
+    if (examStatus === 'agendado' && !examScheduledDate.trim()) {
+      showToast('Para o status Agendado, a Data do Agendamento é obrigatória.', 'error');
+      return;
+    }
+
     try {
+      const payload: Partial<Exam> = {
+        name: examName.trim(),
+        requestDate: examRequestDate || undefined,
+        requestingDoctor: examRequestingDoctor.trim(),
+        scheduledDate: examStatus === 'agendado' ? examScheduledDate.trim() : (examStatus === 'solicitado' ? undefined : (examScheduledDate.trim() || undefined)),
+        executionDate: examExecutionDate || undefined,
+        status: examStatus,
+        notes: examNotes || undefined,
+        documentId: examDocumentId || undefined,
+      };
+
       if (editingExamId) {
-        await api.updateExam(editingExamId, {
-          name: examName,
-          requestDate: examRequestDate,
-          requestingDoctor: examRequestingDoctor,
-          executionDate: examExecutionDate || undefined,
-          status: examStatus,
-          notes: examNotes || undefined,
-          documentId: examDocumentId || undefined,
-        });
+        await api.updateExam(editingExamId, payload);
         showToast('Exame atualizado com sucesso!', 'success');
       } else {
-        await api.createExam(selectedPatient.id, {
-          name: examName,
-          requestDate: examRequestDate,
-          requestingDoctor: examRequestingDoctor,
-          executionDate: examExecutionDate || undefined,
-          status: examStatus,
-          notes: examNotes || undefined,
-          documentId: examDocumentId || undefined,
-        });
+        await api.createExam(selectedPatient.id, payload as any);
         showToast('Exame registrado com sucesso!', 'success');
       }
       setIsExamModalOpen(false);
@@ -844,32 +852,55 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data da Solicitação
-                  </label>
-                  <input
-                    type="date"
-                    value={examRequestDate}
-                    onChange={(e) => setExamRequestDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Data da Solicitação
+                    </label>
+                    <input
+                      type="date"
+                      value={examRequestDate}
+                      onChange={(e) => setExamRequestDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    />
+                  </div>
+
+                  {examStatus === 'agendado' && (
+                    <div>
+                      <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">
+                        Data do Agendamento *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={examScheduledDate}
+                        onChange={(e) => setExamScheduledDate(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white"
+                      />
+                    </div>
+                  )}
+
+                  {(examStatus === 'realizado' || examStatus === 'resultado_disponivel' || examStatus === 'retirado') && (
+                    <div>
+                      <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                        Data e Hora de Realização
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={examExecutionDate}
+                        onChange={(e) => setExamExecutionDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 border border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">
-                    Data e Hora de Realização
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={examExecutionDate}
-                    onChange={(e) => setExamExecutionDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
-                  <span className="text-sm text-slate-600 mt-1 block">
-                    Deixe em branco se ainda aguarda liberação/vaga
-                  </span>
-                </div>
+
+                {examStatus === 'solicitado' && (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-lg">
+                    <strong>Solicitação Pendente:</strong> Registra a guia médica sem criar data fictícia de compromisso na agenda confirmada.
+                  </p>
+                )}
               </div>
 
               <div>

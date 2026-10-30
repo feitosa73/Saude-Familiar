@@ -1,87 +1,102 @@
-# Saúde Familiar | Relatório de Conclusão UX-01 & UX-02
-## Redesign de Legibilidade e Aproveitamento de Tela
+# Saúde Familiar | Resolução P0 Funcional
+## Separação de Solicitação de Exame, Agendamento e Consulta Médica
 
-**Data:** 29 de Outubro de 2026  
-**Status:** Concluído com Sucesso e Testado (92/92 testes aprovados)
-
----
-
-## 1. Fundamentação da Tipografia de Referência (Meu SUS Digital / Gov.br)
-
-### Investigação e Seleção Tipográfica
-O **Meu SUS Digital** é desenvolvido sobre o **Design System do Governo Federal do Brasil (Padrão Digital de Governo - Gov.br)**, cuja diretriz oficial estipula:
-- **Família Tipográfica Primária:** **Open Sans** (composta com **Inter** e **Rawline** como alternativas do ecossistema federal).
-- **Justificativa Técnica de Saúde e Acessibilidade:**
-  - **Altura-x generosa (x-height elevado):** Facilita o reconhecimento imediato de caracteres e números críticos em doses de remédios e horários de exames, mesmo em telas com brilho reduzido ou para usuários idosos e pessoas com baixa acuidade visual.
-  - **Aberturas amplas (open apertures):** Evitam a confusão entre algarismos e letras semelhantes (ex.: `3`, `8`, `B`, `0`, `O`).
-  - **Legibilidade em múltiplos pesos:** Do regular (400) ao extra-bold (800), mantendo nitidez em fundo claro e escuro.
-
-### Implementação Centralizada
-1. **`index.html`:**
-   - Adicionada pré-conexão com `https://fonts.googleapis.com` e `https://fonts.gstatic.com`.
-   - Carregadas as famílias **Open Sans** (400, 500, 600, 700, 800) e **Inter** (400, 500, 600, 700, 800).
-2. **`src/index.css`:**
-   - Base global definida em `html { font-size: 16px; font-family: 'Open Sans', 'Inter', system-ui, ... }`.
-   - Tokens utilitários de escala tipográfica:
-     - Page Title: 28px–32px (`app-page-title`).
-     - Section Title: 22px–26px (`app-section-title`).
-     - Card Title: 18px–20px (`app-card-title`).
-     - Body Primário: 16px (`app-body`).
-     - Body Secundário: 15px–16px (`app-secondary`).
-     - Metadados Mínimos: 14px (`app-meta`) — **eliminadas todas as classes `text-[10px]` e `text-[11px]`**.
-     - Inputs / Selects / Labels: base de 16px com alvos de toque $\ge 44\text{px}$ a $48\text{px}$.
-     - Proteção de contraste: classes de texto atenuado (`.text-slate-400`, `.text-slate-500`) ajustadas para contraste acessível WCAG AAA (#475569 e #334155).
+**Prioridade:** P0 Funcional  
+**Data:** 30 de Outubro de 2026  
+**Status:** Concluído com Sucesso e Testado (10/10 novos testes de regressão aprovados; 100% dos testes da suíte passando)
 
 ---
 
-## 2. Aproveitamento de Tela e Layout Responsivo (UX-02)
+## 1. Problema Identificado e Causa Raiz
 
-### Eliminação de Gargalos de Largura
-- **`src/App.tsx`:** O container principal foi expandido de `max-w-7xl` para `max-w-[1600px] w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12`.
-- **`src/components/Navbar.tsx` & `src/components/TabNavigation.tsx`:** Containers alinhados rigorosamente à mesma largura fluida de `max-w-[1600px]`.
-- **`src/components/AgendaUnifiedView.tsx`:** Removida a restrição anterior `max-w-6xl mx-auto`, tornando a área de trabalho 100% fluida.
+Ao escanear guias médicas de solicitação de exames (como guias da Secretaria Municipal da Saúde de São Paulo com data de emissão e CRM da médica solicitante, mas sem comprovação de agendamento), o sistema estava:
+1. Classificando o exame compulsoriamente como agendado (`status: 'agendado'`).
+2. Sintetizando data e horário fictícios (como `08:00`), reaproveitando indevidamente a data de emissão da guia médica.
+3. Inserindo o exame na lista de compromissos futuros confirmados da Agenda Unificada.
 
-### Reestruturação dos Grids em Desktop
-Em vez de uma única coluna vertical estreita centralizada:
-- **Agenda Unificada (Pendências e Confirmados):** Reestruturada para `grid grid-cols-1 lg:grid-cols-2 gap-4`, permitindo que duas colunas confortáveis preencham o monitor desktop preservando a largura de leitura recomendada.
-- **Exames Diagnósticos & Laboratoriais (`ExamsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
-- **Medicamentos (`MedicationsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
-- **Documentos & Prontuário (`DocumentsView.tsx`):** Grid expandido para `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5`.
-- **Cadastros e Pessoas (`PeopleManagementView.tsx`):** Grids de Pacientes, Cuidadores e Convites expandidos para 2 e 3 colunas (`xl:grid-cols-3`).
-- **Dashboard (`DashboardView.tsx`):** Banner do próximo medicamento com tipografia generosa (até 36px–40px), resumo clínico acessível, barra de ações rápidas com alvos $\ge 72\text{px}$ e grid de 3 colunas no desktop.
+### Causa Raiz
+- No serviço de IA (`ScheduleAiService`), o schema exigia `dateTime` obrigatório em todos os itens extraídos.
+- No modal do leitor (`ScheduleScannerModal`), quando uma data pura (10 caracteres) era encontrada, adicionava-se incondicionalmente `T08:00` e gravava-se com `status: 'agendado'`.
+- No modelo de dados e nos formulários (`ExamsView` e `AgendaUnifiedView`), não existia diferenciação explícita entre `requestDate` (data do pedido/guia), `scheduledDate` (data agendada) e `executionDate` (data de realização/coleta).
 
 ---
 
-## 3. Telas e Componentes Refatorados
+## 2. Solução Implementada no Modelo de Domínio
 
-1. **`index.html`:** Fontes do Padrão Digital (Open Sans / Inter).
-2. **`src/index.css`:** Tokens do design system, escala tipográfica centralizada e contrastes.
-3. **`src/App.tsx`:** Container `max-w-[1600px]`, faixas de aviso com fontes acessíveis.
-4. **`src/components/Navbar.tsx`:** Identidade, seletor de paciente e botões com alvos $\ge 44\text{px}$ e texto legível.
-5. **`src/components/TabNavigation.tsx`:** Abas desktop e gaveta mobile com alvos confortáveis $\ge 44\text{px}$ a $54\text{px}$ e textos ampliados.
-6. **`src/components/AgendaUnifiedView.tsx`:** Grid responsivo de 2 colunas, botões diretos de ação sem dropdown, títulos de seção ampliados.
-7. **`src/components/AgendaCard.tsx`:** Títulos de 18–20px, badges de 14px em bold, alertas contextuais ampliados e botões de ação confortáveis ($\ge 44\text{px}$).
-8. **`src/components/ExamsView.tsx`:** Grid de 3 colunas em telas largas, títulos de 18–20px, caixa de credenciais reveladas com mono legível e botões $\ge 44\text{px}$.
-9. **`src/components/MedicationsView.tsx`:** Grid de 3 colunas, posologia e horários com destaque, botões de ação e status acessíveis.
-10. **`src/components/DocumentsView.tsx`:** Grid de 3 colunas, metadados legíveis e destaque da política de Zero Storage.
-11. **`src/components/DashboardView.tsx`:** Hero banner de alto impacto para remédios do dia, barra clínica com contraste e cartões em 3 colunas.
-12. **`src/components/PeopleManagementView.tsx`:** Grids de pacientes, cuidadores e convites com tipografia clara e CPF mascarado legível.
+### A. Fluxo de Consultas e Compromissos Médicos
+- Preservado integralmente o fluxo de consultas médicas, retornos e atendimentos.
+- Continua exigindo `dateTime` confirmado, registrando especialidade, médico e local, e figurando na agenda confirmada.
 
----
-
-## 4. Garantias Funcionais e de Segurança Preservadas
-
-- **Nenhuma alteração** nas regras de autorização, permissões ou isolamento de pacientes.
-- **Nenhuma alteração** na criptografia/mascaramento de senhas no backend, idempotência de salvamento ou Zero Storage de fotos/arquivos.
-- **Nenhuma dependência desnecessária adicionada** (apenas importação oficial de fontes do sistema visual Meu SUS Digital / Gov.br via CSS/HTML).
-- **Sem regressões funcionais.**
+### B. Ciclo de Vida e Campos do Exame
+- **Status Solicitado (`solicitado`):**
+  - Armazena a **Data da Solicitação** (`requestDate`), correspondente à emissão da guia médica.
+  - A **Data do Agendamento** (`scheduledDate`) permanece nula/indefinida.
+  - **Nenhuma data ou horário fictício (como 08:00) é gerado.**
+  - Na Agenda Unificada, figura exclusivamente na seção de **Pendências / Aguardando Agendamento**, nunca em compromissos confirmados.
+- **Status Agendado (`agendado`):**
+  - Exige obrigatoriamente uma **Data do Agendamento** (`scheduledDate`) válida para ser salvo.
+  - Ingressa nos compromissos confirmados da Agenda Unificada com ordenação cronológica.
+- **Status Realizado (`realizado`):**
+  - Permite transição direta a partir de `solicitado` (coleta imediata em laboratório, sem agendamento prévio).
+  - Registra a **Data de Realização/Coleta** (`executionDate`).
+  - Preserva `scheduledDate` original no histórico quando houve agendamento prévio.
+  - Nunca é apresentado como compromisso futuro confirmado.
 
 ---
 
-## 5. Resultados de Verificação e Testes
+## 3. Melhorias na Experiência de Conferência Humana e Scanner
 
-- **`tsc --noEmit` (Linting):** Aprovado sem erros de tipagem.
-- **`vite build` (Compilação):** Compilado com sucesso em 14.88s.
-- **Suite Automatizada de Testes (`npm test`):**
-  - **15 suítes de teste** executadas.
-  - **92 testes executados e 92 testes aprovados** (0 falhas, 0 cancelados, 0 pendentes).
+1. **Classificação da Natureza do Documento pela IA:**
+   - Classifica em: `pedido_guia_exame`, `comprovante_agendamento`, `consulta_retorno`, `comprovante_coleta_realizacao` ou `ambiguo`.
+   - Exibe banner informativo contextual durante a revisão para orientar o cuidador/paciente.
+2. **Pré-visualização do Documento com Zoom:**
+   - Adicionada visualização lateral/topo do documento original (imagem ou PDF) com controles de zoom in, zoom out e reset, permitindo conferência lado a lado dos dados extraídos com a guia original.
+3. **Seletor de Tipo e Status Dinâmico por Item:**
+   - O usuário pode alternar cada item extraído entre:
+     - *Solicitado (Pendente de Agendamento)*
+     - *Agendado (Com Data Marcada)*
+     - *Realizado (Aguardando Laudo)*
+     - *Consulta Médica*
+   - Os campos de data e horário adaptam-se dinamicamente conforme o status escolhido.
+4. **Documentos Ambíguos:**
+   - A IA prioriza o status mais seguro (`solicitado`), sinaliza aviso de revisão e nunca sintetiza horários ou datas.
+
+---
+
+## 4. Atualização da Agenda Unificada e Formulários
+
+1. **`AgendaService.ts`:**
+   - Itens com status `solicitado` são classificados com `status = 'pendente_agendamento'`, `ehAlertaPendente = true` e são exibidos na lista de pendências.
+   - Itens com status `agendado` exigem data válida para ingressar em `itensConfirmados`.
+   - Itens realizados deixam a lista de confirmados e são catalogados no histórico e linha do tempo geral sem duplicação.
+2. **`ExamsView.tsx` e `AgendaUnifiedView.tsx`:**
+   - Incluído o campo `scheduledDate`.
+   - Validação obrigatória da data quando status é `agendado`.
+   - No card de exibição, são mostradas distintamente a Data do Pedido, a Data Agendada e a Data de Realização/Coleta.
+3. **`shareUtils.ts`:**
+   - O compartilhamento seguro via WhatsApp/Clipboard ajusta dinamicamente os rótulos de data (*Data da Solicitação*, *Data do Agendamento*, *Data da Realização*) de acordo com o estágio do exame.
+
+---
+
+## 5. Suíte de 10 Testes de Regressão Obrigatórios
+
+Criada a suíte `test/exam-lifecycle-and-scheduling.test.ts` validando os 10 cenários especificados:
+
+1. **Guia de exame sem data de agendamento:** Status `solicitado`, `requestDate` gravada, `scheduledDate` vazia, fora de itens confirmados. *(Aprovado)*
+2. **Guia com data de emissão e médico:** Data gravada exclusivamente em `requestDate`, sem propagação indevida para agendamento ou realização. *(Aprovado)*
+3. **Exame Solicitado alterado para Agendado:** Exige data válida e passa a constar na agenda confirmada. *(Aprovado)*
+4. **Exame Solicitado alterado diretamente para Realizado:** Registra `executionDate` sem necessidade de agendamento prévio e não figura em compromissos futuros. *(Aprovado)*
+5. **Exame Agendado alterado para Realizado:** Preserva `scheduledDate` original e registra `executionDate`, removendo de compromissos futuros. *(Aprovado)*
+6. **Comprovante de consulta médica:** Classificado no fluxo de consultas e confirmado na agenda. *(Aprovado)*
+7. **Comprovante explícito de exame agendado:** Status `agendado` com data e horário preservados. *(Aprovado)*
+8. **Documento ambíguo:** Não sintetiza data fictícia e adota status solicitado com sinalização de revisão humana. *(Aprovado)*
+9. **Reabrir e editar o exame:** Edição de campos descritivos preserva status, `requestDate`, `scheduledDate` e `executionDate`. *(Aprovado)*
+10. **Agenda unificada, contadores e histórico:** Contabilização precisa e separada de consultas agendadas, exames agendados, solicitações pendentes e exames realizados. *(Aprovado)*
+
+---
+
+## 6. Verificação e Compilação
+
+- **Linter (`tsc --noEmit`):** Executado com sucesso, zero erros de tipagem.
+- **Compilação (`compile_applet` / `npm run build`):** Compilação bem-sucedida do frontend e backend.
+- **Testes Automatizados:** Suíte de regressão executada com 10/10 testes aprovados.

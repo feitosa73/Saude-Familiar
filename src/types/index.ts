@@ -325,7 +325,7 @@ export interface ExtractedCollectionReceiptResponse {
   exams: ExtractedCollectionItem[];
 }
 
-export type ExtractedScheduleType = 'consulta' | 'exame';
+export type ExtractedScheduleType = 'consulta' | 'exame_agendado' | 'solicitacao_exame' | 'exame';
 
 export interface ExtractedScheduleItem {
   type: ExtractedScheduleType;
@@ -333,14 +333,25 @@ export interface ExtractedScheduleItem {
   specialtyOrCategory: string;
   professional?: string;
   location?: string;
-  dateTime: string;
+  dateTime?: string;
+  requestDate?: string;
+  scheduledDate?: string;
+  executionDate?: string;
+  status?: ExamStatus;
   reason?: string;
   notes?: string;
   preparationInstructions?: string;
+  documentNature?:
+    | 'pedido_guia_exame'
+    | 'comprovante_agendamento'
+    | 'consulta_retorno'
+    | 'comprovante_coleta_realizacao'
+    | 'ambiguo';
 }
 
 export interface ExtractedScheduleResponse {
   patientNameIdentified?: string;
+  documentNature?: string;
   schedules: ExtractedScheduleItem[];
   confidenceWarning?: string;
   generalNotes?: string;

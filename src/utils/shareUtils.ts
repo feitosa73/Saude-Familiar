@@ -21,6 +21,7 @@ export interface ShareExamData {
   examName: string;
   requestingDoctor?: string;
   dateStr: string;
+  dateLabel?: string;
   statusLabel?: string;
   notes?: string;
   laboratory?: string;
@@ -81,7 +82,7 @@ export function buildExamShareText(data: ShareExamData): { title: string; text: 
     data.laboratory ? `🏢 *Laboratório:* ${data.laboratory}` : '',
     data.protocolNumber ? `🔢 *Protocolo:* ${data.protocolNumber}` : '',
     data.requestingDoctor ? `👨‍⚕️ *Médico Solicitante:* ${data.requestingDoctor}` : '',
-    `📅 *Data da Coleta/Execução:* ${data.dateStr}`,
+    `📅 *${data.dateLabel || 'Data'}:* ${data.dateStr}`,
     data.expectedResultDate ? `⏳ *Previsão de Resultado:* ${data.expectedResultDate}` : '',
     data.statusLabel ? `📊 *Status Atual:* ${data.statusLabel}` : '',
     data.portalUrl && !shouldIncludeCredentials ? `🌐 *Portal de Resultados:* ${data.portalUrl}` : '',
