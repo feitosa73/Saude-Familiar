@@ -114,25 +114,25 @@ export const DeleteAllDataModal: React.FC<DeleteAllDataModalProps> = ({
       aria-modal="true"
       aria-labelledby="delete-data-modal-title"
     >
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-rose-200 overflow-hidden transform transition-all my-8">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-rose-200 dark:border-rose-900/60 overflow-hidden transform transition-all my-8 text-slate-800 dark:text-slate-200">
         {/* Header */}
-        <div className="px-6 py-4 bg-rose-50/90 border-b border-rose-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-rose-50/90 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-xs">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="delete-data-modal-title" className="text-base sm:text-lg font-bold text-rose-950">
+              <h2 id="delete-data-modal-title" className="text-base sm:text-lg font-bold text-rose-950 dark:text-rose-200">
                 Apagar Todos os Dados
               </h2>
-              <p className="text-xs text-rose-700">Ação irreversível de exclusão definitiva</p>
+              <p className="text-xs text-rose-700 dark:text-rose-400">Ação irreversível de exclusão definitiva</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleResetAndClose}
             disabled={isDeleting}
-            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-100 transition-colors"
+            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 dark:hover:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

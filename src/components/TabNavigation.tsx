@@ -50,7 +50,7 @@ export const TabNavigation: React.FC = () => {
       {/* Desktop & Tablet Top Navigation Bar */}
       <nav
         id="desktop-navigation-tabs"
-        className="hidden md:block bg-white border-b border-slate-200/90 sticky top-16 sm:top-20 z-30 shadow-xs"
+        className="hidden md:block bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 sticky top-16 sm:top-20 z-30 shadow-xs transition-colors"
         aria-label="Navegação Principal"
       >
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
@@ -63,14 +63,14 @@ export const TabNavigation: React.FC = () => {
                   key={tab.id}
                   id={`tab-desktop-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-sm sm:text-base font-bold whitespace-nowrap transition-all min-h-[44px] ${
+                  className={`flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-sm sm:text-base font-bold whitespace-nowrap transition-all min-h-[44px] cursor-pointer ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -81,18 +81,18 @@ export const TabNavigation: React.FC = () => {
 
       {/* Mobile Drawer for Extra Tabs (Linha do Tempo, Histórico) */}
       {isMoreMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
           <div
             className="flex-1"
             onClick={() => setIsMoreMenuOpen(false)}
           />
-          <div className="bg-white rounded-t-3xl p-5 border-t border-slate-200 shadow-2xl space-y-3 pb-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Mais Recursos</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl p-5 border-t border-slate-200 dark:border-slate-800 shadow-2xl space-y-3 pb-8">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Mais Recursos</h3>
               <button
                 type="button"
                 onClick={() => setIsMoreMenuOpen(false)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -105,19 +105,19 @@ export const TabNavigation: React.FC = () => {
                   setActiveTab('linha_tempo');
                   setIsMoreMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left border transition-all ${
+                className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left border transition-all cursor-pointer ${
                   activeTab === 'linha_tempo'
-                    ? 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-800 font-semibold hover:bg-slate-100'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">Linha do Tempo Clínica</p>
-                    <p className="text-xs text-slate-500">Histórico cronológico de eventos e prescrições</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Linha do Tempo Clínica</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Histórico cronológico de eventos e prescrições</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -129,19 +129,19 @@ export const TabNavigation: React.FC = () => {
                   setActiveTab('historico');
                   setIsMoreMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left border transition-all ${
+                className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left border transition-all cursor-pointer ${
                   activeTab === 'historico'
-                    ? 'bg-blue-50 border-blue-200 text-blue-900 font-bold'
-                    : 'bg-slate-50 border-slate-200 text-slate-800 font-semibold hover:bg-slate-100'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center">
                     <History className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">Histórico de Alterações</p>
-                    <p className="text-xs text-slate-500">Log de auditoria e ações realizadas na família</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Histórico de Alterações</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Log de auditoria e ações realizadas na família</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -154,7 +154,7 @@ export const TabNavigation: React.FC = () => {
       {/* Mobile Bottom Fixed Navigation Bar (Thumb-optimized, 48px+ targets) */}
       <nav
         id="mobile-bottom-navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-2xl px-1.5 pt-1 pb-[max(env(safe-area-inset-bottom),8px)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 shadow-2xl px-1.5 pt-1 pb-[max(env(safe-area-inset-bottom),8px)] transition-colors"
         aria-label="Navegação Inferior Mobile"
       >
         <div className="grid grid-cols-6 gap-1 max-w-lg mx-auto">
@@ -169,20 +169,20 @@ export const TabNavigation: React.FC = () => {
                   setActiveTab(tab.id);
                   setIsMoreMenuOpen(false);
                 }}
-                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] ${
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] cursor-pointer ${
                   isActive
-                    ? 'text-blue-700 bg-blue-50/90 font-bold'
-                    : 'text-slate-600 hover:text-slate-900 font-semibold'
+                    ? 'text-blue-700 dark:text-blue-400 bg-blue-50/90 dark:bg-blue-950/50 font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-semibold'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
                   className={`w-5 h-5 mb-0.5 transition-transform ${
-                    isActive ? 'text-blue-600 stroke-[2.5] scale-110' : 'text-slate-500 stroke-2'
+                    isActive ? 'text-blue-600 dark:text-blue-400 stroke-[2.5] scale-110' : 'text-slate-500 dark:text-slate-400 stroke-2'
                   }`}
                 />
                 <span className={`text-xs leading-tight truncate max-w-full tracking-tight ${
-                  isActive ? 'text-blue-700 font-extrabold' : 'text-slate-700 font-semibold'
+                  isActive ? 'text-blue-700 dark:text-blue-400 font-extrabold' : 'text-slate-700 dark:text-slate-300 font-semibold'
                 }`}>
                   {tab.shortLabel}
                 </span>
@@ -195,22 +195,22 @@ export const TabNavigation: React.FC = () => {
             id="tab-mobile-more"
             type="button"
             onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-            className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] ${
+            className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all min-h-[54px] select-none active:scale-[0.96] cursor-pointer ${
               isMoreActive || isMoreMenuOpen
-                ? 'text-blue-700 bg-blue-50/90 font-bold'
-                : 'text-slate-600 hover:text-slate-900 font-semibold'
+                ? 'text-blue-700 dark:text-blue-400 bg-blue-50/90 dark:bg-blue-950/50 font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-semibold'
             }`}
             aria-expanded={isMoreMenuOpen}
           >
             <MoreHorizontal
               className={`w-5 h-5 mb-0.5 ${
                 isMoreActive || isMoreMenuOpen
-                  ? 'text-blue-600 stroke-[2.5] scale-110'
-                  : 'text-slate-500 stroke-2'
+                  ? 'text-blue-600 dark:text-blue-400 stroke-[2.5] scale-110'
+                  : 'text-slate-500 dark:text-slate-400 stroke-2'
               }`}
             />
             <span className={`text-xs leading-tight truncate max-w-full tracking-tight ${
-              isMoreActive || isMoreMenuOpen ? 'text-blue-700 font-extrabold' : 'text-slate-700 font-semibold'
+              isMoreActive || isMoreMenuOpen ? 'text-blue-700 dark:text-blue-400 font-extrabold' : 'text-slate-700 dark:text-slate-300 font-semibold'
             }`}>
               Mais
             </span>

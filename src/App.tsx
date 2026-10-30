@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider, usePatient } from './context/PatientContext';
 import { LoginView } from './components/LoginView';
@@ -110,10 +111,10 @@ const MainContent: React.FC = () => {
   // Initial loading state
   if (accessStatus === 'loading' || (isAuthLoading && !user)) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800 p-6">
-        <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-        <h2 className="text-lg font-bold text-slate-900">Saúde Familiar</h2>
-        <p className="text-sm text-slate-500 mt-1">Carregando prontuário e autorização...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-800 dark:text-slate-200 p-6">
+        <div className="w-10 h-10 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Saúde Familiar</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Carregando prontuário e autorização...</p>
       </div>
     );
   }
@@ -164,10 +165,10 @@ const MainContent: React.FC = () => {
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800 p-6">
-        <div className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-        <h2 className="text-lg font-bold text-slate-900">Saúde Familiar</h2>
-        <p className="text-sm text-slate-500 mt-1">Carregando dados dos pacientes...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-800 dark:text-slate-200 p-6">
+        <div className="w-10 h-10 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Saúde Familiar</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Carregando dados dos pacientes...</p>
       </div>
     );
   }
@@ -175,14 +176,14 @@ const MainContent: React.FC = () => {
   const hasNoPatients = patients.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white transition-colors">
       {/* Top Navbar */}
       <Navbar onOpenNewPatient={() => setIsNewPatientModalOpen(true)} />
 
       {/* Authenticated Beta Notice Strip */}
       <div
         id="authenticated-beta-strip"
-        className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm font-semibold text-amber-950 flex items-center justify-center gap-2 shadow-2xs"
+        className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/60 px-4 py-2 text-center text-sm font-semibold text-amber-950 dark:text-amber-200 flex items-center justify-center gap-2 shadow-2xs"
       >
         <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
         <span>Ambiente Beta • Utilize somente dados fictícios</span>
@@ -345,11 +346,13 @@ const MainContent: React.FC = () => {
 export default function App() {
   return (
     <ErrorBoundary title="Erro inesperado na aplicação">
-      <AuthProvider>
-        <PatientProvider>
-          <MainContent />
-        </PatientProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <PatientProvider>
+            <MainContent />
+          </PatientProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

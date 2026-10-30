@@ -567,21 +567,21 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[96vh] sm:max-w-5xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[96vh] sm:max-w-5xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 dark:sm:border-slate-800 overflow-hidden flex flex-col text-slate-800 dark:text-slate-200">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-purple-50 via-indigo-50/40 to-slate-50 shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-purple-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-purple-950/30 dark:to-slate-900 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-xs shrink-0">
               <CalendarCheck2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 Leitura de Guia ou Agendamento
-                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full border border-purple-200">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 rounded-full border border-purple-200 dark:border-purple-800">
                   Zero Storage
                 </span>
               </h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Identificação de solicitações de exames, agendamentos e consultas para {safePatientName}
               </p>
             </div>
@@ -589,7 +589,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Fechar scanner"
           >
             <X className="w-5 h-5" />

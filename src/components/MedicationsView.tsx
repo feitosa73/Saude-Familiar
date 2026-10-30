@@ -235,12 +235,12 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2.5">
-            <Pill className="w-7 h-7 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <Pill className="w-7 h-7 text-blue-600 dark:text-blue-400" />
             Controle de Medicamentos
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Gerencie remédios de uso contínuo e tratamentos pontuais de {selectedPatient?.name}
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+            Gerencie remédios de uso contínuo e tratamentos pontuais de <strong className="text-slate-800 dark:text-slate-200">{selectedPatient?.name}</strong>
           </p>
         </div>
 
@@ -265,7 +265,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold border border-slate-200 min-h-[44px]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold border border-slate-200 dark:border-slate-700 min-h-[44px]">
             <Lock className="w-4 h-4 text-slate-400" />
             <span>Cadastro restrito a Cuidadores/Admin</span>
           </div>
@@ -274,8 +274,8 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
 
       {/* Viewer Notice */}
       {isViewer && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-900 text-xs sm:text-sm">
-          <Eye className="w-4 h-4 text-amber-600 shrink-0" />
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-center gap-2 text-amber-900 dark:text-amber-200 text-xs sm:text-sm">
+          <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span>
             <strong>Modo Visualizador:</strong> Você tem permissão para consultar a lista e posologia dos medicamentos.
           </span>
@@ -283,7 +283,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
       )}
 
       {/* Filters and Search Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between transition-colors">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -292,18 +292,18 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
             placeholder="Buscar por nome, médico ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-slate-800"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-xl shrink-0 overflow-x-auto">
           <button
             id="filter-meds-active"
             onClick={() => setFilterActive('active')}
             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'active'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Em Uso ({medications.filter((m) => m.active).length})
@@ -313,8 +313,8 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
             onClick={() => setFilterActive('inactive')}
             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'inactive'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Inativos ({medications.filter((m) => !m.active).length})
@@ -324,8 +324,8 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
             onClick={() => setFilterActive('all')}
             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold min-h-[44px] transition-all ${
               filterActive === 'all'
-                ? 'bg-white text-blue-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Todos ({medications.length})
@@ -335,8 +335,8 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
 
       {/* Grid of Medications */}
       {loading ? (
-        <div className="p-8 text-center text-slate-500">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+          <div className="w-8 h-8 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs font-medium">Carregando medicamentos...</p>
         </div>
       ) : filteredMeds.length > 0 ? (
@@ -344,10 +344,10 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
           {filteredMeds.map((med) => (
             <div
               key={med.id}
-              className={`bg-white rounded-2xl border transition-all p-5 sm:p-6 flex flex-col justify-between shadow-xs ${
+              className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all p-5 sm:p-6 flex flex-col justify-between shadow-xs ${
                 med.active
-                  ? 'border-slate-200 hover:border-slate-300'
-                  : 'border-slate-200/60 bg-slate-50/50 opacity-75'
+                  ? 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  : 'border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/60 opacity-75'
               }`}
             >
               <div>
@@ -355,14 +355,14 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-lg sm:text-xl text-slate-900 truncate">
+                      <span className="font-bold text-lg sm:text-xl text-slate-900 dark:text-slate-100 truncate">
                         {med.name}
                       </span>
-                      <span className="px-3 py-1 rounded-lg text-xs sm:text-sm font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="px-3 py-1 rounded-lg text-xs sm:text-sm font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
                         {med.dosage}
                       </span>
                     </div>
-                    <p className="text-sm sm:text-base text-slate-700 font-semibold mt-1">
+                    <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 font-semibold mt-1">
                       {med.frequency}
                     </p>
                   </div>
@@ -373,7 +373,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                       <button
                         id={`edit-med-${med.id}`}
                         onClick={() => handleOpenEdit(med)}
-                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 dark:text-slate-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                         title="Editar medicamento"
                       >
                         <Edit2 className="w-4.5 h-4.5" />
@@ -383,7 +383,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                       <button
                         id={`delete-med-${med.id}`}
                         onClick={() => handleDelete(med.id, med.name)}
-                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                         title="Excluir medicamento (Apenas Admin)"
                       >
                         <Trash2 className="w-4.5 h-4.5" />
@@ -393,14 +393,14 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 </div>
 
                 {/* Times Badges */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs sm:text-sm text-slate-500 font-semibold flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-slate-400" /> Horários:
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Horários:
                   </span>
                   {med.times.map((time, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-0.5 rounded-md text-xs sm:text-sm font-bold bg-slate-100 text-slate-800 border border-slate-200"
+                      className="px-2.5 py-0.5 rounded-md text-xs sm:text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
                     >
                       {time}
                     </span>
@@ -408,20 +408,20 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 </div>
 
                 {/* Details info */}
-                <div className="mt-3.5 space-y-2 text-sm text-slate-700">
+                <div className="mt-3.5 space-y-2 text-sm text-slate-700 dark:text-slate-300">
                   {med.prescribingDoctor && (
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>Prescrito por: <strong className="text-slate-900 font-bold">{med.prescribingDoctor}</strong></span>
+                      <User className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                      <span>Prescrito por: <strong className="text-slate-900 dark:text-slate-100 font-bold">{med.prescribingDoctor}</strong></span>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                    <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
                     <span>Início: {med.startDate || 'Não informado'}</span>
                     {med.endDate && <span> • Término: {med.endDate}</span>}
                   </div>
                   {med.notes && (
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-sm mt-2.5 italic leading-relaxed">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm mt-2.5 italic leading-relaxed">
                       {med.notes}
                     </div>
                   )}
@@ -430,14 +430,14 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
 
               {/* Status Footer Toggle */}
               {permissions?.canEditRecord && (
-                <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <button
                     id={`toggle-status-med-${med.id}`}
                     onClick={() => handleToggleActive(med)}
                     className={`inline-flex items-center gap-2 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl transition-colors min-h-[38px] ${
                       med.active
-                        ? 'text-slate-600 hover:text-amber-700 hover:bg-amber-50'
-                        : 'text-blue-700 hover:text-blue-900 hover:bg-blue-50'
+                        ? 'text-slate-600 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                        : 'text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30'
                     }`}
                   >
                     {med.active ? (
@@ -447,7 +447,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-4 h-4 text-blue-600" />
+                        <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         Reativar Medicamento
                       </>
                     )}
@@ -458,10 +458,10 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-          <Pill className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800">Nenhum medicamento encontrado</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+          <Pill className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Nenhum medicamento encontrado</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
             {searchTerm
               ? 'Nenhum item corresponde à sua busca.'
               : 'Cadastre os medicamentos receitados para manter o cronograma e alertas organizados.'}
@@ -481,9 +481,9 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                 type="button"
                 id="empty-manual-add-med-btn"
                 onClick={handleOpenCreate}
-                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
               >
-                <Plus className="w-4 h-4 text-slate-500" />
+                <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <span>Cadastrar Manualmente</span>
               </button>
             </div>
@@ -499,11 +499,11 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
         >
           <div
             id="medication-modal-content"
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-slate-100 transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Pill className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Pill className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 {editingMedId ? 'Editar Medicamento' : 'Novo Medicamento'}
               </h2>
               <button
@@ -512,7 +512,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   resetForm();
                   onCloseModal();
                 }}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-base font-bold"
                 aria-label="Fechar modal"
               >
                 ✕
@@ -521,7 +521,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Nome do Medicamento *
                 </label>
                 <input
@@ -530,13 +530,13 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   placeholder="Ex: Losartana Potássica, Metformina, Vitamina D"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Dosagem *
                   </label>
                   <input
@@ -545,12 +545,12 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                     placeholder="Ex: 50mg, 850mg, 7.000 UI"
                     value={dosage}
                     onChange={(e) => setDosage(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Frequência / Posologia *
                   </label>
                   <input
@@ -559,13 +559,13 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                     placeholder="Ex: 1x ao dia pela manhã, 12/12h"
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Horários de Administração (separados por vírgula) *
                 </label>
                 <input
@@ -574,41 +574,41 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   placeholder="Ex: 08:00, 14:00, 20:00"
                   value={timesInput}
                   onChange={(e) => setTimesInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
-                <span className="text-sm text-slate-600 mt-1 block">
+                <span className="text-sm text-slate-600 dark:text-slate-400 mt-1 block">
                   Defina os horários do dia em que a dose deve ser administrada.
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Data de Início
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Data de Término (Opcional)
                   </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Médico Prescritor
                 </label>
                 <input
@@ -616,12 +616,12 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   placeholder="Ex: Dr. Roberto Martins (Cardiologista)"
                   value={prescribingDoctor}
                   onChange={(e) => setPrescribingDoctor(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Instruções e Observações
                 </label>
                 <textarea
@@ -629,7 +629,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   placeholder="Ex: Tomar após o café da manhã com bastante água."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -639,18 +639,18 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                   id="med-active-check"
                   checked={active}
                   onChange={(e) => setActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800"
                 />
-                <label htmlFor="med-active-check" className="text-xs font-medium text-slate-700">
+                <label htmlFor="med-active-check" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Medicamento em uso contínuo / ativo atualmente
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>

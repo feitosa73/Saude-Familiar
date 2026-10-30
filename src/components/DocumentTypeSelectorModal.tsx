@@ -71,18 +71,18 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-3xl shadow-2xl border-0 sm:border sm:border-slate-100 dark:sm:border-slate-800 overflow-hidden flex flex-col text-slate-800 dark:text-slate-200">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-slate-50 to-blue-50/30 shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-linear-to-r from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800/80 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 via-purple-500 to-blue-600 flex items-center justify-center text-white shadow-xs shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                 O que você deseja ler com a IA?
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {patientName ? `Paciente: ${patientName} • ` : ''}
                 Selecione o tipo de documento
               </p>
@@ -91,7 +91,7 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -104,7 +104,7 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
               <div
                 key={opt.id}
                 onClick={() => onSelectType(opt.id)}
-                className={`group relative p-4 sm:p-5 rounded-2xl border-2 border-slate-200/80 cursor-pointer transition-all duration-150 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${opt.borderHover} hover:shadow-md`}
+                className={`group relative p-4 sm:p-5 rounded-2xl border-2 border-slate-200/80 dark:border-slate-800 cursor-pointer transition-all duration-150 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 ${opt.borderHover} hover:shadow-md`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 ${opt.iconBg} transition-transform group-hover:scale-105`}>
@@ -112,17 +112,17 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
                   </div>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-blue-700 transition-colors">
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {opt.title}
                       </h3>
                       <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${opt.badgeColor}`}>
                         {opt.badge}
                       </span>
                     </div>
-                    <p className="text-sm font-semibold text-slate-700">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                       {opt.description}
                     </p>
-                    <p className="text-sm text-slate-600 leading-relaxed">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                       {opt.details}
                     </p>
                   </div>
@@ -139,11 +139,11 @@ export const DocumentTypeSelectorModal: React.FC<DocumentTypeSelectorModalProps>
           </div>
 
           {/* Privacy Note */}
-          <div className="mt-5 p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl flex items-start gap-2.5 text-sm text-blue-950">
-            <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="mt-5 p-3.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/60 rounded-2xl flex items-start gap-2.5 text-sm text-blue-950 dark:text-blue-200">
+            <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5 text-sm leading-relaxed">
-              <span className="font-bold text-blue-900 block">Arquitetura Zero Storage & Privacidade LGPD</span>
-              <p className="text-blue-900/90">
+              <span className="font-bold text-blue-900 dark:text-blue-300 block">Arquitetura Zero Storage & Privacidade LGPD</span>
+              <p className="text-blue-900/90 dark:text-blue-200/90">
                 Seus arquivos (PDF ou imagem) são analisados diretamente na memória RAM e descartados imediatamente após a extração estruturada. Nenhum arquivo original sensível fica gravado em servidores externos.
               </p>
             </div>

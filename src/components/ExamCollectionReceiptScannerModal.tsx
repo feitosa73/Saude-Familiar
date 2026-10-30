@@ -430,7 +430,7 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden border border-slate-200 flex flex-col max-h-[95vh] h-full sm:h-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[95vh] h-full sm:h-auto text-slate-800 dark:text-slate-200">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 bg-linear-to-r from-blue-700 via-indigo-700 to-sky-800 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">

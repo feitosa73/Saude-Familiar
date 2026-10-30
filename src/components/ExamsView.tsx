@@ -533,12 +533,12 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2.5">
-            <Activity className="w-7 h-7 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <Activity className="w-7 h-7 text-blue-600 dark:text-blue-400" />
             <span>Exames & Resultados Laboratoriais</span>
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Gerencie pedidos, comprovantes de coleta, senhas de acesso aos portais e laudos de {selectedPatient?.name || 'paciente'}
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+            Gerencie pedidos, comprovantes de coleta, senhas de acesso aos portais e laudos de <strong className="text-slate-800 dark:text-slate-200">{selectedPatient?.name || 'paciente'}</strong>
           </p>
         </div>
 
@@ -573,7 +573,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       </div>
 
       {/* Filter and Search */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between transition-colors">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -582,18 +582,18 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             placeholder="Buscar por nome, laboratório, protocolo ou médico..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white text-slate-800"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shrink-0 overflow-x-auto">
           <button
             id="filter-exam-all"
             onClick={() => setFilterStatus('all')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'all'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Todos ({exams.length})
@@ -603,8 +603,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             onClick={() => setFilterStatus('solicitado')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'solicitado'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Solicitados ({exams.filter((e) => e.status === 'solicitado').length})
@@ -614,8 +614,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             onClick={() => setFilterStatus('agendado')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'agendado'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Agendados ({exams.filter((e) => e.status === 'agendado').length})
@@ -625,8 +625,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             onClick={() => setFilterStatus('realizado')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'realizado'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Coletados ({exams.filter((e) => e.status === 'realizado').length})
@@ -636,8 +636,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             onClick={() => setFilterStatus('resultado_disponivel')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'resultado_disponivel'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Laudos Prontos ({exams.filter((e) => e.status === 'resultado_disponivel').length})
@@ -647,8 +647,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             onClick={() => setFilterStatus('retirado')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === 'retirado'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Retirados ({exams.filter((e) => e.status === 'retirado').length})
@@ -686,14 +686,14 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                 id={`exam-card-${exam.id}`}
                 className={`rounded-2xl border p-5 sm:p-6 transition-all flex flex-col justify-between ${
                   isResultadoPronto
-                    ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80 ring-1 ring-emerald-200 dark:ring-emerald-800/60'
                     : isRetirado
-                    ? 'bg-slate-50 border-slate-200 opacity-90'
+                    ? 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 opacity-90'
                     : isRealizado
-                    ? 'bg-white border-blue-200 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-900/60 shadow-xs'
                     : isAgendado
-                    ? 'bg-white border-indigo-200 shadow-xs'
-                    : 'bg-white border-slate-200 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/60 shadow-xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs'
                 }`}
               >
                 <div>
@@ -704,14 +704,14 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         <span
                           className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
                             exam.status === 'solicitado'
-                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
                               : exam.status === 'agendado'
-                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
                               : exam.status === 'realizado'
-                              ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                              ? 'bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60'
                               : exam.status === 'resultado_disponivel'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 font-bold'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 font-bold'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                           }`}
                         >
                           {exam.status === 'solicitado' && 'Solicitado (Sem Data)'}
@@ -722,14 +722,14 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         </span>
 
                         {hasCredentials && (
-                          <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 flex items-center gap-1.5">
-                            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                          <span className="text-xs font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                             <span>Acesso Online</span>
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug break-words">
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 leading-snug break-words">
                         {exam.name}
                       </h3>
                     </div>
@@ -738,15 +738,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       <button
                         id={`share-exam-quick-${exam.id}`}
                         onClick={() => handleOpenShareModal(exam)}
-                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 dark:text-slate-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                         title="Avisar Família / Compartilhar Exame"
                       >
-                        <Share2 className="w-4 h-4 text-blue-600" />
+                        <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </button>
                       <button
                         id={`edit-exam-${exam.id}`}
                         onClick={() => handleOpenEdit(exam)}
-                        className="p-2 rounded-lg text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-blue-700 dark:text-slate-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                         title="Editar exame"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -754,7 +754,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       <button
                         id={`delete-exam-${exam.id}`}
                         onClick={() => handleDelete(exam.id, exam.name)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                         title="Excluir exame"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -763,23 +763,23 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   </div>
 
                   {/* Details */}
-                  <div className="mt-4 space-y-2.5 text-sm text-slate-700">
+                  <div className="mt-4 space-y-2.5 text-sm text-slate-700 dark:text-slate-300">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>Solicitado por: <strong className="text-slate-900 font-bold">{exam.requestingDoctor}</strong></span>
+                      <User className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                      <span>Solicitado por: <strong className="text-slate-900 dark:text-slate-100 font-bold">{exam.requestingDoctor}</strong></span>
                     </div>
 
                     {(exam.laboratory || exam.protocolNumber) && (
                       <div className="flex items-center gap-2 flex-wrap">
                         {exam.laboratory && (
-                          <div className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md text-xs sm:text-sm font-semibold">
-                            <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-md text-xs sm:text-sm font-semibold border border-slate-200/80 dark:border-slate-700">
+                            <Building2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
                             <span>{exam.laboratory}</span>
                           </div>
                         )}
                         {exam.protocolNumber && (
-                          <div className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md text-xs sm:text-sm font-mono font-semibold">
-                            <Barcode className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2.5 py-1 rounded-md text-xs sm:text-sm font-mono font-semibold border border-slate-200/80 dark:border-slate-700">
+                            <Barcode className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
                             <span>Prot: {exam.protocolNumber}</span>
                           </div>
                         )}
@@ -788,18 +788,18 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+                        <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <span>Data do Pedido: {formatDate(exam.requestDate)}</span>
                       </div>
                       {exam.scheduledDate && (
-                        <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-950 border border-blue-200/80 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
-                          <Calendar className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-950 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
+                          <Calendar className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400 shrink-0" />
                           <span>Agendamento: {formatExecutionDateTime(exam.scheduledDate)}</span>
                         </div>
                       )}
                       {exam.executionDate && (
-                        <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-950 border border-amber-200/80 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
-                          <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 px-2.5 py-1 rounded-md font-semibold text-xs sm:text-sm">
+                          <Clock className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
                           <span>Execução / Coleta: {formatExecutionDateTime(exam.executionDate)}</span>
                         </div>
                       )}
@@ -818,10 +818,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                     {/* Online Portal Credentials Box */}
                     {hasCredentials && (
-                      <div className="mt-3 p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2 text-sm text-indigo-950">
-                        <div className="flex items-center justify-between font-bold text-indigo-950 text-xs sm:text-sm">
+                      <div className="mt-3 p-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-2 text-sm text-indigo-950 dark:text-indigo-200 transition-colors">
+                        <div className="flex items-center justify-between font-bold text-indigo-950 dark:text-indigo-200 text-xs sm:text-sm">
                           <span className="flex items-center gap-1.5">
-                            <KeyRound className="w-4 h-4 text-indigo-600" />
+                            <KeyRound className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                             <span>Acesso ao Laudo Online</span>
                           </span>
 
@@ -836,19 +836,19 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                                 type="button"
                                 onClick={() => toggleCredentialsVisibility(exam.id)}
                                 disabled={loadingPasswordId === exam.id}
-                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors min-h-[32px]"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-700 shadow-2xs transition-colors min-h-[32px]"
                                 title={isCredsRevealed ? 'Ocultar credenciais' : 'Revelar credenciais sob demanda'}
                               >
                                 {loadingPasswordId === exam.id ? (
                                   <span className="animate-pulse">Consultando...</span>
                                 ) : isCredsRevealed ? (
                                   <>
-                                    <EyeOff className="w-3.5 h-3.5 text-indigo-600" />
+                                    <EyeOff className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                                     <span>Ocultar</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                                    <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                                     <span>Revelar</span>
                                   </>
                                 )}
@@ -860,7 +860,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                                 href={exam.portalUrl.startsWith('http') ? exam.portalUrl : `https://${exam.portalUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 font-bold text-xs sm:text-sm hover:underline"
+                                className="text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center gap-1 font-bold text-xs sm:text-sm hover:underline"
                               >
                                 <span>Acessar Portal</span>
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -872,8 +872,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs sm:text-sm">
                           {(exam.hasAccessUser || exam.accessUser) && (
                             <div>
-                              <span className="text-slate-500 font-sans">Login: </span>
-                              <strong className="text-slate-900 font-bold">
+                              <span className="text-slate-500 dark:text-slate-400 font-sans">Login: </span>
+                              <strong className="text-slate-900 dark:text-slate-100 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessUser || '—') : '••••••••'}
                               </strong>
                             </div>
@@ -881,8 +881,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                           {(exam.hasAccessPassword || exam.accessPassword) && (
                             <div>
-                              <span className="text-slate-500 font-sans">Senha: </span>
-                              <strong className="text-slate-900 font-bold">
+                              <span className="text-slate-500 dark:text-slate-400 font-sans">Senha: </span>
+                              <strong className="text-slate-900 dark:text-slate-100 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessPassword || '••••••••') : '••••••••'}
                               </strong>
                             </div>
@@ -890,8 +890,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
                           {(exam.hasAccessCode || exam.accessCode) && (
                             <div className="sm:col-span-2">
-                              <span className="text-slate-500 font-sans">Chave: </span>
-                              <strong className="text-slate-900 font-bold">
+                              <span className="text-slate-500 dark:text-slate-400 font-sans">Chave: </span>
+                              <strong className="text-slate-900 dark:text-slate-100 font-bold">
                                 {isCredsRevealed ? (revealedCreds?.accessCode || '—') : '••••••••'}
                               </strong>
                             </div>
@@ -901,13 +901,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     )}
 
                     {exam.pickupInstructions && (
-                      <p className="text-xs sm:text-sm text-slate-700 bg-slate-50 border border-slate-100 p-2.5 rounded-lg leading-relaxed">
-                        <strong className="text-slate-900 font-bold">Instruções de Retirada:</strong> {exam.pickupInstructions}
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-850/80 border border-slate-100 dark:border-slate-800 p-2.5 rounded-lg leading-relaxed">
+                        <strong className="text-slate-900 dark:text-slate-100 font-bold">Instruções de Retirada:</strong> {exam.pickupInstructions}
                       </p>
                     )}
 
                     {exam.notes && (
-                      <p className="p-2.5 bg-slate-50 rounded-lg text-slate-700 border border-slate-100 italic mt-2 line-clamp-3 leading-relaxed text-xs sm:text-sm">
+                      <p className="p-2.5 bg-slate-50 dark:bg-slate-850/80 rounded-lg text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800 italic mt-2 line-clamp-3 leading-relaxed text-xs sm:text-sm">
                         {exam.notes}
                       </p>
                     )}
@@ -920,9 +920,9 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         type="button"
                         id={`quick-ready-btn-${exam.id}`}
                         onClick={() => handleQuickStatusChange(exam, 'resultado_disponivel')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>Marcar Laudo Disponível</span>
                       </button>
                     )}
@@ -931,30 +931,30 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         type="button"
                         id={`quick-retirado-btn-${exam.id}`}
                         onClick={() => handleQuickStatusChange(exam, 'retirado')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                       >
-                        <Check className="w-3.5 h-3.5 text-blue-600" />
+                        <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                         <span>Confirmar Retirada / Leitura</span>
                       </button>
                     )}
                     {exam.status === 'retirado' && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" /> Retirado / Concluído
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800/60">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Retirado / Concluído
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Linked Document Footer & Share Action */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     {linkedDoc ? (
                       <button
                         id={`view-linked-doc-${exam.id}`}
                         onClick={() => setActiveTab('documentos')}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 transition-colors truncate"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-800/60 transition-colors truncate"
                       >
-                        <FileCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                         <span className="truncate">Laudo: {linkedDoc.fileName}</span>
                         <ArrowUpRight className="w-3 h-3 shrink-0" />
                       </button>
@@ -968,7 +968,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                             setActiveTab('documentos');
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 py-1 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 py-1 transition-colors"
                       >
                         <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                         Vincular laudo / anotação clínica
@@ -979,10 +979,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   <button
                     id={`share-exam-btn-${exam.id}`}
                     onClick={() => handleOpenShareModal(exam)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 transition-colors shadow-2xs"
                     title="Avisar família sobre este exame (WhatsApp / SMS)"
                   >
-                    <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                    <Share2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <span>Avisar Família</span>
                   </button>
                 </div>
@@ -991,10 +991,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-          <Activity className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800">Nenhum exame cadastrado</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+          <Activity className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Nenhum exame cadastrado</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
             {searchTerm
               ? 'Nenhum exame corresponde à busca realizada.'
               : 'Registre os pedidos de exames médicos solicitados para acompanhar prazos e resultados.'}
@@ -1017,16 +1017,16 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
         >
           <div
             id="exam-modal-content"
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-slate-100 transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 {editingExamId ? 'Editar Exame' : 'Novo Pedido de Exame'}
               </h2>
               <button
                 onClick={onCloseModal}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-semibold p-1"
               >
                 ✕
               </button>
@@ -1034,7 +1034,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Nome do Exame *
                 </label>
                 <input
@@ -1043,13 +1043,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   placeholder="Ex: Hemograma Completo, Ecocardiograma, Densitometria Óssea"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Médico Solicitante *
                   </label>
                   <input
@@ -1058,17 +1058,17 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     placeholder="Ex: Dra. Helena Martins"
                     value={requestingDoctor}
                     onChange={(e) => setRequestingDoctor(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Status do Exame
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as ExamStatus)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="solicitado">Solicitado (Pendente agendamento)</option>
                     <option value="agendado">Agendado (Com data marcada)</option>
@@ -1081,7 +1081,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Laboratório / Clínica
                   </label>
                   <input
@@ -1089,11 +1089,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     placeholder="Ex: Fleury, Dasa, Lavoisier"
                     value={laboratory}
                     onChange={(e) => setLaboratory(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Protocolo / Número do Pedido
                   </label>
                   <input
@@ -1101,51 +1101,51 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                     placeholder="Ex: 2026-9812-FL"
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white font-mono"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 font-mono text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               {/* Online Results Access Credentials Section */}
-              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3">
+              <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5 uppercase tracking-wider">
-                    <KeyRound className="w-4 h-4 text-indigo-600" />
+                  <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5 uppercase tracking-wider">
+                    <KeyRound className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Acesso aos Resultados Online</span>
                   </span>
-                  <span className="text-xs text-indigo-700 font-semibold">Opcional</span>
+                  <span className="text-xs text-indigo-700 dark:text-indigo-300 font-semibold">Opcional</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   <div className="sm:col-span-2">
-                    <label className="block text-slate-700 font-medium mb-1">URL / Site do Portal</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">URL / Site do Portal</label>
                     <input
                       type="text"
                       placeholder="Ex: www.fleury.com.br/resultados"
                       value={portalUrl}
                       onChange={(e) => setPortalUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 font-medium mb-1">Login / Usuário</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Login / Usuário</label>
                     <input
                       type="text"
                       placeholder="Ex: CPF ou código de usuário"
                       value={accessUser}
                       onChange={(e) => setAccessUser(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-700 font-medium">Senha da Internet</label>
+                      <label className="text-slate-700 dark:text-slate-300 font-medium">Senha da Internet</label>
                       <button
                         type="button"
                         onClick={() => setShowFormPassword(!showFormPassword)}
-                        className="text-xs text-indigo-700 hover:text-indigo-900 font-bold"
+                        className="text-xs text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 font-bold"
                       >
                         {showFormPassword ? 'Ocultar' : 'Revelar'}
                       </button>
@@ -1155,18 +1155,18 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       placeholder="Ex: Senha do comprovante"
                       value={accessPassword}
                       onChange={(e) => setAccessPassword(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-slate-700 font-medium mb-1">Código de Acesso / Chave Adicional</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Código de Acesso / Chave Adicional</label>
                     <input
                       type="text"
                       placeholder="Ex: Localizador de resultado"
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
                     />
                   </div>
                 </div>
@@ -1175,7 +1175,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                       Data da Solicitação *
                     </label>
                     <input
@@ -1183,13 +1183,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                       value={requestDate}
                       onChange={(e) => setRequestDate(e.target.value)}
                       required
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                     />
                   </div>
 
                   {status === 'agendado' && (
                     <div>
-                      <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">
                         Data do Agendamento *
                       </label>
                       <input
@@ -1197,47 +1197,47 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                         value={scheduledDate}
                         onChange={(e) => setScheduledDate(e.target.value)}
                         required
-                        className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white"
+                        className="w-full px-3 py-2 text-sm bg-blue-50/50 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-700 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                       />
                     </div>
                   )}
 
                   {(status === 'realizado' || status === 'resultado_disponivel' || status === 'retirado') && (
                     <div>
-                      <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">
                         Data de Realização / Coleta
                       </label>
                       <input
                         type="datetime-local"
                         value={executionDate}
                         onChange={(e) => setExecutionDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 border border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white"
+                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                       Previsão do Resultado
                     </label>
                     <input
                       type="date"
                       value={expectedResultDate}
                       onChange={(e) => setExpectedResultDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                     />
                   </div>
                 </div>
 
                 {status === 'solicitado' && (
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-lg">
+                  <p className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-2.5 rounded-lg">
                     <strong>Status Solicitado:</strong> O exame foi prescrito pelo médico e aguarda agendamento. Nenhuma data futura fictícia é gerada.
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Local / Instruções de Retirada Presencial
                 </label>
                 <input
@@ -1245,18 +1245,18 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   placeholder="Ex: Retirar na unidade Centro ou levar documento com foto"
                   value={pickupInstructions}
                   onChange={(e) => setPickupInstructions(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Vincular a Documento Existente (opcional)
                 </label>
                 <select
                   value={documentId}
                   onChange={(e) => setDocumentId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 >
                   <option value="">Nenhum documento vinculado</option>
                   {documents.map((doc) => (
@@ -1268,7 +1268,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Instruções de Preparo e Observações
                 </label>
                 <textarea
@@ -1276,15 +1276,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
                   placeholder="Ex: Jejum obrigatório de 12 horas, suspender medicamento X 24h antes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1304,16 +1304,16 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
       {/* SECURE SHARE MODAL WITH PREVIEW */}
       {sharingExam && selectedPatient && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 text-slate-900 dark:text-slate-100 transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-base">Avisar Família sobre Exame</h3>
+                <Share2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Avisar Família sobre Exame</h3>
               </div>
               <button
                 type="button"
                 onClick={handleCloseShareModal}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 title="Fechar"
                 aria-label="Fechar modal de compartilhamento"
               >
@@ -1321,7 +1321,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
               </button>
             </div>
 
-            <p className="text-sm text-slate-700 leading-relaxed">
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               Compartilhe informações claras com os familiares e cuidadores de <strong>{selectedPatient.name}</strong> para acompanhar a realização e os resultados do exame.
             </p>
 
@@ -1332,21 +1332,21 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
               sharingExam.accessUser ||
               sharingExam.accessPassword ||
               sharingExam.accessCode) && (
-              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 text-sm">
-                <label className="flex items-start gap-2.5 cursor-pointer font-semibold text-amber-950">
+              <div className="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl space-y-2 text-sm">
+                <label className="flex items-start gap-2.5 cursor-pointer font-semibold text-amber-950 dark:text-amber-200">
                   <input
                     type="checkbox"
                     checked={includeCredentialsInShare}
                     onChange={(e) => handleToggleIncludeCredentialsInShare(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 mt-0.5"
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 mt-0.5"
                   />
                   <span>
                     Incluir dados de acesso online (Login e Senha do Portal) nesta mensagem
                   </span>
                 </label>
-                <p className="text-sm text-amber-900 leading-relaxed pl-6">
+                <p className="text-sm text-amber-900 dark:text-amber-300 leading-relaxed pl-6">
                   {includeCredentialsInShare ? (
-                    <strong className="text-rose-700">
+                    <strong className="text-rose-700 dark:text-rose-400">
                       ⚠️ Atenção: A senha será compartilhada. Envie apenas para contatos de confiança da família.
                     </strong>
                   ) : (
@@ -1358,10 +1358,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
 
             {/* Real-time Message Preview */}
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 Prévia da Mensagem:
               </span>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 font-sans whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
+              <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-slate-200 font-sans whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed shadow-inner">
                 {
                   buildExamShareText({
                     patientName: selectedPatient.name,
@@ -1388,11 +1388,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => handleExecuteShare(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>Copiar Mensagem</span>

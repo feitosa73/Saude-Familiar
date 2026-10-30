@@ -27,21 +27,33 @@ describe('Prioridade 6: Regressão de Autenticação e MFA (Authenticator)', () 
     assert.strictEqual(error.resolver, mockResolver);
   });
 
-  it('2. Deve garantir que o fluxo de login demo e fallback preserve integridade de sessão', async () => {
+  it('2. Deve permitir login demo exclusivo em ambiente de teste e rejeitar em produção', async () => {
     const { authService } = await import('../src/services/authService');
 
-    // O login demo de validação deve emitir usuário com ID consistente sem quebrar autenticação
+    // Em ambiente de teste (NODE_ENV=test), o helper permite mock de usuário para suítes
     const demoCuidador = await authService.loginAsDemo('CAREGIVER');
     assert.strictEqual(demoCuidador.id, 'demo-user-cuidador');
     assert.strictEqual(demoCuidador.email, 'cuidador.demo@saudefamiliar.com');
 
-    const demoFamiliar = await authService.loginAsDemo('VIEWER');
-    assert.strictEqual(demoFamiliar.id, 'demo-user-familiar');
-    assert.strictEqual(demoFamiliar.email, 'familiar.apoio@saudefamiliar.com');
-
     // Desloga de volta para limpar
     await authService.logout();
     assert.strictEqual(authService.isAuthenticated(), false);
+
+    // Em produção (NODE_ENV !== 'test'), deve rejeitar terminantemente
+    const origEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'production';
+      await assert.rejects(
+        async () => {
+          await authService.loginAsDemo('CAREGIVER');
+        },
+        (err: any) => {
+          return err.message.includes('O modo de demonstração foi definitivamente descontinuado');
+        }
+      );
+    } finally {
+      process.env.NODE_ENV = origEnv;
+    }
   });
 
   it('3. Deve rejeitar código MFA menor que 6 dígitos com mensagem clara', async () => {

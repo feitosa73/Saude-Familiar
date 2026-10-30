@@ -159,7 +159,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
     >
       <div
         id="cpf-regularization-modal"
-        className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden"
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-200"
       >
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-amber-600 to-orange-600 text-white flex items-start justify-between">
@@ -191,37 +191,37 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Informative Explanation */}
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 text-amber-900 text-sm space-y-1.5 leading-relaxed">
-            <p className="font-semibold flex items-center gap-1.5 text-base">
-              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200/80 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-sm space-y-1.5 leading-relaxed">
+            <p className="font-semibold flex items-center gap-1.5 text-base text-amber-900 dark:text-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
               Por que regularizar o CPF dos pacientes?
             </p>
-            <p className="text-sm text-amber-800">
+            <p className="text-sm text-amber-800 dark:text-amber-300">
               O CPF é o identificador único para prevenir prontuários duplicados e garantir a segurança médica dos registros de saúde.
               <strong> Seus dados existentes (medicamentos, consultas e exames) estão preservados.</strong>
             </p>
-            <p className="text-sm text-amber-900">
+            <p className="text-sm text-amber-900 dark:text-amber-200">
               Após informado, o CPF é validado pelos dígitos verificadores, exibido de forma protegida (***.***.***-XX) e fixado como imutável.
             </p>
           </div>
 
           {/* All Completed State */}
           {isAllDone ? (
-            <div className="p-8 text-center bg-emerald-50 rounded-2xl border border-emerald-200 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
+            <div className="p-8 text-center bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 mx-auto flex items-center justify-center">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-emerald-950">
+              <h3 className="text-base sm:text-lg font-bold text-emerald-950 dark:text-emerald-100">
                 Todos os cadastros vinculados foram regularizados!
               </h3>
-              <p className="text-xs sm:text-sm text-emerald-800 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-300 max-w-md mx-auto">
                 Não há mais pacientes vinculados sem CPF na sua conta. Esta mensagem não será mais exibida.
               </p>
               <button
                 type="button"
                 id="btn-finish-regularization"
                 onClick={onClose}
-                className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+                className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-xs transition min-h-[44px]"
               >
                 <span>Concluir e Continuar</span>
                 <ArrowRight className="w-4 h-4" />
@@ -231,10 +231,10 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
             /* List of Pending Patients */
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Pacientes sem CPF ({remainingPatients.length})
                 </h3>
-                <span className="text-xs text-amber-700 font-semibold bg-amber-100 px-2.5 py-0.5 rounded-full">
+                <span className="text-xs text-amber-700 dark:text-amber-300 font-semibold bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
                   Pendente de regularização
                 </span>
               </div>
@@ -251,21 +251,21 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                     <div
                       key={patient.id}
                       id={`regularize-patient-card-${patient.id}`}
-                      className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 transition hover:border-slate-300"
+                      className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-3 transition hover:border-slate-300 dark:hover:border-slate-600"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
                             {patient.name.charAt(0)}
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold text-slate-900">{patient.name}</h4>
-                            <p className="text-xs text-slate-500">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                               Tipo Sanguíneo: {patient.bloodType || 'n/d'} • Acompanhamento: {patient.primaryDoctor || 'n/d'}
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
+                        <span className="text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-md border border-rose-200 dark:border-rose-800">
                           Sem CPF
                         </span>
                       </div>
@@ -280,16 +280,16 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                             value={val}
                             disabled={isSaving}
                             onChange={(e) => handlePatientCpfChange(patient.id, e.target.value)}
-                            className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:outline-none transition font-mono ${
+                            className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white dark:bg-slate-800 border rounded-xl focus:outline-none transition font-mono min-h-[44px] text-slate-900 dark:text-slate-100 ${
                               err
                                 ? 'border-red-400 focus:border-red-500'
                                 : isValid
                                 ? 'border-emerald-500 focus:border-emerald-600'
-                                : 'border-slate-300 focus:border-blue-500'
+                                : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'
                             }`}
                           />
                           {isValid && (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3 top-3 pointer-events-none" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute right-3 top-3.5 pointer-events-none" />
                           )}
                         </div>
 
@@ -298,10 +298,10 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                           id={`btn-save-cpf-${patient.id}`}
                           disabled={isSaving || !isValid}
                           onClick={() => handleSavePatientCpf(patient)}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 ${
+                          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] ${
                             isValid && !isSaving
                               ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer'
-                              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                           }`}
                         >
                           {isSaving ? (
@@ -316,7 +316,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                       </div>
 
                       {err && (
-                        <p className="text-xs text-red-600 flex items-center gap-1 font-medium">
+                        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                           {err}
                         </p>
@@ -330,18 +330,18 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
 
           {/* Optional User CPF Section */}
           {userNeedsCpf && !userCpfSaved && (
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-slate-600" />
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                     Seu CPF de Usuário / Cuidador
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                     Opcional: você pode vincular seu próprio CPF ao seu perfil de cuidador/familiar agora ou mais tarde.
                   </p>
                 </div>
-                <span className="text-xs font-bold text-slate-600 bg-slate-200 px-2.5 py-0.5 rounded-full uppercase">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 rounded-full uppercase">
                   Opcional
                 </span>
               </div>
@@ -359,8 +359,8 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                     setUserCpf(formatted);
                     setUserCpfError(null);
                   }}
-                  className={`flex-1 px-3.5 py-2 text-xs sm:text-sm bg-white border rounded-xl focus:outline-none transition font-mono ${
-                    userCpfError ? 'border-red-400' : 'border-slate-300 focus:border-blue-500'
+                  className={`flex-1 px-3.5 py-2.5 text-xs sm:text-sm bg-white dark:bg-slate-800 border rounded-xl focus:outline-none transition font-mono min-h-[44px] text-slate-900 dark:text-slate-100 ${
+                    userCpfError ? 'border-red-400' : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'
                   }`}
                 />
 
@@ -369,10 +369,10 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
                   id="btn-save-user-cpf"
                   disabled={isSavingUserCpf || !userCpf}
                   onClick={handleSaveUserCpf}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition shrink-0 ${
+                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition shrink-0 min-h-[44px] ${
                     userCpf && !isSavingUserCpf
                       ? 'bg-slate-800 hover:bg-slate-900 text-white cursor-pointer'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                   }`}
                 >
                   {isSavingUserCpf ? 'Salvando...' : 'Salvar Meu CPF'}
@@ -380,7 +380,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
               </div>
 
               {userCpfError && (
-                <p className="text-xs text-red-600 flex items-center gap-1 font-medium">
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   {userCpfError}
                 </p>
@@ -389,16 +389,16 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
           )}
 
           {userCpfSaved && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-xs sm:text-sm text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>Seu CPF de usuário foi registrado com sucesso.</span>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <p className="text-sm text-slate-600 font-medium">
+        <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
             {remainingPatients.length > 0
               ? `${remainingPatients.length} paciente(s) ainda pendente(s)`
               : 'Tudo pronto'}
@@ -408,7 +408,7 @@ export const CpfRegularizationModal: React.FC<CpfRegularizationModalProps> = ({
               type="button"
               id="btn-dismiss-regularization"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition"
+              className="px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-700 transition min-h-[44px]"
             >
               {remainingPatients.length > 0 ? 'Regularizar Mais Tarde' : 'Fechar'}
             </button>

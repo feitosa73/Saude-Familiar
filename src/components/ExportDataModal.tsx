@@ -80,29 +80,29 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div
         id="export-data-modal-container"
-        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+        className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all text-slate-800 dark:text-slate-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-850 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="export-modal-title" className="text-base font-bold text-slate-900">
+              <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Exportar dados e Portabilidade
               </h2>
-              <p className="text-xs text-slate-500">Planilhas estruturadas no padrão XLSX V1</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Planilhas estruturadas no padrão XLSX V1</p>
             </div>
           </div>
           <button
             type="button"
             id="close-export-modal-btn"
             onClick={onClose}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Fechar"
             aria-label="Fechar modal de exportação"
           >
@@ -117,31 +117,31 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
             <div
               className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs ${
                 feedbackMessage.type === 'success'
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
               }`}
             >
               {feedbackMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
               )}
               <span>{feedbackMessage.text}</span>
             </div>
           )}
 
           {/* Option 1: Baixar Meus Dados */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/30 transition-all">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-slate-800/40 transition-all">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Download className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-base font-bold text-slate-900">Baixar meus dados (.xlsx)</h3>
+                  <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Baixar meus dados (.xlsx)</h3>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                   Exporte os dados de saúde que você possui permissão para visualizar.
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Inclui fichas dos pacientes autorizados ({patients.length}), medicamentos, consultas, exames, metadados de documentos e eventos manuais.
                 </p>
               </div>
@@ -174,17 +174,17 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
           </div>
 
           {/* Option 2: Baixar modelo para preenchimento */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 transition-all">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-base font-bold text-slate-900">Baixar modelo para preenchimento (.xlsx)</h3>
+                  <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Baixar modelo para preenchimento (.xlsx)</h3>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                   Baixe uma planilha vazia que poderá ser preenchida e futuramente importada para o Saúde Familiar.
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Arquivo com 8 abas padronizadas, regras de preenchimento e cabeçalhos fixos do Contrato V1.
                 </p>
               </div>
@@ -194,7 +194,7 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
                 type="button"
                 id="btn-download-template-xlsx"
                 onClick={handleDownloadTemplate}
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
                 <span>Baixar Modelo Vazio</span>
@@ -203,16 +203,16 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
           </div>
 
           {/* Orientação & Aviso de Privacidade */}
-          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-amber-950">
-              <Info className="w-4 h-4 text-amber-700 shrink-0" />
+          <div className="bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl p-4 text-sm text-amber-900 dark:text-amber-200 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-amber-950 dark:text-amber-100">
+              <Info className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
               <span>Orientações de Preenchimento e Segurança</span>
             </div>
-            <p className="text-sm leading-relaxed text-amber-950 font-medium">
+            <p className="text-sm leading-relaxed text-amber-950 dark:text-amber-100 font-medium">
               Você poderá preencher o modelo manualmente ou utilizar uma ferramenta de sua confiança para ajudá-lo. Sempre revise as informações antes de importar.
             </p>
-            <p className="text-sm leading-relaxed text-amber-900 pt-1 border-t border-amber-200/60 flex items-start gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-200 pt-1 border-t border-amber-200/60 dark:border-amber-800/60 flex items-start gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
               <span>
                 Este arquivo pode conter informações pessoais e de saúde. Armazene-o em local seguro e compartilhe somente com pessoas ou serviços de sua confiança.
               </span>
@@ -221,12 +221,12 @@ export const ExportDataModal: React.FC<ExportDataModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-850 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span>Padrão Saúde Familiar V1</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Fechar
           </button>

@@ -21,7 +21,7 @@ async function setupTestApp() {
   const app = express();
   app.use(express.json());
 
-  // Custom token handler for dynamic test users
+  // Custom token handler for dynamic test users and mock demo users
   app.use((req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer test-user-')) {
@@ -29,6 +29,18 @@ async function setupTestApp() {
       (req as any).user = {
         uid,
         email: `${uid}@test.saudefamiliar.com`,
+        emailVerified: true,
+      };
+    } else if (authHeader === 'Bearer demo-cuidador') {
+      (req as any).user = {
+        uid: 'demo-user-cuidador',
+        email: 'cuidador@exemplo.com',
+        emailVerified: true,
+      };
+    } else if (authHeader === 'Bearer demo-familiar') {
+      (req as any).user = {
+        uid: 'demo-user-familiar',
+        email: 'familiar@exemplo.com',
         emailVerified: true,
       };
     }

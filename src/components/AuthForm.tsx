@@ -309,7 +309,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             type="button"
             onClick={handleGoogleLogin}
             disabled={busy}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 active:scale-[0.99] border border-slate-300 text-slate-700 rounded-xl font-semibold text-sm transition-all shadow-2xs hover:shadow-xs disabled:opacity-50 min-h-[44px] cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 active:scale-[0.99] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-semibold text-sm transition-all shadow-2xs hover:shadow-xs disabled:opacity-50 min-h-[44px] cursor-pointer"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
@@ -333,8 +333,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({
           </button>
 
           <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-xs text-slate-400 font-medium uppercase tracking-wider absolute">
+            <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
+            <span className="bg-white dark:bg-slate-900 px-3 text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider absolute">
               ou
             </span>
           </div>
@@ -343,12 +343,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 
       {/* Mode Header Indicator */}
       <div className="text-left">
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
           {mode === 'login' && 'Entrar com e-mail'}
           {mode === 'register' && 'Criar sua conta'}
           {mode === 'forgot_password' && 'Recuperação de Senha'}
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           {mode === 'login' && 'Informe seu e-mail e senha cadastrados'}
           {mode === 'register' && 'Preencha seus dados para acessar o Saúde Familiar'}
           {mode === 'forgot_password' && 'Enviaremos instruções de redefinição para seu e-mail'}
@@ -360,9 +360,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         <div
           id="auth-error-alert"
           role="alert"
-          className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2.5 animate-in fade-in"
+          className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-xl text-xs sm:text-sm flex items-start gap-2.5 animate-in fade-in"
         >
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">{errorMessage}</div>
           <button
             type="button"
@@ -378,9 +378,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         <div
           id="auth-success-alert"
           role="status"
-          className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs flex items-start gap-2.5"
+          className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 rounded-xl text-xs sm:text-sm flex items-start gap-2.5"
         >
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">{successMessage}</div>
         </div>
       )}
@@ -390,11 +390,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         {/* Name (Only in Register mode) */}
         {mode === 'register' && (
           <div className="space-y-1">
-            <label htmlFor="auth-name" className="block text-xs font-semibold text-slate-700">
+            <label htmlFor="auth-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
               Nome completo
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                 <UserIcon className="w-4 h-4" />
               </div>
               <input
@@ -406,7 +406,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 placeholder="Ex: Maria Silva"
                 disabled={busy}
                 autoComplete="name"
-                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 transition"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition min-h-[44px]"
               />
             </div>
           </div>
@@ -414,11 +414,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 
         {/* Email Field */}
         <div className="space-y-1">
-          <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-700">
+          <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
             E-mail
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
               <Mail className="w-4 h-4" />
             </div>
             <input
@@ -430,7 +430,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               placeholder="seuemail@exemplo.com"
               disabled={busy}
               autoComplete="email"
-              className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 transition"
+              className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition min-h-[44px]"
             />
           </div>
         </div>
@@ -439,7 +439,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         {mode !== 'forgot_password' && (
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label htmlFor="auth-password" className="block text-sm font-bold text-slate-700">
+              <label htmlFor="auth-password" className="block text-sm font-bold text-slate-700 dark:text-slate-300">
                 Senha
               </label>
               {mode === 'login' && (
@@ -448,14 +448,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                   id="btn-goto-forgot"
                   onClick={() => switchMode('forgot_password')}
                   tabIndex={-1}
-                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 transition cursor-pointer"
+                  className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 transition cursor-pointer"
                 >
                   Esqueci minha senha
                 </button>
               )}
             </div>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -467,13 +467,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 placeholder={mode === 'register' ? 'Mínimo de 6 caracteres' : 'Sua senha'}
                 disabled={busy}
                 autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                className="w-full pl-9 pr-10 py-2.5 bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 transition"
+                className="w-full pl-9 pr-10 py-2.5 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition min-h-[44px]"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer min-h-[44px] min-w-[40px] justify-center"
                 title={showPassword ? 'Ocultar senha' : 'Ver senha'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -485,11 +485,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         {/* Confirm Password (Register mode only) */}
         {mode === 'register' && (
           <div className="space-y-1">
-            <label htmlFor="auth-confirm-password" className="block text-xs font-semibold text-slate-700">
+            <label htmlFor="auth-confirm-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
               Confirmar senha
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -501,13 +501,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 placeholder="Repita sua senha"
                 disabled={busy}
                 autoComplete="new-password"
-                className="w-full pl-9 pr-10 py-2.5 bg-slate-50/70 focus:bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 transition"
+                className="w-full pl-9 pr-10 py-2.5 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition min-h-[44px]"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 tabIndex={-1}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer min-h-[44px] min-w-[40px] justify-center"
                 title={showConfirmPassword ? 'Ocultar confirmação de senha' : 'Ver senha'}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -541,15 +541,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({
       </form>
 
       {/* Footer Mode Switch Links */}
-      <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-center space-y-2">
         {mode === 'login' && (
-          <p className="text-xs text-slate-600">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
             Ainda não tem conta?{' '}
             <button
               type="button"
               id="btn-goto-register"
               onClick={() => switchMode('register')}
-              className="font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+              className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition cursor-pointer"
             >
               Criar conta
             </button>
@@ -557,13 +557,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         )}
 
         {mode === 'register' && (
-          <p className="text-xs text-slate-600">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
             Já tem uma conta cadastrada?{' '}
             <button
               type="button"
               id="btn-goto-login"
               onClick={() => switchMode('login')}
-              className="font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+              className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition cursor-pointer"
             >
               Entrar
             </button>
@@ -571,13 +571,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         )}
 
         {mode === 'forgot_password' && (
-          <p className="text-xs text-slate-600">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
             Lembrou sua senha?{' '}
             <button
               type="button"
               id="btn-goto-login-from-forgot"
               onClick={() => switchMode('login')}
-              className="font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+              className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition cursor-pointer"
             >
               Voltar para o login
             </button>

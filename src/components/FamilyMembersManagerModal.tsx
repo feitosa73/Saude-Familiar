@@ -353,23 +353,23 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
       id="family-members-manager-modal"
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
     >
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-800 dark:text-slate-200">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-850 dark:bg-slate-800/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold">
               <Users className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                   Familiares e Acessos
                 </h2>
-                <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+                <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-full">
                   {members.length} {members.length === 1 ? 'membro ativo' : 'membros ativos'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {family?.name || 'Família'} • Administração de membros e permissões por paciente
               </p>
             </div>
@@ -381,7 +381,7 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
               id="btn-refresh-members"
               onClick={loadData}
               disabled={isLoading}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+              className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
               title="Atualizar lista"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -390,7 +390,7 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
               type="button"
               id="btn-close-members-modal"
               onClick={onClose}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition flex items-center justify-center cursor-pointer"
               aria-label="Fechar membros da família"
             >
               <X className="w-5 h-5" />
@@ -399,7 +399,7 @@ export const FamilyMembersManagerModal: React.FC<FamilyMembersManagerModalProps>
         </div>
 
         {/* Quick Actions Bar */}
-        <div className="px-5 py-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="px-5 py-3 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 flex-1 min-w-[240px]">
             <div className="relative w-full max-w-sm">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

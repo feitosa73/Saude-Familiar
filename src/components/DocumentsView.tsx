@@ -232,12 +232,12 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2.5">
-            <FileText className="w-7 h-7 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <FileText className="w-7 h-7 text-blue-600 dark:text-blue-400" />
             Documentos e Prontuário Digital
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Receitas, laudos de exames, pedidos e relatórios de {selectedPatient?.name}
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+            Receitas, laudos de exames, pedidos e relatórios de <strong className="text-slate-800 dark:text-slate-200">{selectedPatient?.name}</strong>
           </p>
         </div>
 
@@ -254,27 +254,27 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           <button
             id="add-document-main-btn"
             onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm sm:text-base px-4 py-2.5 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] border border-slate-200"
+            className="inline-flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm sm:text-base px-4 py-2.5 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] border border-slate-200 dark:border-slate-700"
           >
-            <Plus className="w-4.5 h-4.5 text-slate-600" />
+            <Plus className="w-4.5 h-4.5 text-slate-600 dark:text-slate-400" />
             <span>Adicionar Anotação Textual</span>
           </button>
         </div>
       </div>
 
       {/* Zero Storage Architecture Note */}
-      <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3.5 text-sm text-blue-950">
-        <ShieldCheck className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
+      <div className="p-4 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-2xl flex items-start gap-3.5 text-sm text-blue-950 dark:text-blue-200 transition-colors">
+        <ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold text-blue-950">Privacidade Absoluta & Zero Storage de Arquivos: </span>
-          <span className="text-blue-900 leading-relaxed font-medium">
+          <span className="font-bold text-blue-950 dark:text-blue-200">Privacidade Absoluta & Zero Storage de Arquivos: </span>
+          <span className="text-blue-900 dark:text-blue-300 leading-relaxed font-medium">
             O aplicativo <strong>não armazena nem hospeda fotos ou arquivos PDF</strong> em nuvem. A funcionalidade de envio é utilizada exclusivamente para a IA ler o conteúdo em memória volátil (RAM), sugerir os dados nas tabelas do app e descartar a imagem imediatamente.
           </span>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between transition-colors">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -283,18 +283,18 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             placeholder="Buscar por título, médico ou anotações..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white text-slate-800"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shrink-0 overflow-x-auto">
           <button
             id="filter-doc-all"
             onClick={() => setFilterCategory('all')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterCategory === 'all'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Todos ({documents.length})
@@ -304,8 +304,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             onClick={() => setFilterCategory('resultado_exame')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterCategory === 'resultado_exame'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Laudos ({documents.filter((d) => d.category === 'resultado_exame').length})
@@ -315,8 +315,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             onClick={() => setFilterCategory('receita')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterCategory === 'receita'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Receitas ({documents.filter((d) => d.category === 'receita').length})
@@ -326,8 +326,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             onClick={() => setFilterCategory('relatorio_medico')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
               filterCategory === 'relatorio_medico'
-                ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Relatórios ({documents.filter((d) => d.category === 'relatorio_medico').length})
@@ -337,8 +337,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
       {/* Documents List */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+          <div className="w-8 h-8 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs">Carregando prontuário...</p>
         </div>
       ) : filteredDocs.length > 0 ? (
@@ -349,33 +349,33 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
               <div
                 key={doc.id}
                 id={`document-card-${doc.id}`}
-                className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2.5 mb-2.5">
                     <span
-                      className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border ${cat.color}`}
+                      className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border ${cat.color} dark:bg-slate-800 dark:border-slate-700`}
                     >
                       {cat.icon}
                       {cat.label}
                     </span>
                     <div className="flex items-center gap-1">
                       {doc.extractedByAi && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 px-2 py-0.5 rounded-md">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                           IA
                         </span>
                       )}
                       <button
                         onClick={() => handleOpenEdit(doc)}
-                        className="text-slate-400 hover:text-slate-700 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg transition-colors"
+                        className="text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg transition-colors"
                         title="Editar"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(doc.id, doc.title)}
-                        className="text-slate-400 hover:text-rose-600 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg transition-colors"
+                        className="text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg transition-colors"
                         title="Excluir"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -383,25 +383,25 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                     </div>
                   </div>
 
-                  <h3 className="font-bold text-slate-900 text-base sm:text-lg mb-1 leading-snug line-clamp-2">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base sm:text-lg mb-1 leading-snug line-clamp-2">
                     {doc.title}
                   </h3>
 
-                  <div className="space-y-1.5 text-sm text-slate-700 mt-2.5">
+                  <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300 mt-2.5">
                     {doc.date && (
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                         <span>Data: {new Date(doc.date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
                       </div>
                     )}
                     {doc.doctor && (
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-slate-400" />
-                        <span>Profissional: <strong className="text-slate-900 font-bold">{doc.doctor}</strong></span>
+                        <User className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <span>Profissional: <strong className="text-slate-900 dark:text-slate-100 font-bold">{doc.doctor}</strong></span>
                       </div>
                     )}
                     {doc.notes && (
-                      <p className="p-3 bg-slate-50 rounded-xl text-slate-700 border border-slate-100 italic mt-2 line-clamp-3 leading-relaxed text-sm">
+                      <p className="p-3 bg-slate-50 dark:bg-slate-850/80 rounded-xl text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800 italic mt-2 line-clamp-3 leading-relaxed text-sm">
                         {doc.notes}
                       </p>
                     )}
@@ -409,11 +409,11 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <button
                     id={`preview-doc-btn-${doc.id}`}
                     onClick={() => setPreviewDoc(doc)}
-                    className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 hover:text-blue-900 bg-blue-50 px-3.5 py-2 rounded-xl border border-blue-200 transition-colors min-h-[38px]"
+                    className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200 bg-blue-50 dark:bg-blue-950/50 px-3.5 py-2 rounded-xl border border-blue-200 dark:border-blue-800/60 transition-colors min-h-[38px]"
                   >
                     <Eye className="w-4 h-4" />
                     Visualizar Registro
@@ -424,10 +424,10 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800">Nenhum prontuário transcrito ainda</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+          <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Nenhum prontuário transcrito ainda</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto leading-relaxed">
             {searchTerm
               ? 'Nenhum registro corresponde ao filtro pesquisado.'
               : 'O aplicativo não hospeda arquivos para manter custo zero e garantir sua privacidade. Envie fotos ou PDFs para que a IA leia e transcreva as informações diretamente para as tabelas do sistema.'}
@@ -443,9 +443,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             </button>
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
             >
-              <Plus className="w-4 h-4 text-slate-500" />
+              <Plus className="w-4 h-4 text-slate-500 dark:text-slate-400" />
               <span>Nova Anotação Textual</span>
             </button>
           </div>
@@ -460,16 +460,16 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         >
           <div
             id="document-modal-content"
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-slate-100 transition-colors"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 {editingDocId ? 'Editar Registro Clínico' : 'Cadastrar Registro no Prontuário'}
               </h2>
               <button
                 onClick={onCloseModal}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-semibold p-1"
               >
                 ✕
               </button>
@@ -477,7 +477,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Título do Registro / Documento *
                 </label>
                 <input
@@ -486,19 +486,19 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                   placeholder="Ex: Laudo de Exames Laboratoriais - Hemograma"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Categoria *
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="resultado_exame">Resultado / Laudo de Exame</option>
                     <option value="receita">Receita Médica</option>
@@ -508,20 +508,20 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Data do Documento
                   </label>
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Médico / Especialista Responsável
                 </label>
                 <input
@@ -529,19 +529,19 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                   placeholder="Ex: Dr. Roberto Alencar"
                   value={doctor}
                   onChange={(e) => setDoctor(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               {category === 'resultado_exame' && exams.length > 0 && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Vincular a Exame Cadastrado
                   </label>
                   <select
                     value={relatedExamId}
                     onChange={(e) => setRelatedExamId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="">Nenhum exame vinculado</option>
                     {exams.map((ex) => (
@@ -554,7 +554,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Anotações, Laudo ou Prescrição Textual
                 </label>
                 <textarea
@@ -562,15 +562,15 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                   placeholder="Descreva o conteúdo do documento, valores de referência ou orientações..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
@@ -590,56 +590,56 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
       {/* Details View Modal */}
       {previewDoc && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 text-slate-900 dark:text-slate-100 transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Detalhes do Registro Clínico</h3>
-                  <p className="text-sm text-slate-600">{selectedPatient?.name}</p>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Detalhes do Registro Clínico</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{selectedPatient?.name}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer text-base font-bold"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-base font-bold"
                 aria-label="Fechar modal"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-sm text-slate-700">
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="font-semibold text-slate-600">Título:</span>
-                  <span className="font-bold text-slate-900">{previewDoc.title}</span>
+            <div className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700">
+                  <span className="font-semibold text-slate-600 dark:text-slate-400">Título:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{previewDoc.title}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="font-semibold text-slate-600">Categoria:</span>
-                  <span className="font-bold text-slate-800">
+                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700">
+                  <span className="font-semibold text-slate-600 dark:text-slate-400">Categoria:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
                     {categoryLabels[previewDoc.category]?.label || previewDoc.category}
                   </span>
                 </div>
                 {previewDoc.date && (
-                  <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="font-semibold text-slate-600">Data:</span>
-                    <span className="font-bold text-slate-800">
+                  <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700">
+                    <span className="font-semibold text-slate-600 dark:text-slate-400">Data:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
                       {new Date(previewDoc.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                 )}
                 {previewDoc.doctor && (
-                  <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="font-semibold text-slate-600">Profissional / CRM:</span>
-                    <span className="font-bold text-slate-800">{previewDoc.doctor}</span>
+                  <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700">
+                    <span className="font-semibold text-slate-600 dark:text-slate-400">Profissional / CRM:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{previewDoc.doctor}</span>
                   </div>
                 )}
                 {previewDoc.extractedByAi && (
-                  <div className="py-1 flex items-center gap-1.5 text-indigo-700 font-semibold">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="py-1 flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-semibold">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Processado via IA (Zero Storage / Transcrição Concluída)</span>
                   </div>
                 )}
@@ -647,19 +647,19 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
               {previewDoc.notes && (
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-800 block">Conteúdo / Orientações Registradas:</span>
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto font-mono text-sm">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">Conteúdo / Orientações Registradas:</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto font-mono text-sm">
                     {previewDoc.notes}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 Fechar
               </button>

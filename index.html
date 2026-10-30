@@ -102,6 +102,21 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="manifest" href="/manifest.json" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('sf_theme_preference');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark) || (saved === 'system' && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch (_) {}
+      })();
+    </script>
     <!-- Tipografia Oficial Gov.br / Meu SUS Digital: Rawline (com fallback funcional Raleway) -->
     <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">

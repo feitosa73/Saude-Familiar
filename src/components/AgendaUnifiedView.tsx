@@ -395,16 +395,16 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
   return (
     <div className="space-y-6 pb-20 w-full">
       {/* 1. TOPO ACESSÍVEL: Dois Botões de Ação Direta (Sem dropdowns, >= 44px) */}
-      <div className="bg-white p-5 sm:p-6 lg:p-7 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 lg:p-7 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2.5">
-            <CalendarCheck2 className="w-7 h-7 text-blue-600" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            <CalendarCheck2 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
               Consultas e Exames
             </h1>
           </div>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Agenda médica unificada de {selectedPatient?.name || 'paciente'} com alertas de prazos e pendências
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+            Agenda médica unificada de <strong className="text-slate-800 dark:text-slate-200">{selectedPatient?.name || 'paciente'}</strong> com alertas de prazos e pendências
           </p>
         </div>
 
@@ -415,20 +415,20 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               <button
                 id="btn-agenda-escanear-ia"
                 onClick={() => setIsScannerModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
                 title="Ler comprovante ou print de agendamento com IA"
               >
-                <Sparkles className="w-4.5 h-4.5 text-purple-600" />
+                <Sparkles className="w-4.5 h-4.5 text-purple-600 dark:text-purple-400" />
                 <span>Escanear Comprovante</span>
               </button>
 
               <button
                 id="btn-agenda-coleta-ia"
                 onClick={() => setIsReceiptScannerModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 rounded-xl font-bold text-sm sm:text-base transition-all min-h-[48px]"
                 title="Ler comprovante ou protocolo de coleta laboratorial com IA"
               >
-                <FileCheck className="w-4.5 h-4.5 text-sky-600" />
+                <FileCheck className="w-4.5 h-4.5 text-sky-600 dark:text-sky-400" />
                 <span>Ler Comprovante de Coleta</span>
               </button>
 
@@ -455,7 +455,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center border border-slate-200"
+            className="p-3 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center border border-slate-200 dark:border-slate-700"
             title="Atualizar lista"
           >
             <RefreshCw className={`w-4.5 h-4.5 ${loading ? 'animate-spin' : ''}`} />
@@ -464,7 +464,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
       </div>
 
       {/* 2. BARRA DE BUSCA E FILTROS RÁPIDOS */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -472,12 +472,12 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por médico, exame, especialidade ou local..."
-            className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800 shadow-2xs"
+            className="w-full pl-9 pr-8 py-2.5 text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-2xs"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -485,13 +485,13 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
         </div>
 
         {/* Segmented Filter Control */}
-        <div className="inline-flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shrink-0 shadow-2xs">
+        <div className="inline-flex items-center gap-1 p-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shrink-0 shadow-2xs">
           <button
             onClick={() => setFiltroTipo('todos')}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
               filtroTipo === 'todos'
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 dark:bg-blue-600 text-white shadow-2xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Todos ({items.length})
@@ -501,7 +501,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
               filtroTipo === 'consultas'
                 ? 'bg-blue-600 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-blue-700'
+                : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'
             }`}
           >
             Consultas
@@ -511,7 +511,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
               filtroTipo === 'exames'
                 ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-emerald-700'
+                : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
             }`}
           >
             Exames
@@ -524,27 +524,27 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
         <section aria-labelledby="secao-pendencias-sem-data" className="space-y-4">
           {temMuitasPendencias ? (
             /* Acordeon Condensado para > 2 Pendências (Anti-Poluição Visual) */
-            <div className="rounded-2xl border border-amber-300 bg-amber-50/90 overflow-hidden shadow-xs ring-1 ring-amber-200">
+            <div className="rounded-2xl border border-amber-300 dark:border-amber-700/80 bg-amber-50/90 dark:bg-amber-950/40 overflow-hidden shadow-xs ring-1 ring-amber-200 dark:ring-amber-800/60 transition-colors">
               <button
                 type="button"
                 onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-                className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-amber-100/70 transition-colors"
+                className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-amber-100/70 dark:hover:bg-amber-900/30 transition-colors"
                 aria-expanded={isAccordionOpen}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-200/90 flex items-center justify-center text-amber-800 shrink-0 shadow-2xs">
+                  <div className="w-9 h-9 rounded-xl bg-amber-200/90 dark:bg-amber-900/60 flex items-center justify-center text-amber-800 dark:text-amber-200 shrink-0 shadow-2xs">
                     <AlertCircle className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 id="secao-pendencias-sem-data" className="text-base sm:text-lg font-bold text-amber-950">
+                    <h2 id="secao-pendencias-sem-data" className="text-base sm:text-lg font-bold text-amber-950 dark:text-amber-200">
                       {tituloPendencias}
                     </h2>
-                    <p className="text-sm text-amber-900 font-medium">
+                    <p className="text-sm text-amber-900 dark:text-amber-300 font-medium">
                       {subtituloPendencias}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-bold text-amber-950 shrink-0">
+                <div className="flex items-center gap-2 text-sm font-bold text-amber-950 dark:text-amber-200 shrink-0">
                   <span>{isAccordionOpen ? 'Ocultar' : 'Ver pendências'}</span>
                   {isAccordionOpen ? (
                     <ChevronUp className="w-5 h-5" />
@@ -555,7 +555,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               </button>
 
               {isAccordionOpen && (
-                <div className="p-4 pt-3 border-t border-amber-200 bg-amber-50/50">
+                <div className="p-4 pt-3 border-t border-amber-200 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {pendencias.map((item) => (
                       <AgendaCard
@@ -574,8 +574,8 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
           ) : (
             /* Se houver até 2 pendências, exibe diretamente no topo */
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-amber-950 uppercase tracking-wider">
-                <AlertCircle className="w-4.5 h-4.5 text-amber-600" />
+              <div className="flex items-center gap-2 text-sm font-bold text-amber-950 dark:text-amber-300 uppercase tracking-wider">
+                <AlertCircle className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
                 <h2 id="secao-pendencias-sem-data">{rotuloSecaoPequena}</h2>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -597,23 +597,23 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
 
       {/* 4. COMPROMISSOS CONFIRMADOS (ORDENADOS CRONOLOGICAMENTE) */}
       <section aria-labelledby="secao-compromissos-confirmados" className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-          <h2 id="secao-compromissos-confirmados" className="text-base sm:text-lg font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2.5">
-            <Calendar className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+          <h2 id="secao-compromissos-confirmados" className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2.5">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <span>Compromissos Confirmados ({confirmados.length})</span>
           </h2>
-          <span className="text-xs sm:text-sm text-slate-500 font-medium">
+          <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
             Em ordem cronológica
           </span>
         </div>
 
         {confirmados.length === 0 ? (
-          <div className="py-12 px-4 text-center bg-white rounded-2xl border border-dashed border-slate-200 shadow-2xs">
-            <CalendarCheck2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base sm:text-lg font-bold text-slate-800">
+          <div className="py-12 px-4 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 shadow-2xs">
+            <CalendarCheck2 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
               Nenhum compromisso confirmado
             </h3>
-            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               {searchTerm
                 ? 'Nenhum agendamento encontrado para o termo pesquisado.'
                 : 'Cadastre a primeira consulta médica ou exame para acompanhar a agenda da família.'}
@@ -654,15 +654,15 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
       {/* 5. MODAL DE CONSULTA (CRIAÇÃO E EDIÇÃO) */}
       {isAptModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Stethoscope className="w-5 h-5 text-blue-600" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 text-slate-900 dark:text-slate-100 transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 {editingAptId ? 'Editar Consulta Médica' : 'Nova Consulta Médica'}
               </h3>
               <button
                 onClick={() => setIsAptModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-semibold p-1"
               >
                 ✕
               </button>
@@ -671,7 +671,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
             <form onSubmit={handleSubmitAppointment} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Especialidade *
                   </label>
                   <input
@@ -680,11 +680,11 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     placeholder="Ex: Cardiologia, Geriatria"
                     value={aptSpecialty}
                     onChange={(e) => setAptSpecialty(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Médico / Profissional *
                   </label>
                   <input
@@ -693,14 +693,14 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     placeholder="Ex: Dra. Helena"
                     value={aptProfessional}
                     onChange={(e) => setAptProfessional(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Data e Horário *
                   </label>
                   <input
@@ -708,17 +708,17 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     required
                     value={aptDateTime}
                     onChange={(e) => setAptDateTime(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Status
                   </label>
                   <select
                     value={aptStatus}
                     onChange={(e) => setAptStatus(e.target.value as AppointmentStatus)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="agendada">Agendada</option>
                     <option value="realizada">Realizada</option>
@@ -728,7 +728,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Local / Endereço *
                 </label>
                 <input
@@ -737,12 +737,12 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   placeholder="Ex: Hospital das Clínicas, Sala 304"
                   value={aptLocation}
                   onChange={(e) => setAptLocation(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Motivo da Consulta *
                 </label>
                 <input
@@ -751,12 +751,12 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   placeholder="Ex: Acompanhamento de hipertensão e rotina"
                   value={aptReason}
                   onChange={(e) => setAptReason(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Instruções e Observações (Opcional)
                 </label>
                 <textarea
@@ -764,15 +764,15 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   placeholder="Ex: Chegar com 20 min de antecedência, levar exames de sangue recentes"
                   value={aptNotes}
                   onChange={(e) => setAptNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAptModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                 >
                   Cancelar
                 </button>
@@ -791,15 +791,15 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
       {/* 6. MODAL DE EXAME (CRIAÇÃO E EDIÇÃO) */}
       {isExamModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-600" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 my-8 text-slate-900 dark:text-slate-100 transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 {editingExamId ? 'Editar Exame Diagnóstico' : 'Novo Pedido de Exame'}
               </h3>
               <button
                 onClick={() => setIsExamModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 text-sm font-semibold p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-semibold p-1"
               >
                 ✕
               </button>
@@ -807,7 +807,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
 
             <form onSubmit={handleSubmitExam} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Nome do Exame *
                 </label>
                 <input
@@ -816,13 +816,13 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   placeholder="Ex: Ultrassonografia Doppler, Hemograma Completo"
                   value={examName}
                   onChange={(e) => setExamName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Médico Solicitante *
                   </label>
                   <input
@@ -831,17 +831,17 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                     placeholder="Ex: Dra. Julaine Morais"
                     value={examRequestingDoctor}
                     onChange={(e) => setExamRequestingDoctor(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Status do Exame
                   </label>
                   <select
                     value={examStatus}
                     onChange={(e) => setExamStatus(e.target.value as ExamStatus)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="solicitado">Solicitado (Pendente Agendamento / Guia)</option>
                     <option value="agendado">Agendado (Com Data Marcada)</option>
@@ -855,20 +855,20 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                       Data da Solicitação
                     </label>
                     <input
                       type="date"
                       value={examRequestDate}
                       onChange={(e) => setExamRequestDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                     />
                   </div>
 
                   {examStatus === 'agendado' && (
                     <div>
-                      <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">
                         Data do Agendamento *
                       </label>
                       <input
@@ -876,41 +876,41 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                         value={examScheduledDate}
                         onChange={(e) => setExamScheduledDate(e.target.value)}
                         required
-                        className="w-full px-3 py-2 text-sm bg-blue-50/50 border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white"
+                        className="w-full px-3 py-2 text-sm bg-blue-50/50 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-700 rounded-lg focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                       />
                     </div>
                   )}
 
                   {(examStatus === 'realizado' || examStatus === 'resultado_disponivel' || examStatus === 'retirado') && (
                     <div>
-                      <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">
                         Data e Hora de Realização
                       </label>
                       <input
                         type="datetime-local"
                         value={examExecutionDate}
                         onChange={(e) => setExamExecutionDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 border border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white"
+                        className="w-full px-3 py-2 text-sm bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                       />
                     </div>
                   )}
                 </div>
 
                 {examStatus === 'solicitado' && (
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-lg">
+                  <p className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-2.5 rounded-lg">
                     <strong>Solicitação Pendente:</strong> Registra a guia médica sem criar data fictícia de compromisso na agenda confirmada.
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Vincular a Laudo / Documento (Opcional)
                 </label>
                 <select
                   value={examDocumentId}
                   onChange={(e) => setExamDocumentId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 >
                   <option value="">Nenhum documento vinculado</option>
                   {documents.map((doc) => (
@@ -922,7 +922,7 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Preparo e Instruções Clínicas (Opcional)
                 </label>
                 <textarea
@@ -930,15 +930,15 @@ export const AgendaUnifiedView: React.FC<AgendaUnifiedViewProps> = ({
                   placeholder="Ex: Jejum absoluto de 8 horas, suspender anticoagulante"
                   value={examNotes}
                   onChange={(e) => setExamNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsExamModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                 >
                   Cancelar
                 </button>
