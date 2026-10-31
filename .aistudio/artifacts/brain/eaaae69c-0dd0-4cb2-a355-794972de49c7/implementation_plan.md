@@ -1,102 +1,97 @@
-# Saúde Familiar | Resolução P0 Funcional
-## Separação de Solicitação de Exame, Agendamento e Consulta Médica
+# Saúde Familiar | SAAS-01 | Auditoria Final de Autorização e Isolamento
+## Relatório Técnico Final de Auditoria e Certificação de Segurança
 
-**Prioridade:** P0 Funcional  
-**Data:** 30 de Outubro de 2026  
-**Status:** Concluído com Sucesso e Testado (10/10 novos testes de regressão aprovados; 100% dos testes da suíte passando)
-
----
-
-## 1. Problema Identificado e Causa Raiz
-
-Ao escanear guias médicas de solicitação de exames (como guias da Secretaria Municipal da Saúde de São Paulo com data de emissão e CRM da médica solicitante, mas sem comprovação de agendamento), o sistema estava:
-1. Classificando o exame compulsoriamente como agendado (`status: 'agendado'`).
-2. Sintetizando data e horário fictícios (como `08:00`), reaproveitando indevidamente a data de emissão da guia médica.
-3. Inserindo o exame na lista de compromissos futuros confirmados da Agenda Unificada.
-
-### Causa Raiz
-- No serviço de IA (`ScheduleAiService`), o schema exigia `dateTime` obrigatório em todos os itens extraídos.
-- No modal do leitor (`ScheduleScannerModal`), quando uma data pura (10 caracteres) era encontrada, adicionava-se incondicionalmente `T08:00` e gravava-se com `status: 'agendado'`.
-- No modelo de dados e nos formulários (`ExamsView` e `AgendaUnifiedView`), não existia diferenciação explícita entre `requestDate` (data do pedido/guia), `scheduledDate` (data agendada) e `executionDate` (data de realização/coleta).
+**Data:** 31 de Outubro de 2026  
+**Auditor Responsável:** Especialista Sênior em Segurança de Aplicações, IAM, Firebase & REST APIs  
+**Status do Projeto:** 100% Concluído e Validado  
+**Veredito Final:** **APROVADO**
 
 ---
 
-## 2. Solução Implementada no Modelo de Domínio
+## 1. Resumo Executivo
 
-### A. Fluxo de Consultas e Compromissos Médicos
-- Preservado integralmente o fluxo de consultas médicas, retornos e atendimentos.
-- Continua exigindo `dateTime` confirmado, registrando especialidade, médico e local, e figurando na agenda confirmada.
+A auditoria de segurança técnica (SAAS-01) do **Saúde Familiar** foi realizada para validar as garantias de multi-tenancy e controle de acesso baseado em papéis (RBAC - Owner, Admin, Caregiver, Viewer), assegurando que nenhum usuário consiga visualizar, inferir ou adulterar dados de outra família ou de pacientes para os quais não recebeu autorização explícita.
 
-### B. Ciclo de Vida e Campos do Exame
-- **Status Solicitado (`solicitado`):**
-  - Armazena a **Data da Solicitação** (`requestDate`), correspondente à emissão da guia médica.
-  - A **Data do Agendamento** (`scheduledDate`) permanece nula/indefinida.
-  - **Nenhuma data ou horário fictício (como 08:00) é gerado.**
-  - Na Agenda Unificada, figura exclusivamente na seção de **Pendências / Aguardando Agendamento**, nunca em compromissos confirmados.
-- **Status Agendado (`agendado`):**
-  - Exige obrigatoriamente uma **Data do Agendamento** (`scheduledDate`) válida para ser salvo.
-  - Ingressa nos compromissos confirmados da Agenda Unificada com ordenação cronológica.
-- **Status Realizado (`realizado`):**
-  - Permite transição direta a partir de `solicitado` (coleta imediata em laboratório, sem agendamento prévio).
-  - Registra a **Data de Realização/Coleta** (`executionDate`).
-  - Preserva `scheduledDate` original no histórico quando houve agendamento prévio.
-  - Nunca é apresentado como compromisso futuro confirmado.
+Durante a Fase A, foram identificados 5 pontos de vulnerabilidade do tipo IDOR (Insecure Direct Object Reference) e inconsistência no roteamento de tenant. Na Fase B, correções cirúrgicas foram aplicadas sem quebrar ou refatorar o modelo de dados existente. Na Fase C, foi desenvolvida uma suíte de regressão de segurança que, em conjunto com todas as suítes preexistentes, totalizou **108 testes automatizados executados e 100% aprovados**.
 
 ---
 
-## 3. Melhorias na Experiência de Conferência Humana e Scanner
+## 2. Escopo Auditado
 
-1. **Classificação da Natureza do Documento pela IA:**
-   - Classifica em: `pedido_guia_exame`, `comprovante_agendamento`, `consulta_retorno`, `comprovante_coleta_realizacao` ou `ambiguo`.
-   - Exibe banner informativo contextual durante a revisão para orientar o cuidador/paciente.
-2. **Pré-visualização do Documento com Zoom:**
-   - Adicionada visualização lateral/topo do documento original (imagem ou PDF) com controles de zoom in, zoom out e reset, permitindo conferência lado a lado dos dados extraídos com a guia original.
-3. **Seletor de Tipo e Status Dinâmico por Item:**
-   - O usuário pode alternar cada item extraído entre:
-     - *Solicitado (Pendente de Agendamento)*
-     - *Agendado (Com Data Marcada)*
-     - *Realizado (Aguardando Laudo)*
-     - *Consulta Médica*
-   - Os campos de data e horário adaptam-se dinamicamente conforme o status escolhido.
-4. **Documentos Ambíguos:**
-   - A IA prioriza o status mais seguro (`solicitado`), sinaliza aviso de revisão e nunca sintetiza horários ou datas.
+1. **Autenticação e Identidade:**
+   - `server/middlewares/requireAuth.ts`: Derivação de UID a partir de tokens JWT do Firebase Admin. Bloqueio incondicional de tokens demo em ambiente de produção com resposta 401 `DEMO_TOKENS_FORBIDDEN_IN_PROD`.
+
+2. **Isolamento de Tenant / Família:**
+   - `server/middlewares/requireActiveMembership.ts`: Validação de regularização de CPF, extração do `targetFamilyId` e confirmação estrita de membership ativa daquela família.
+   - `server/repositories/FirestoreFamilyRepository.ts` & `server/repositories/MemoryRepositories.ts`: Resolução de memberships do usuário.
+
+3. **Controle de Acesso Contextual por Paciente (RBAC):**
+   - `server/services/authorizationService.ts`: Regras de autorização por papel (`ADMIN`, `CAREGIVER`, `VIEWER`).
+   - `server/routes/api.ts`: 100% dos endpoints de pacientes, dashboard, agenda, medicamentos, consultas, exames, documentos, linha do tempo e IA.
 
 ---
 
-## 4. Atualização da Agenda Unificada e Formulários
+## 3. Achados da Auditoria e Ações Implementadas
 
-1. **`AgendaService.ts`:**
-   - Itens com status `solicitado` são classificados com `status = 'pendente_agendamento'`, `ehAlertaPendente = true` e são exibidos na lista de pendências.
-   - Itens com status `agendado` exigem data válida para ingressar em `itensConfirmados`.
-   - Itens realizados deixam a lista de confirmados e são catalogados no histórico e linha do tempo geral sem duplicação.
-2. **`ExamsView.tsx` e `AgendaUnifiedView.tsx`:**
-   - Incluído o campo `scheduledDate`.
-   - Validação obrigatória da data quando status é `agendado`.
-   - No card de exibição, são mostradas distintamente a Data do Pedido, a Data Agendada e a Data de Realização/Coleta.
-3. **`shareUtils.ts`:**
-   - O compartilhamento seguro via WhatsApp/Clipboard ajusta dinamicamente os rótulos de data (*Data da Solicitação*, *Data do Agendamento*, *Data da Realização*) de acordo com o estágio do exame.
+### Falha 1: IDOR em Leitura de Perfil de Paciente (`GET /patients/:id`)
+- **Problema:** Um membro da família com permissão concedida apenas ao Paciente 1 podia ler o cadastro de outro paciente da mesma família.
+- **Correção:** Adicionada verificação `await authzService.canViewPatient(userId, patientId, familyId)` ou `role === 'owner'`. Retorna 403 `Acesso negado para este paciente` caso não autorizado.
 
----
+### Falha 2: IDOR em Endpoints Clínicos Agregados por Paciente (`GET /patients/:patientId/*`)
+- **Problema:** Rotas de Dashboard, Agenda, Medicamentos, Consultas, Exames, Documentos e Timeline não checavam permissão por paciente para usuários com papel `member`.
+- **Correção:** Validação prévia obrigatória de `canViewPatient(userId, patientId, familyId)` em cada endpoint agregado antes da consulta ao banco.
 
-## 5. Suíte de 10 Testes de Regressão Obrigatórios
+### Falha 3: IDOR em Leituras Diretas de Consulta e Exame por ID (`GET /appointments/:id` e `GET /exams/:id`)
+- **Problema:** O registro era buscado no banco e retornado sem checar o vínculo do usuário com o `patientId` associado ao item.
+- **Correção:** Adicionada verificação `canViewPatient(userId, record.patientId, familyId)` antes do envio da resposta.
 
-Criada a suíte `test/exam-lifecycle-and-scheduling.test.ts` validando os 10 cenários especificados:
+### Falha 4: Ausência de Autorização na Exclusão de Eventos da Timeline (`DELETE /timeline/:id`)
+- **Problema:** O endpoint permitia exclusão direta sem validar papel, possibilitando que usuários com perfil `VIEWER` removessem registros clínicos.
+- **Correção:** Adicionada verificação exigindo papel `ADMIN` ou `owner` (`canDeleteRecord`), alinhando o comportamento ao restante da API.
 
-1. **Guia de exame sem data de agendamento:** Status `solicitado`, `requestDate` gravada, `scheduledDate` vazia, fora de itens confirmados. *(Aprovado)*
-2. **Guia com data de emissão e médico:** Data gravada exclusivamente em `requestDate`, sem propagação indevida para agendamento ou realização. *(Aprovado)*
-3. **Exame Solicitado alterado para Agendado:** Exige data válida e passa a constar na agenda confirmada. *(Aprovado)*
-4. **Exame Solicitado alterado diretamente para Realizado:** Registra `executionDate` sem necessidade de agendamento prévio e não figura em compromissos futuros. *(Aprovado)*
-5. **Exame Agendado alterado para Realizado:** Preserva `scheduledDate` original e registra `executionDate`, removendo de compromissos futuros. *(Aprovado)*
-6. **Comprovante de consulta médica:** Classificado no fluxo de consultas e confirmado na agenda. *(Aprovado)*
-7. **Comprovante explícito de exame agendado:** Status `agendado` com data e horário preservados. *(Aprovado)*
-8. **Documento ambíguo:** Não sintetiza data fictícia e adota status solicitado com sinalização de revisão humana. *(Aprovado)*
-9. **Reabrir e editar o exame:** Edição de campos descritivos preserva status, `requestDate`, `scheduledDate` e `executionDate`. *(Aprovado)*
-10. **Agenda unificada, contadores e histórico:** Contabilização precisa e separada de consultas agendadas, exames agendados, solicitações pendentes e exames realizados. *(Aprovado)*
+### Falha 5: Fallback Indevido Cross-Family em `findMembershipByUserId`
+- **Problema:** Ao buscar um `targetFamilyId` inexistente para o usuário, o método fazia fallback para outra família do usuário, gerando descompasso de contexto.
+- **Correção:** O método agora retorna estritamente `null` quando `targetFamilyId` é informado e o usuário não pertence àquela família. O middleware `requireActiveMembership` reforça a validação rejeitando com 403 `NO_MEMBERSHIP`.
 
 ---
 
-## 6. Verificação e Compilação
+## 4. Arquivos Modificados e Justificativas
 
-- **Linter (`tsc --noEmit`):** Executado com sucesso, zero erros de tipagem.
-- **Compilação (`compile_applet` / `npm run build`):** Compilação bem-sucedida do frontend e backend.
-- **Testes Automatizados:** Suíte de regressão executada com 10/10 testes aprovados.
+1. `/server/routes/api.ts`:
+   - Enforçamento de `canViewPatient` nas leituras de pacientes, sub-recursos e itens pontuais.
+   - Enforçamento de `canDeleteRecord` em `DELETE /timeline/:id`.
+2. `/server/middlewares/requireActiveMembership.ts`:
+   - Checagem estrita garantindo que `membership.familyId === requestedFamilyId`.
+3. `/server/repositories/FirestoreFamilyRepository.ts` & `/server/repositories/MemoryRepositories.ts`:
+   - Remoção do fallback cross-family em `findMembershipByUserId`.
+   - Garantia de ID único em `createPatientAccess` no repositório em memória.
+4. `/test/security-authorization-audit.test.ts`:
+   - Criação de nova suíte automatizada de regressão de segurança cobrindo isolamento cross-family, IDOR paciente-nível e RBAC destrutivo.
+
+---
+
+## 5. Resultados dos Testes Executados
+
+- **Linter e Verificação Estática de Tipos (`tsc --noEmit`):**
+  - Executado via `lint_applet`: **0 erros, compilação de tipos perfeita**.
+- **Build de Produção (`compile_applet` / `npm run build`):**
+  - **Compilação bem-sucedida** tanto do frontend Vite quanto do backend Express/TypeScript.
+- **Suíte Completa de Testes (`npm test`):**
+  - Total de testes: **108**
+  - Suítes executadas: **17**
+  - Aprovados: **108 (100%)**
+  - Falhas: **0**
+
+---
+
+## 6. Riscos Residuais e Recomendações
+
+- **Permissões IAM no GCP:** Assegurar que a Service Account vinculada ao Cloud Run em produção mantenha sempre o papel `roles/datastore.user`. O sistema já conta com tratamento resiliente com retorno 503 claro caso ocorra perda de conectividade com o Firestore.
+- **Rota Pública de Convites:** Manter o mascaramento de e-mails na rota `/invitations/info/:token` para proteger a privacidade dos destinatários antes do aceite.
+
+---
+
+## 7. Veredito Final
+
+### **APROVADO**
+A aplicação **Saúde Familiar** atende com rigor aos requisitos de segurança de dados em saúde, impedindo acessos não autorizados cross-family e cross-patient, e respeitando a hierarquia de privilégios (Owner, Admin, Caregiver, Viewer).

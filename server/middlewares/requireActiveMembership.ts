@@ -54,10 +54,10 @@ export function createRequireActiveMembership(
         requestedFamilyId
       );
 
-      if (!membership) {
-        console.warn('[AuthZ] Access denied: No membership found');
+      if (!membership || (requestedFamilyId && membership.familyId !== requestedFamilyId)) {
+        console.warn('[AuthZ] Access denied: No membership found for requested family');
         res.status(403).json({
-          error: 'Acesso negado: usuário não possui vínculo com nenhuma família',
+          error: 'Acesso negado: usuário não possui vínculo ativo com a família solicitada',
           code: 'NO_MEMBERSHIP',
         });
         return;

@@ -1447,7 +1447,15 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const patient = await repository.getPatientById(req.params.id, familyId);
+        const patientId = req.params.id;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
+        const patient = await repository.getPatientById(patientId, familyId);
         if (!patient) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
         }
@@ -1792,6 +1800,13 @@ export function createApiRouter(
       try {
         const familyId = req.membership!.familyId;
         const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
         const patient = await repository.getPatientById(patientId, familyId);
         if (!patient) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
@@ -1854,6 +1869,13 @@ export function createApiRouter(
       try {
         const familyId = req.membership!.familyId;
         const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
         const patient = await repository.getPatientById(patientId, familyId);
         if (!patient) {
           return res.status(404).json({ error: 'Paciente não encontrado' });
@@ -1877,7 +1899,15 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const medications = await repository.getMedications(req.params.patientId, familyId);
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
+        const medications = await repository.getMedications(patientId, familyId);
         res.json(medications);
       } catch (error) {
         console.error('Error fetching medications:', error);
@@ -2196,7 +2226,15 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const appointments = await repository.getAppointments(req.params.patientId, familyId);
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
+        const appointments = await repository.getAppointments(patientId, familyId);
         res.json(appointments);
       } catch (error) {
         console.error('Error fetching appointments:', error);
@@ -2269,6 +2307,13 @@ export function createApiRouter(
         const patientId = req.query.patientId as string | undefined;
         const appt = await repository.getAppointmentById(req.params.id, familyId, patientId);
         if (!appt) return res.status(404).json({ error: 'Consulta não encontrada' });
+
+        const userId = getCurrentUserId(req);
+        const canView = await authzService.canViewPatient(userId, appt.patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
         res.json(appt);
       } catch (error) {
         console.error('Error fetching appointment:', error);
@@ -2356,7 +2401,15 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const exams = await repository.getExams(req.params.patientId, familyId);
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
+        const exams = await repository.getExams(patientId, familyId);
         res.json(exams.map(sanitizeExamForClient));
       } catch (error) {
         console.error('Error fetching exams:', error);
@@ -2542,6 +2595,13 @@ export function createApiRouter(
         const patientId = req.query.patientId as string | undefined;
         const exam = await repository.getExamById(req.params.id, familyId, patientId);
         if (!exam) return res.status(404).json({ error: 'Exame não encontrado' });
+
+        const userId = getCurrentUserId(req);
+        const canView = await authzService.canViewPatient(userId, exam.patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
         res.json(sanitizeExamForClient(exam));
       } catch (error) {
         console.error('Error fetching exam:', error);
@@ -2626,7 +2686,15 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const docs = await repository.getDocuments(req.params.patientId, familyId);
+        const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
+        const docs = await repository.getDocuments(patientId, familyId);
         res.json(docs);
       } catch (error) {
         console.error('Error fetching documents:', error);
@@ -2758,6 +2826,13 @@ export function createApiRouter(
       try {
         const familyId = req.membership!.familyId;
         const { patientId } = req.params;
+        const userId = getCurrentUserId(req);
+
+        const canView = await authzService.canViewPatient(userId, patientId, familyId);
+        if (!canView && req.membership?.role !== 'owner') {
+          return res.status(403).json({ error: 'Acesso negado para este paciente' });
+        }
+
         const { category, type, startDate, endDate } = req.query as {
           category?: string;
           type?: TimelineEventType;
@@ -2831,7 +2906,23 @@ export function createApiRouter(
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
         const familyId = req.membership!.familyId;
-        const deleted = await repository.deleteTimelineEvent(req.params.id, familyId);
+        const patientId = (req.query.patientId as string) || req.body?.patientId;
+        const userId = getCurrentUserId(req);
+
+        if (patientId) {
+          const canDelete = await authzService.canDeleteRecord(userId, patientId, familyId);
+          if (!canDelete && req.membership?.role !== 'owner') {
+            return res.status(403).json({
+              error: 'Apenas Administradores podem excluir eventos da linha do tempo',
+            });
+          }
+        } else if (req.membership?.role !== 'owner') {
+          return res.status(403).json({
+            error: 'Apenas Administradores podem excluir eventos da linha do tempo',
+          });
+        }
+
+        const deleted = await repository.deleteTimelineEvent(req.params.id, familyId, patientId);
         if (!deleted) {
           return res.status(404).json({ error: 'Evento não encontrado' });
         }

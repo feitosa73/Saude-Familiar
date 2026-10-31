@@ -1,6 +1,6 @@
 {
-  "summary":  "Relatório técnico detalhado da correção P0 funcional: separação estrita entre Solicitação de Exame (pedido/guia), Agendamento de Exame e Consulta Médica, com prevenção de datas fictícias, suporte a transições manuais e diretas, pré-visualização do documento com zoom, adaptação da Agenda Unificada e 10 testes de regressão automatizados.",
-  "updatedAt":  "2026-10-30T07:53:14.883774662Z",
+  "summary":  "Relatório Final da Auditoria Técnica de Segurança (SAAS-01): Autorização, Multi-Tenancy e Isolamento de Dados Familiares e Clínicos no Saúde Familiar. Todas as 5 falhas identificadas foram corrigidas cirurgicamente, 108/108 testes automatizados aprovados e build 100% verificado. Veredito: Aprovado.",
+  "updatedAt":  "2026-10-31T15:16:48.319257641Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

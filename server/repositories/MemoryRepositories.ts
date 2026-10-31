@@ -291,7 +291,24 @@ export class MemoryFamilyRepository implements IFamilyRepository {
   async findMembershipByUserId(uid: string, targetFamilyId?: string): Promise<FamilyMembership | null> {
     if (targetFamilyId) {
       const mem = this.memberships.get(`${targetFamilyId}:${uid}`);
-      if (mem) return mem;
+      if (mem && mem.status === 'active') return mem;
+
+      const fam = this.families.get(targetFamilyId);
+      if (fam && (fam.primaryOwnerUid === uid || fam.createdBy === uid)) {
+        const ownerMem: FamilyMembership = {
+          id: uid,
+          userId: uid,
+          familyId: targetFamilyId,
+          role: 'owner',
+          status: 'active',
+          joinedAt: fam.createdAt || new Date().toISOString(),
+          createdAt: fam.createdAt || new Date().toISOString(),
+          createdBy: fam.createdBy || uid,
+        };
+        this.memberships.set(`${targetFamilyId}:${uid}`, ownerMem);
+        return ownerMem;
+      }
+      return null;
     }
     for (const mem of this.memberships.values()) {
       if (mem.userId === uid && mem.status === 'active') return mem;
@@ -978,8 +995,11 @@ export class MemoryHealthRepository implements IHealthRepository {
     return list[0] || null;
   }
 
-  async createPatientAccess(data: Omit<PatientAccess, 'id' | 'createdAt'>): Promise<PatientAccess> {
-    const id = `acc-${Date.now()}`;
+  async createPatientAccess(
+    data: Omit<PatientAccess, 'id' | 'createdAt'>,
+    _familyId?: string
+  ): Promise<PatientAccess> {
+    const id = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const access: PatientAccess = { id, ...data, createdAt: new Date().toISOString() };
     this.familyRepo.getAccessMap().set(id, access);
     return access;
@@ -1135,7 +1155,7 @@ export class MemoryHealthRepository implements IHealthRepository {
     return this.appointments.get(id) || null;
   }
 
-  async createAppointment(data: Omit<Appointment, 'id'>): Promise<Appointment> {
+  async createAppointment(data: Omit<Appointment, 'id'>, _familyId?: string): Promise<Appointment> {
     const id = `apt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const apt: Appointment = { id, ...data };
     this.appointments.set(id, apt);
@@ -1162,7 +1182,7 @@ export class MemoryHealthRepository implements IHealthRepository {
     return this.exams.get(id) || null;
   }
 
-  async createExam(data: Omit<Exam, 'id'>): Promise<Exam> {
+  async createExam(data: Omit<Exam, 'id'>, _familyId?: string): Promise<Exam> {
     const id = `exam-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const exam: Exam = { id, ...data };
     this.exams.set(id, exam);
@@ -1284,7 +1304,7 @@ export class MemoryHealthRepository implements IHealthRepository {
     return this.documents.get(id) || null;
   }
 
-  async createDocument(data: Omit<MedicalDocument, 'id'>): Promise<MedicalDocument> {
+  async createDocument(data: Omit<MedicalDocument, 'id'>, _familyId?: string): Promise<MedicalDocument> {
     const id = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const doc: MedicalDocument = { id, ...data };
     this.documents.set(id, doc);
@@ -1307,14 +1327,14 @@ export class MemoryHealthRepository implements IHealthRepository {
     return Array.from(this.timeline.values()).filter((t) => t.patientId === patientId);
   }
 
-  async createTimelineEvent(data: Omit<TimelineEvent, 'id'>): Promise<TimelineEvent> {
+  async createTimelineEvent(data: Omit<TimelineEvent, 'id'>, _familyId?: string): Promise<TimelineEvent> {
     const id = `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const evt: TimelineEvent = { id, ...data };
     this.timeline.set(id, evt);
     return evt;
   }
 
-  async deleteTimelineEvent(id: string): Promise<boolean> {
+  async deleteTimelineEvent(id: string, _familyId?: string, _patientId?: string): Promise<boolean> {
     return this.timeline.delete(id);
   }
 

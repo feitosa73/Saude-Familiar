@@ -361,9 +361,13 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
         await this.saveMembership(ownerMem);
         return ownerMem;
       }
+
+      // Se um targetFamilyId específico foi solicitado e o usuário não é membro nem proprietário dele,
+      // retorna null imediatamente para não vazar acesso a outra família.
+      return null;
     }
 
-    // Busca geral nas memberships do usuário
+    // Busca geral nas memberships do usuário somente quando targetFamilyId não foi informado
     const allMemberships = await this.listMembershipsByUserId(uid);
     if (allMemberships.length > 0) {
       const ownerMem = allMemberships.find((m) => m.role === 'owner');
