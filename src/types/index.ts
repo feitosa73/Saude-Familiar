@@ -83,7 +83,7 @@ export interface UserMeResponse {
   pendingRequestsCount?: number;
 }
 
-export type PatientRole = 'ADMIN' | 'CAREGIVER' | 'VIEWER';
+export type PatientRole = 'ADMIN' | 'CAREGIVER' | 'VIEWER' | 'NO_ACCESS';
 
 export interface PatientAccess {
   id: string;

@@ -163,6 +163,17 @@ describe('SAAS-01: Auditoria Final de Autorização e Isolamento de Dados', () =
       fam1.id
     );
 
+    const examP1 = await healthRepo.createExam(
+      {
+        patientId: patient1.id,
+        name: 'Hemograma Paciente 1',
+        requestDate: '2026-10-20',
+        requestingDoctor: 'Dr. Roberto',
+        status: 'solicitado',
+      },
+      fam1.id
+    );
+
     const timeEventP1 = await healthRepo.createTimelineEvent(
       {
         patientId: patient1.id,
@@ -201,7 +212,10 @@ describe('SAAS-01: Auditoria Final de Autorização e Isolamento de Dados', () =
       patient2,
       apptP2,
       examP2,
+      examP1,
       timeEventP1,
+      familyRepo,
+      healthRepo,
       setAuthUser: (u: any) => {
         simulatedAuthUser = u;
       },
@@ -401,6 +415,209 @@ describe('SAAS-01: Auditoria Final de Autorização e Isolamento de Dados', () =
       const dashData = await resDash.json();
       assert.ok(dashData.patient);
       assert.strictEqual(dashData.patient.id, env.patient2.id);
+    } finally {
+      env.server.close();
+    }
+  });
+
+  it('7. Configuração explícita de "Sem acesso" (NO_ACCESS) bloqueia leitura e escrita dos dados clínicos do paciente específico sem remover o membro nem afetar outros pacientes', async () => {
+    const env = await setupSecurityAuditEnvironment();
+    try {
+      // 1. Concede acesso de Visualizador ao Paciente 2 para o membro viewer
+      await env.familyRepo.grantMemberPatientAccess(
+        env.fam1.id,
+        'user-viewer-p1',
+        env.patient2.id,
+        'VIEWER',
+        'user-owner-fam1'
+      );
+
+      // 2. Administrador (Owner) define explicitamente "Sem acesso" (NO_ACCESS) para o Paciente 1
+      env.setAuthUser({
+        uid: 'user-owner-fam1',
+        email: 'owner1@exemplo.com',
+      });
+
+      const resUpdateAccess = await fetch(
+        `${env.baseUrl}/families/${env.fam1.id}/members/user-viewer-p1/patient-access/${env.patient1.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-token-owner1',
+            'x-family-id': env.fam1.id,
+          },
+          body: JSON.stringify({ role: 'NO_ACCESS' }),
+        }
+      );
+      assert.strictEqual(resUpdateAccess.status, 200);
+      const updateData = await resUpdateAccess.json();
+      assert.strictEqual(updateData.success, true);
+      assert.strictEqual(updateData.patientAccess.role, 'NO_ACCESS');
+
+      // 3. Autentica como o membro para quem o acesso foi bloqueado
+      env.setAuthUser({
+        uid: 'user-viewer-p1',
+        email: 'viewer@exemplo.com',
+      });
+
+      // A. Leitura do Paciente 1 é bloqueada (403)
+      const resP1 = await fetch(`${env.baseUrl}/patients/${env.patient1.id}`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resP1.status, 403);
+      const dataP1 = await resP1.json();
+      assert.strictEqual(dataP1.error, 'Acesso negado para este paciente');
+
+      // B. Leitura do Dashboard do Paciente 1 é bloqueada (403)
+      const resDash = await fetch(`${env.baseUrl}/patients/${env.patient1.id}/dashboard`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resDash.status, 403);
+
+      // C. Leitura de Medicamentos do Paciente 1 é bloqueada (403)
+      const resMeds = await fetch(`${env.baseUrl}/patients/${env.patient1.id}/medications`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resMeds.status, 403);
+
+      // D. Criação de Consulta no Paciente 1 é bloqueada (403)
+      const resApt = await fetch(`${env.baseUrl}/patients/${env.patient1.id}/appointments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+        body: JSON.stringify({
+          specialty: 'Cardiologia',
+          dateTime: '2026-11-20T10:00:00',
+        }),
+      });
+      assert.strictEqual(resApt.status, 403);
+
+      // E. Criação de Exame no Paciente 1 é bloqueada (403)
+      const resExam = await fetch(`${env.baseUrl}/patients/${env.patient1.id}/exams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+        body: JSON.stringify({
+          name: 'Hemograma',
+          requestDate: '2026-11-01',
+        }),
+      });
+      assert.strictEqual(resExam.status, 403);
+
+      // F. Tentativa de acessar exame do Paciente 1 via ID direto (IDOR) é bloqueada (403)
+      const resDirectExam = await fetch(`${env.baseUrl}/exams/${env.examP1.id}`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resDirectExam.status, 403);
+
+      // G. Listagem geral de pacientes (/patients) NÃO inclui o Paciente 1 (sem acesso)
+      const resList = await fetch(`${env.baseUrl}/patients`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resList.status, 200);
+      const patientList = await resList.json();
+      assert.ok(!patientList.some((p: any) => p.id === env.patient1.id));
+      assert.ok(patientList.some((p: any) => p.id === env.patient2.id));
+
+      // H. O membro CONTINUA com acesso ao Paciente 2 (200)
+      const resP2 = await fetch(`${env.baseUrl}/patients/${env.patient2.id}`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resP2.status, 200);
+
+      // I. O membro CONTINUA ativo na família (não foi removido)
+      const membership = await env.familyRepo.getMembership(env.fam1.id, 'user-viewer-p1');
+      assert.ok(membership);
+      assert.strictEqual(membership.status, 'active');
+      assert.strictEqual(membership.role, 'member');
+    } finally {
+      env.server.close();
+    }
+  });
+
+  it('8. Concessão posterior de permissão após "Sem acesso" restaura acesso imediatamente', async () => {
+    const env = await setupSecurityAuditEnvironment();
+    try {
+      // 1. Define NO_ACCESS para user-viewer-p1 no Paciente 1
+      await env.familyRepo.grantMemberPatientAccess(
+        env.fam1.id,
+        'user-viewer-p1',
+        env.patient1.id,
+        'NO_ACCESS',
+        'user-owner-fam1'
+      );
+
+      // 2. Confirma que o membro está bloqueado
+      env.setAuthUser({
+        uid: 'user-viewer-p1',
+        email: 'viewer@exemplo.com',
+      });
+      const resBlocked = await fetch(`${env.baseUrl}/patients/${env.patient1.id}`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resBlocked.status, 403);
+
+      // 3. Admin reatribui permissão para VIEWER via API
+      env.setAuthUser({
+        uid: 'user-owner-fam1',
+        email: 'owner1@exemplo.com',
+      });
+      const resRestore = await fetch(
+        `${env.baseUrl}/families/${env.fam1.id}/members/user-viewer-p1/patient-access/${env.patient1.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-token-owner1',
+            'x-family-id': env.fam1.id,
+          },
+          body: JSON.stringify({ role: 'VIEWER' }),
+        }
+      );
+      assert.strictEqual(resRestore.status, 200);
+
+      // 4. Membro agora tem acesso restaurado
+      env.setAuthUser({
+        uid: 'user-viewer-p1',
+        email: 'viewer@exemplo.com',
+      });
+      const resUnblocked = await fetch(`${env.baseUrl}/patients/${env.patient1.id}`, {
+        headers: {
+          Authorization: 'Bearer test-token-viewer',
+          'x-family-id': env.fam1.id,
+        },
+      });
+      assert.strictEqual(resUnblocked.status, 200);
+      const pData = await resUnblocked.json();
+      assert.strictEqual(pData.id, env.patient1.id);
     } finally {
       env.server.close();
     }

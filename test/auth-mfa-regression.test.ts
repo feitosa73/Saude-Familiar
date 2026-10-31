@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { MultiFactorAuthRequiredError } from '../src/services/authService';
 
+process.env.NODE_ENV = 'test';
+
 describe('Prioridade 6: Regressão de Autenticação e MFA (Authenticator)', () => {
   it('1. Deve preservar a classe MultiFactorAuthRequiredError com código padrão auth/multi-factor-auth-required', () => {
     const mockResolver = {

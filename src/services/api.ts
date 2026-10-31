@@ -178,7 +178,7 @@ export const api = {
   grantMemberPatientAccess: (
     familyId: string,
     userId: string,
-    data: { patientId: string; role: 'VIEWER' | 'CAREGIVER' }
+    data: { patientId: string; role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS' }
   ) =>
     request<{ success: boolean; message: string; patientAccess: PatientAccess }>(
       `/families/${familyId}/members/${userId}/patient-access`,
@@ -192,7 +192,7 @@ export const api = {
     familyId: string,
     userId: string,
     patientId: string,
-    data: { role: 'VIEWER' | 'CAREGIVER' }
+    data: { role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS' }
   ) =>
     request<{ success: boolean; message: string; patientAccess: PatientAccess }>(
       `/families/${familyId}/members/${userId}/patient-access/${patientId}`,

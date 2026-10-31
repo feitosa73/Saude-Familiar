@@ -17,6 +17,7 @@ import {
   AccessRequestStatus,
   FamilyInvitation,
   FamilyMemberWithAccess,
+  MemberPatientAccessItem,
   CpfRegistryRecord,
   MembershipRole,
 } from '../types';
@@ -544,25 +545,74 @@ export class MemoryFamilyRepository implements IFamilyRepository {
 
   async listFamilyMembersWithAccess(familyId: string): Promise<FamilyMemberWithAccess[]> {
     const members = await this.listMemberships(familyId);
+    const family = await this.getFamily(familyId);
+    const patients = this.healthRepo ? await this.healthRepo.getPatients() : [];
     const result: FamilyMemberWithAccess[] = [];
     for (const mem of members) {
       const user = await this.getUser(mem.userId);
-      const accesses = Array.from(this.accesses.values()).filter((a) => a.userId === mem.userId);
+      const isOwner = mem.role === 'owner' || mem.userId === family?.primaryOwnerUid;
+      let patientAccesses: MemberPatientAccessItem[] = [];
+      const userAccesses = Array.from(this.accesses.values()).filter((a) => a.userId === mem.userId);
+
+      if (isOwner) {
+        patientAccesses = patients.map((p) => ({
+          patientId: p.id,
+          patientName: p.name,
+          role: 'ADMIN' as PatientRole,
+          grantedAt: p.createdAt || family?.createdAt,
+        }));
+      } else if (patients.length > 0) {
+        const mappedPatientIds = new Set<string>();
+        patientAccesses = patients.map((p) => {
+          mappedPatientIds.add(p.id);
+          const acc = userAccesses.find((a) => a.patientId === p.id);
+          if (acc) {
+            return {
+              patientId: p.id,
+              patientName: p.name,
+              role: acc.role as PatientRole,
+              accessId: acc.id,
+              grantedAt: acc.createdAt,
+            };
+          }
+          return {
+            patientId: p.id,
+            patientName: p.name,
+            role: 'NO_ACCESS' as PatientRole,
+            grantedAt: undefined,
+          };
+        });
+        for (const acc of userAccesses) {
+          if (!mappedPatientIds.has(acc.patientId)) {
+            patientAccesses.push({
+              patientId: acc.patientId,
+              patientName: 'Paciente',
+              role: acc.role as PatientRole,
+              accessId: acc.id,
+              grantedAt: acc.createdAt,
+            });
+          }
+        }
+      } else {
+        patientAccesses = userAccesses.map((a) => ({
+          patientId: a.patientId,
+          patientName: 'Paciente',
+          role: a.role as PatientRole,
+          accessId: a.id,
+          grantedAt: a.createdAt,
+        }));
+      }
       result.push({
         userId: mem.userId,
         email: user?.email || '',
         name: user?.displayName || 'Membro da Família',
         phone: user?.phone || undefined,
-        familyRole: mem.role,
+        familyRole: isOwner ? 'owner' : 'member',
         status: mem.status,
         joinedAt: mem.joinedAt,
         createdAt: mem.createdAt,
-        patientAccesses: accesses.map((a) => ({
-          patientId: a.patientId,
-          patientName: 'Paciente',
-          role: a.role,
-          grantedAt: a.createdAt,
-        })),
+        patientAccesses,
+        isPrimaryOwner: mem.userId === family?.primaryOwnerUid,
       });
     }
     return result;
@@ -590,20 +640,48 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     }
   }
 
-  async grantMemberPatientAccess(familyId: string, userId: string, patientId: string, role: 'VIEWER' | 'CAREGIVER'): Promise<PatientAccess> {
-    const access: PatientAccess = {
-      id: `acc-${userId}-${patientId}`,
+  async grantMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS',
+    grantedBy: string = 'system'
+  ): Promise<PatientAccess> {
+    const existingKey = `acc-${userId}-${patientId}`;
+    let access = this.accesses.get(existingKey);
+    if (!access) {
+      for (const [, a] of this.accesses.entries()) {
+        if (a.userId === userId && a.patientId === patientId) {
+          access = a;
+          break;
+        }
+      }
+    }
+    if (access) {
+      access.role = role;
+      access.updatedAt = new Date().toISOString();
+      return access;
+    }
+
+    const newAccess: PatientAccess = {
+      id: existingKey,
       userId,
       patientId,
       role,
       createdAt: new Date().toISOString(),
-      createdBy: 'system',
+      createdBy: grantedBy,
+      familyId,
     };
-    this.accesses.set(access.id, access);
-    return access;
+    this.accesses.set(newAccess.id, newAccess);
+    return newAccess;
   }
 
-  async updateMemberPatientAccess(familyId: string, userId: string, patientId: string, role: 'VIEWER' | 'CAREGIVER'): Promise<PatientAccess> {
+  async updateMemberPatientAccess(
+    familyId: string,
+    userId: string,
+    patientId: string,
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS'
+  ): Promise<PatientAccess> {
     return this.grantMemberPatientAccess(familyId, userId, patientId, role);
   }
 
@@ -1017,7 +1095,18 @@ export class MemoryHealthRepository implements IHealthRepository {
   }
 
   async getPatients(userId?: string): Promise<Patient[]> {
-    return Array.from(this.patients.values());
+    const list = Array.from(this.patients.values());
+    if (userId) {
+      const allowed: Patient[] = [];
+      for (const p of list) {
+        const acc = await this.getPatientAccess(userId, p.id);
+        if (acc && acc.role !== 'NO_ACCESS') {
+          allowed.push(p);
+        }
+      }
+      return allowed;
+    }
+    return list;
   }
 
   async getPatientById(id: string): Promise<Patient | null> {

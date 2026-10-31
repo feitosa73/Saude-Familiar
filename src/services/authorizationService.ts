@@ -90,6 +90,8 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
         return 'Cuidador(a) Designado(a)';
       case 'VIEWER':
         return 'Familiar (Apoio)';
+      case 'NO_ACCESS':
+        return 'Sem acesso';
       default:
         return 'Sem acesso';
     }
@@ -103,6 +105,7 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
         return 'Cuidador(a) designado(a): administra e cadastra medicamentos, consultas, exames e histórico clínico.';
       case 'VIEWER':
         return 'Apoio familiar: acompanha dados do paciente, agenda consultas, exames e compartilha laudos. Administração de medicamentos reservada ao cuidador designado.';
+      case 'NO_ACCESS':
       default:
         return 'Você não possui acesso aos registros deste paciente.';
     }
@@ -112,7 +115,12 @@ class AuthorizationServiceImplementation implements IAuthorizationService {
     let role: PatientRole | null = null;
     if (patientId && accesses) {
       role = this.getUserRole(roleOrUserId || '', patientId, accesses);
-    } else if (roleOrUserId === 'ADMIN' || roleOrUserId === 'CAREGIVER' || roleOrUserId === 'VIEWER') {
+    } else if (
+      roleOrUserId === 'ADMIN' ||
+      roleOrUserId === 'CAREGIVER' ||
+      roleOrUserId === 'VIEWER' ||
+      roleOrUserId === 'NO_ACCESS'
+    ) {
       role = roleOrUserId as PatientRole;
     }
     return {

@@ -1027,9 +1027,9 @@ export function createApiRouter(
         const { userId } = req.params;
         const { patientId, role } = req.body;
 
-        if (!patientId || !role || (role !== 'VIEWER' && role !== 'CAREGIVER')) {
+        if (!patientId || !role || (role !== 'VIEWER' && role !== 'CAREGIVER' && role !== 'NO_ACCESS')) {
           return res.status(400).json({
-            error: 'patientId e role (VIEWER ou CAREGIVER) são obrigatórios.',
+            error: 'patientId e role (VIEWER, CAREGIVER ou NO_ACCESS) são obrigatórios.',
             code: 'INVALID_PARAMETERS',
           });
         }
@@ -1075,7 +1075,7 @@ export function createApiRouter(
     }
   );
 
-  // 3.3 Update Patient Access Role (VIEWER <-> CAREGIVER)
+  // 3.3 Update Patient Access Role (VIEWER <-> CAREGIVER <-> NO_ACCESS)
   router.patch(
     '/families/:familyId/members/:userId/patient-access/:patientId',
     requireAuth,
@@ -1087,9 +1087,9 @@ export function createApiRouter(
         const { userId, patientId } = req.params;
         const { role } = req.body;
 
-        if (!role || (role !== 'VIEWER' && role !== 'CAREGIVER')) {
+        if (!role || (role !== 'VIEWER' && role !== 'CAREGIVER' && role !== 'NO_ACCESS')) {
           return res.status(400).json({
-            error: 'Role deve ser VIEWER ou CAREGIVER.',
+            error: 'Role deve ser VIEWER, CAREGIVER ou NO_ACCESS.',
             code: 'INVALID_ROLE',
           });
         }

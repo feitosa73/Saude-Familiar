@@ -36,6 +36,15 @@ async function setupTestApp(options: { seedOwnerCpf?: boolean } = {}) {
 
   const app = express();
   app.use(express.json());
+  app.use((req: any, _res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.includes('demo-familiar')) {
+      req.user = { uid: 'demo-user-familiar', email: 'familiar.apoio@saudefamiliar.com' };
+    } else if (authHeader) {
+      req.user = { uid: ownerUid, email: 'cuidador.demo@saudefamiliar.com' };
+    }
+    next();
+  });
   app.use('/api', createApiRouter(healthRepo, familyRepo));
 
   const server = app.listen(0);

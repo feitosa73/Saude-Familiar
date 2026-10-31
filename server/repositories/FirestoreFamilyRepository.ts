@@ -1096,22 +1096,25 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
             grantedAt: p.createdAt || family.createdAt,
           }));
         } else {
-          patientAccesses = patients
-            .map((p) => {
-              const accList = patientAccessMap.get(p.id) || [];
-              const acc = accList.find((a) => a.userId === membership.userId);
-              if (acc) {
-                return {
-                  patientId: p.id,
-                  patientName: p.name,
-                  role: acc.role as PatientRole,
-                  accessId: acc.id,
-                  grantedAt: acc.createdAt || membership.joinedAt,
-                };
-              }
-              return null;
-            })
-            .filter((a): a is NonNullable<typeof a> => a !== null);
+          patientAccesses = patients.map((p) => {
+            const accList = patientAccessMap.get(p.id) || [];
+            const acc = accList.find((a) => a.userId === membership.userId);
+            if (acc) {
+              return {
+                patientId: p.id,
+                patientName: p.name,
+                role: acc.role as PatientRole,
+                accessId: acc.id,
+                grantedAt: acc.createdAt || membership.joinedAt,
+              };
+            }
+            return {
+              patientId: p.id,
+              patientName: p.name,
+              role: 'NO_ACCESS' as PatientRole,
+              grantedAt: undefined,
+            };
+          });
         }
 
         return {
@@ -1165,7 +1168,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     familyId: string,
     userId: string,
     patientId: string,
-    role: 'VIEWER' | 'CAREGIVER',
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS',
     grantedBy: string
   ): Promise<PatientAccess> {
     const now = new Date().toISOString();
@@ -1197,7 +1200,7 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     familyId: string,
     userId: string,
     patientId: string,
-    role: 'VIEWER' | 'CAREGIVER'
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS'
   ): Promise<PatientAccess> {
     const snap = await this.db
       .collection('families')

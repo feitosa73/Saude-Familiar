@@ -222,7 +222,7 @@ export class FirestoreHealthRepository implements IHealthRepository {
         const allowedPatients: Patient[] = [];
         for (const p of list) {
           const acc = await this.getPatientAccess(userId, p.id, familyId);
-          if (acc) {
+          if (acc && acc.role !== 'NO_ACCESS') {
             allowedPatients.push(p);
           }
         }

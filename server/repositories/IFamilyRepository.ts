@@ -109,14 +109,14 @@ export interface IFamilyRepository {
     familyId: string,
     userId: string,
     patientId: string,
-    role: 'VIEWER' | 'CAREGIVER',
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS',
     grantedBy: string
   ): Promise<PatientAccess>;
   updateMemberPatientAccess(
     familyId: string,
     userId: string,
     patientId: string,
-    role: 'VIEWER' | 'CAREGIVER'
+    role: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS'
   ): Promise<PatientAccess>;
   revokeMemberPatientAccess(
     familyId: string,

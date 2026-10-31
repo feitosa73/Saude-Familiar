@@ -133,12 +133,18 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
   const handleUpdateRole = async (
     member: FamilyMemberWithAccess,
     patientId: string,
-    newRole: 'VIEWER' | 'CAREGIVER'
+    newRole: 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS'
   ) => {
     if (!family?.id) return;
     try {
       await api.updateMemberPatientAccess(family.id, member.userId, patientId, { role: newRole });
-      setSuccessMessage(`Permissão de ${member.name} alterada para ${newRole === 'CAREGIVER' ? 'Cuidador(a)' : 'Visualizador(a)'}.`);
+      const roleLabel =
+        newRole === 'CAREGIVER'
+          ? 'Cuidador(a)'
+          : newRole === 'VIEWER'
+          ? 'Visualizador(a)'
+          : 'Sem acesso';
+      setSuccessMessage(`Permissão de ${member.name} alterada para ${roleLabel}.`);
       await loadData();
     } catch (err: any) {
       setErrorMessage(err.message || 'Falha ao atualizar papel.');
@@ -767,10 +773,16 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                                     className={`font-semibold ${
                                       acc.role === 'CAREGIVER'
                                         ? 'text-emerald-700 dark:text-emerald-400'
-                                        : 'text-blue-700 dark:text-blue-400'
+                                        : acc.role === 'VIEWER'
+                                        ? 'text-blue-700 dark:text-blue-400'
+                                        : 'text-slate-500 dark:text-slate-400'
                                     }`}
                                   >
-                                    {acc.role === 'CAREGIVER' ? 'Cuidador(a) (Edição)' : 'Visualizador(a) (Leitura)'}
+                                    {acc.role === 'CAREGIVER'
+                                      ? 'Cuidador(a) (Edição)'
+                                      : acc.role === 'VIEWER'
+                                      ? 'Visualizador(a) (Leitura)'
+                                      : 'Sem acesso'}
                                   </span>
                                 </div>
 
@@ -781,13 +793,14 @@ export const PeopleManagementView: React.FC<PeopleManagementViewProps> = ({
                                       handleUpdateRole(
                                         member,
                                         acc.patientId,
-                                        e.target.value as 'VIEWER' | 'CAREGIVER'
+                                        e.target.value as 'VIEWER' | 'CAREGIVER' | 'NO_ACCESS'
                                       )
                                     }
                                     className="text-xs sm:text-sm font-semibold py-1.5 px-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-200 min-h-[36px]"
                                   >
                                     <option value="VIEWER">Visualizador</option>
                                     <option value="CAREGIVER">Cuidador</option>
+                                    <option value="NO_ACCESS">Sem acesso</option>
                                   </select>
                                 )}
                               </div>
