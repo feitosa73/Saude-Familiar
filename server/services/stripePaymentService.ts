@@ -107,29 +107,35 @@ export class StripePaymentService {
       }
     }
 
-    // Modo Sandbox / Teste quando chave Stripe não está configurada
-    const cleanBaseUrl = returnBaseUrl.replace(/\/+$/, '');
-    const simulatedSessionId = `cs_test_${orderId}`;
-    const simulatedUrl = `${cleanBaseUrl}/wallet?test_checkout_session=${simulatedSessionId}&order_id=${orderId}`;
+    // Modo de teste automatizado local (exclusivo para execução de testes unitários com NODE_ENV === 'test')
+    if (process.env.NODE_ENV === 'test') {
+      const cleanBaseUrl = returnBaseUrl.replace(/\/+$/, '');
+      const simulatedSessionId = `cs_test_${orderId}`;
+      const simulatedUrl = `${cleanBaseUrl}/wallet?test_checkout_session=${simulatedSessionId}&order_id=${orderId}`;
 
-    const order: PaymentOrder = {
-      id: orderId,
-      userId,
-      amountCents,
-      currency: 'BRL',
-      credits,
-      status: 'PENDING',
-      stripeSessionId: simulatedSessionId,
-      checkoutUrl: simulatedUrl,
-      createdAt: now,
-      updatedAt: now,
-    };
+      const order: PaymentOrder = {
+        id: orderId,
+        userId,
+        amountCents,
+        currency: 'BRL',
+        credits,
+        status: 'PENDING',
+        stripeSessionId: simulatedSessionId,
+        checkoutUrl: simulatedUrl,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    const savedOrder = await this.familyRepo.createPaymentOrder(order);
-    return {
-      order: savedOrder,
-      checkoutUrl: simulatedUrl,
-    };
+      const savedOrder = await this.familyRepo.createPaymentOrder(order);
+      return {
+        order: savedOrder,
+        checkoutUrl: simulatedUrl,
+      };
+    }
+
+    throw new Error(
+      'O gateway de pagamentos da Stripe não está configurado no servidor (STRIPE_SECRET_KEY ausente). Para realizar pagamentos reais via Cartão ou Pix, configure as credenciais da Stripe.'
+    );
   }
 
   /**
@@ -144,22 +150,33 @@ export class StripePaymentService {
     let event: any;
 
     if (this.stripe && this.webhookSecret) {
-      if (!signature) {
+      if (signature) {
+        try {
+          event = this.stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
+        } catch (err: any) {
+          console.error('[StripePaymentService] Falha na validação de assinatura do webhook:', err.message);
+          throw new Error(`Webhook Signature Verification Failed: ${err.message}`);
+        }
+      } else if (process.env.NODE_ENV === 'test') {
+        try {
+          event = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf-8'));
+        } catch (err: any) {
+          throw new Error(`Payload de webhook inválido: ${err.message}`);
+        }
+      } else {
         throw new Error('Assinatura Stripe ausente no cabeçalho stripe-signature');
       }
-      try {
-        event = this.stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
-      } catch (err: any) {
-        console.error('[StripePaymentService] Falha na validação de assinatura do webhook:', err.message);
-        throw new Error(`Webhook Signature Verification Failed: ${err.message}`);
-      }
-    } else {
-      // Test or development fallback without live webhook signing secret
+    } else if (process.env.NODE_ENV === 'test') {
+      // Permitido estritamente no ambiente de teste automatizado local
       try {
         event = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf-8'));
       } catch (err: any) {
         throw new Error(`Payload de webhook inválido: ${err.message}`);
       }
+    } else {
+      throw new Error(
+        'Recepção de webhook não autorizada: STRIPE_WEBHOOK_SECRET não configurado ou assinatura ausente.'
+      );
     }
 
     // Processa eventos de sucesso de pagamento

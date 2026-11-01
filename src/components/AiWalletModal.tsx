@@ -17,6 +17,7 @@ import {
   QrCode,
   ExternalLink,
   Loader2,
+  Lock,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { AiWalletSummary, AiWalletLedgerEntry, PaymentOrderStatus } from '../types';
@@ -47,7 +48,6 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
-  const [isSimulatingConfirmation, setIsSimulatingConfirmation] = useState(false);
 
   const pollIntervalRef = useRef<any>(null);
 
@@ -74,19 +74,6 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      loadWalletData();
-    } else {
-      stopPolling();
-      setPendingPayment(null);
-      setFeedback(null);
-    }
-    return () => {
-      stopPolling();
-    };
-  }, [isOpen]);
-
   const stopPolling = () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -94,7 +81,7 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
     }
   };
 
-  // Inicia o polling a cada 3 segundos enquanto houver um pedido pendente
+  // Polling automático para acompanhamento da confirmação da Stripe via webhook
   const startPolling = (orderId: string) => {
     stopPolling();
     pollIntervalRef.current = setInterval(async () => {
@@ -105,7 +92,7 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
           setPendingPayment(null);
           setFeedback({
             type: 'success',
-            message: 'Pagamento confirmado com sucesso! 100 créditos de IA foram liberados na sua conta.',
+            message: 'Pagamento confirmado com sucesso pela Stripe! 100 créditos de IA foram liberados na sua conta.',
           });
           await loadWalletData();
         } else if (orderStatus.status === 'FAILED' || orderStatus.status === 'EXPIRED') {
@@ -113,7 +100,7 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
           setPendingPayment(null);
           setFeedback({
             type: 'error',
-            message: 'O pagamento expirou ou não pôde ser concluído. Tente novamente.',
+            message: 'O pagamento expirou ou não pôde ser concluído no gateway. Tente novamente.',
           });
         }
       } catch (err: any) {
@@ -122,7 +109,45 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
     }, 3000);
   };
 
-  // Dispara a criação da sessão real no Stripe Checkout
+  // Verifica retorno de checkout pela URL (ex: ?status=success&order_id=...)
+  useEffect(() => {
+    if (isOpen) {
+      loadWalletData();
+
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlStatus = urlParams.get('status');
+        const urlOrderId = urlParams.get('order_id');
+
+        if (urlOrderId) {
+          if (urlStatus === 'success') {
+            setFeedback({
+              type: 'info',
+              message: 'Retorno do checkout detectado! Verificando confirmação do pagamento junto à Stripe...',
+            });
+            startPolling(urlOrderId);
+          } else if (urlStatus === 'cancelled') {
+            setFeedback({
+              type: 'info',
+              message: 'O processo de pagamento foi cancelado na Stripe antes da conclusão.',
+            });
+          }
+          // Limpa os parâmetros da URL para evitar reapresentação em refresh
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    } else {
+      stopPolling();
+      setPendingPayment(null);
+      setFeedback(null);
+    }
+
+    return () => {
+      stopPolling();
+    };
+  }, [isOpen]);
+
+  // Criação da sessão autoritativa de checkout na Stripe
   const handleInitiateCheckout = async () => {
     setIsCreatingCheckout(true);
     setFeedback(null);
@@ -141,72 +166,20 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
       setPendingPayment(pending);
       startPolling(result.orderId);
 
-      // Abre a página do Stripe Checkout em nova aba ou redireciona
-      if (result.checkoutUrl && !result.checkoutUrl.includes('test_checkout_session')) {
-        window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer');
+      // Redireciona para a página segura de pagamento da Stripe
+      if (result.checkoutUrl) {
+        window.location.assign(result.checkoutUrl);
       }
-
-      setFeedback({
-        type: 'info',
-        message: 'Pedido gerado! Conclua o pagamento via Cartão ou Pix na Stripe para liberação imediata dos créditos.',
-      });
     } catch (err: any) {
       console.error('Falha ao criar checkout de créditos:', err);
       setFeedback({
         type: 'error',
-        message: err.message || 'Falha ao conectar com o gateway de pagamentos da Stripe.',
+        message:
+          err.message ||
+          'Falha ao conectar com o gateway de pagamentos da Stripe. Verifique as credenciais no servidor.',
       });
     } finally {
       setIsCreatingCheckout(false);
-    }
-  };
-
-  // Simulação interativa no ambiente local/sandbox de recebimento de webhook
-  const handleSimulateWebhookSuccess = async () => {
-    if (!pendingPayment) return;
-    setIsSimulatingConfirmation(true);
-    try {
-      // Dispara webhook de simulação na API
-      const response = await fetch('/api/webhooks/stripe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'checkout.session.completed',
-          data: {
-            object: {
-              id: pendingPayment.stripeSessionId,
-              payment_status: 'paid',
-              metadata: {
-                orderId: pendingPayment.orderId,
-              },
-            },
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Erro ao processar confirmação do webhook');
-      }
-
-      // Consulta imediatamente o status atualizado
-      const statusRes = await api.getPaymentOrderStatus(pendingPayment.orderId);
-      if (statusRes.status === 'PAID') {
-        stopPolling();
-        setPendingPayment(null);
-        setFeedback({
-          type: 'success',
-          message: 'Pagamento confirmado via Webhook! 100 créditos adicionados com sucesso ao seu saldo.',
-        });
-        await loadWalletData();
-      }
-    } catch (err: any) {
-      setFeedback({
-        type: 'error',
-        message: `Falha ao processar confirmação: ${err.message}`,
-      });
-    } finally {
-      setIsSimulatingConfirmation(false);
     }
   };
 
@@ -402,42 +375,27 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                           <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
-                          Verificando confirmação automática...
+                          Aguardando confirmação oficial da Stripe...
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mt-1">
-                        Pedido <strong>#{pendingPayment.orderId}</strong> criado. Os créditos serão adicionados instantaneamente assim que o Stripe confirmar o pagamento via Pix ou Cartão.
+                        Pedido <strong>#{pendingPayment.orderId}</strong> em processamento. Os créditos serão adicionados automaticamente assim que a Stripe confirmar a liquidação do Pix ou Cartão.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-800/60">
-                    {pendingPayment.checkoutUrl && !pendingPayment.checkoutUrl.includes('test_checkout_session') && (
+                    {pendingPayment.checkoutUrl && (
                       <a
                         href={pendingPayment.checkoutUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Abrir Checkout Stripe</span>
+                        <span>Ir para o Checkout da Stripe</span>
                       </a>
                     )}
-
-                    {/* Botão de teste facilitador em modo sandbox/preview */}
-                    <button
-                      type="button"
-                      onClick={handleSimulateWebhookSuccess}
-                      disabled={isSimulatingConfirmation}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSimulatingConfirmation ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      )}
-                      <span>Simular Confirmação Webhook</span>
-                    </button>
 
                     <button
                       type="button"
@@ -488,31 +446,52 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    id="btn-buy-credit-lot"
-                    onClick={handleInitiateCheckout}
-                    disabled={isCreatingCheckout || Boolean(pendingPayment)}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm shadow-md transition disabled:opacity-50 cursor-pointer min-h-[46px] shrink-0"
-                  >
-                    {isCreatingCheckout ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Gerando Checkout...</span>
-                      </>
-                    ) : pendingPayment ? (
-                      <>
-                        <Clock className="w-4 h-4" />
-                        <span>Aguardando Pagamento</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingBag className="w-4 h-4" />
-                        <span>Comprar 100 créditos</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      id="btn-buy-credit-lot"
+                      onClick={handleInitiateCheckout}
+                      disabled={isCreatingCheckout || Boolean(pendingPayment) || wallet?.isStripeConfigured === false}
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm shadow-md transition disabled:opacity-50 cursor-pointer min-h-[46px]"
+                    >
+                      {isCreatingCheckout ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Redirecionando para Stripe...</span>
+                        </>
+                      ) : pendingPayment ? (
+                        <>
+                          <Clock className="w-4 h-4" />
+                          <span>Aguardando Pagamento</span>
+                        </>
+                      ) : wallet?.isStripeConfigured === false ? (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          <span>Stripe não configurado</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>Comprar 100 créditos</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="text-2xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      <span>Checkout Oficial Stripe (SSL 256-bit)</span>
+                    </div>
+                  </div>
                 </div>
+
+                {wallet && wallet.isStripeConfigured === false && (
+                  <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Aviso de Configuração:</strong> O gateway Stripe ainda não possui as chaves de API (<code className="font-mono text-2xs bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded">STRIPE_SECRET_KEY</code>) configuradas no ambiente. Para processar cobranças reais via Cartão e Pix, configure as credenciais no servidor. A adição de créditos sem pagamento foi desativada.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Table of Operations & Costs */}

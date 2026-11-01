@@ -71,7 +71,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAccountSecurityModalOpen, setIsAccountSecurityModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search;
+      const path = window.location.pathname;
+      return path.includes('/wallet') || search.includes('order_id') || search.includes('status=success');
+    }
+    return false;
+  });
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   useEffect(() => {

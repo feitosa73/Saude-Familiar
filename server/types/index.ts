@@ -527,6 +527,7 @@ export interface AiWalletSummary {
   initialGrantClaimedAt?: string;
   updatedAt: string;
   version: number;
+  isStripeConfigured?: boolean;
 }
 
 export type PaymentOrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';

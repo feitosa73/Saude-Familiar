@@ -345,4 +345,26 @@ describe('Stripe Credit Payment & Monetization Flow', () => {
       env.close();
     }
   });
+
+  it('6. Bloqueia simulação manual de compra fora do ambiente de teste', async () => {
+    const prevEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'production';
+      const env = await setupPaymentTestEnv();
+      try {
+        env.setAuth({ uid: 'user-pay-1', email: 'user1@pagamento.com' });
+        const res = await env.authFetch(`${env.baseUrl}/user/wallet/simulate-purchase`, {
+          method: 'POST',
+        });
+        assert.equal(res.status, 403);
+        const data = await res.json();
+        assert.equal(data.code, 'SIMULATION_DISABLED');
+      } finally {
+        env.close();
+      }
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+    }
+  });
 });
+

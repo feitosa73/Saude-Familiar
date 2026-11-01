@@ -82,6 +82,7 @@ export function createApiRouter(
         ...wallet,
         config: AI_OPERATIONS_CONFIG,
         lotPurchaseConfig: AI_LOT_PURCHASE_CONFIG,
+        isStripeConfigured: stripePaymentService.isStripeConfigured(),
       });
     } catch (error: any) {
       console.error('[API] Erro ao carregar carteira de créditos de IA:', error);
@@ -184,8 +185,15 @@ export function createApiRouter(
     }
   });
 
-  // 1.5 Simulação de Sandbox (mantida para testes e desenvolvimento)
+  // 1.5 Simulação de Sandbox (estritamente desabilitada fora de ambiente de testes automatizados)
   router.post('/user/wallet/simulate-purchase', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    if (process.env.NODE_ENV !== 'test') {
+      return res.status(403).json({
+        error: 'A simulação direta de compra foi descontinuada. Os créditos de IA só podem ser adquiridos via pagamento real confirmado pelo gateway Stripe.',
+        code: 'SIMULATION_DISABLED',
+      });
+    }
+
     try {
       const userId = req.user?.uid;
       if (!userId) {

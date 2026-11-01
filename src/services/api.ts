@@ -645,6 +645,7 @@ export const api = {
       AiWalletSummary & {
         config: Record<string, { operationType: string; cost: number; label: string }>;
         lotPurchaseConfig: { credits: number; priceBrl: number; promotional: boolean };
+        isStripeConfigured?: boolean;
       }
     >('/user/wallet'),
 
@@ -675,17 +676,6 @@ export const api = {
       createdAt: string;
       updatedAt: string;
     }>(`/user/wallet/orders/${orderId}/status`),
-
-  simulatePurchaseWalletLot: () =>
-    request<
-      AiWalletSummary & {
-        config: Record<string, { operationType: string; cost: number; label: string }>;
-        lotPurchaseConfig: { credits: number; priceBrl: number; promotional: boolean };
-        message: string;
-      }
-    >('/user/wallet/simulate-purchase', {
-      method: 'POST',
-    }),
 };
 
 
