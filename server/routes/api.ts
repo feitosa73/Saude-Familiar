@@ -21,6 +21,7 @@ import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
 import { CpfDuplicateError, validateCpf, normalizeCpf, hashCpf } from '../utils/cpf';
 import { CreditWalletService } from '../services/creditWalletService';
+import { StripePaymentService } from '../services/stripePaymentService';
 import { createRequireAiCredits } from '../middlewares/requireAiCredits';
 import {
   AI_LOT_PURCHASE_CONFIG,
@@ -45,6 +46,7 @@ export function createApiRouter(
   const requireActiveMembership = createRequireActiveMembership(familyRepository);
   const requireUserCpf = createRequireUserCpf(familyRepository);
   const creditWalletService = new CreditWalletService(familyRepository);
+  const stripePaymentService = new StripePaymentService(familyRepository, creditWalletService);
 
   // In-memory Multer for transitory AI file processing (Zero Storage / In-memory only)
   const upload = multer({
@@ -102,6 +104,87 @@ export function createApiRouter(
     }
   });
 
+  // 1.2 Monetização Real via Stripe Checkout: Inicialização de Sessão de Pagamento
+  router.post('/user/wallet/checkout-session', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
+      }
+
+      const returnBaseUrl =
+        (req.body?.returnUrl as string) ||
+        (req.headers.origin as string) ||
+        (req.headers.referer ? new URL(req.headers.referer).origin : 'http://localhost:3000');
+
+      const userEmail = req.user?.email || undefined;
+      const result = await stripePaymentService.createCheckoutSession(userId, userEmail, returnBaseUrl);
+
+      res.status(201).json({
+        success: true,
+        orderId: result.order.id,
+        order: result.order,
+        checkoutUrl: result.checkoutUrl,
+        stripeSessionId: result.order.stripeSessionId,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao criar checkout session de créditos:', error);
+      res.status(500).json({
+        error: error.message || 'Erro ao inicializar sessão de pagamento na Stripe',
+        code: 'CHECKOUT_SESSION_FAILED',
+      });
+    }
+  });
+
+  // 1.3 Acompanhamento de Pedido de Pagamento (Polling do status da transação)
+  router.get('/user/wallet/orders/:orderId/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
+      }
+
+      const { orderId } = req.params;
+      const order = await stripePaymentService.getPaymentOrderStatus(orderId, userId);
+      if (!order) {
+        return res.status(404).json({ error: 'Ordem de pagamento não encontrada', code: 'ORDER_NOT_FOUND' });
+      }
+
+      res.json({
+        orderId: order.id,
+        status: order.status,
+        credits: order.credits,
+        amountCents: order.amountCents,
+        currency: order.currency,
+        paidAt: order.paidAt,
+        stripeSessionId: order.stripeSessionId,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao consultar status da ordem de pagamento:', error);
+      res.status(403).json({
+        error: error.message || 'Não autorizado a consultar esta ordem',
+        code: 'ORDER_ACCESS_DENIED',
+      });
+    }
+  });
+
+  // 1.4 Webhook Oficial Stripe (Recepção autoritativa assinado criptograficamente)
+  router.post('/webhooks/stripe', async (req: Request, res: Response) => {
+    try {
+      const signature = req.headers['stripe-signature'] as string | undefined;
+      const rawBody = (req as any).rawBody || req.body;
+
+      const result = await stripePaymentService.handleWebhookEvent(rawBody, signature);
+      return res.status(200).json({ received: true, ...result });
+    } catch (err: any) {
+      console.error('[API] Falha no processamento do webhook da Stripe:', err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+  });
+
+  // 1.5 Simulação de Sandbox (mantida para testes e desenvolvimento)
   router.post('/user/wallet/simulate-purchase', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.uid;

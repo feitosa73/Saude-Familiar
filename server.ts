@@ -24,8 +24,14 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  // JSON Body parser
-  app.use(express.json());
+  // JSON Body parser with rawBody preserved for Stripe webhook verification
+  app.use(
+    express.json({
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
 
   // Request logger middleware with requestId and sanitized operational metrics
   app.use(requestLogger);

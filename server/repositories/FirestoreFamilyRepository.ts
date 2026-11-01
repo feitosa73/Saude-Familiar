@@ -15,6 +15,8 @@ import {
   AiWalletSummary,
   AiWalletLedgerEntry,
   LedgerEntryStatus,
+  PaymentOrder,
+  PaymentOrderStatus,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 import {
@@ -1563,6 +1565,52 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
       .collection('wallet_ledger')
       .doc(ledgerId)
       .update(updateData);
+  }
+
+  // =========================================================================
+  // PAYMENT ORDERS (Stripe Monetization)
+  // =========================================================================
+
+  async createPaymentOrder(order: PaymentOrder): Promise<PaymentOrder> {
+    await this.db.collection('payment_orders').doc(order.id).set(order);
+    return order;
+  }
+
+  async getPaymentOrder(orderId: string): Promise<PaymentOrder | null> {
+    const doc = await this.db.collection('payment_orders').doc(orderId).get();
+    if (!doc.exists) return null;
+    return doc.data() as PaymentOrder;
+  }
+
+  async getPaymentOrderByStripeSession(stripeSessionId: string): Promise<PaymentOrder | null> {
+    const snap = await this.db
+      .collection('payment_orders')
+      .where('stripeSessionId', '==', stripeSessionId)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return snap.docs[0].data() as PaymentOrder;
+  }
+
+  async updatePaymentOrderStatus(
+    orderId: string,
+    status: PaymentOrderStatus,
+    paidAt?: string,
+    stripePaymentIntentId?: string
+  ): Promise<PaymentOrder | null> {
+    const ref = this.db.collection('payment_orders').doc(orderId);
+    const snap = await ref.get();
+    if (!snap.exists) return null;
+    const now = new Date().toISOString();
+    const updateData: any = {
+      status,
+      updatedAt: now,
+    };
+    if (paidAt) updateData.paidAt = paidAt;
+    if (stripePaymentIntentId) updateData.stripePaymentIntentId = stripePaymentIntentId;
+    await ref.update(updateData);
+    const updatedSnap = await ref.get();
+    return updatedSnap.data() as PaymentOrder;
   }
 }
 

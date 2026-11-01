@@ -532,4 +532,22 @@ export interface AiWalletSummary {
   version: number;
 }
 
+export type PaymentOrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
+
+export interface PaymentOrder {
+  id: string;
+  userId: string;
+  amountCents: number;
+  currency: 'BRL';
+  credits: number;
+  status: PaymentOrderStatus;
+  stripeSessionId: string;
+  stripePaymentIntentId?: string;
+  checkoutUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+}
+
+
 

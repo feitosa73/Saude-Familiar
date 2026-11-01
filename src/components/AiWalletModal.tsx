@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -13,14 +13,26 @@ import {
   ArrowDownRight,
   ShieldCheck,
   Zap,
+  CreditCard,
+  QrCode,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { AiWalletSummary, AiWalletLedgerEntry } from '../types';
+import { AiWalletSummary, AiWalletLedgerEntry, PaymentOrderStatus } from '../types';
 
 interface AiWalletModalProps {
   isOpen: boolean;
   onClose: () => void;
   onWalletUpdated?: (wallet: AiWalletSummary) => void;
+}
+
+interface PendingPayment {
+  orderId: string;
+  checkoutUrl: string;
+  stripeSessionId: string;
+  status: PaymentOrderStatus;
+  startedAt: number;
 }
 
 export const AiWalletModal: React.FC<AiWalletModalProps> = ({
@@ -31,13 +43,16 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
   const [wallet, setWallet] = useState<AiWalletSummary | null>(null);
   const [history, setHistory] = useState<AiWalletLedgerEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPurchasing, setIsPurchasing] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const [isSimulatingConfirmation, setIsSimulatingConfirmation] = useState(false);
+
+  const pollIntervalRef = useRef<any>(null);
 
   const loadWalletData = async () => {
     setIsLoading(true);
-    setFeedback(null);
     try {
       const [walletData, historyData] = await Promise.all([
         api.getAiWallet(),
@@ -62,34 +77,136 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadWalletData();
+    } else {
+      stopPolling();
+      setPendingPayment(null);
+      setFeedback(null);
     }
+    return () => {
+      stopPolling();
+    };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
 
-  const handleSimulatePurchase = async () => {
-    setIsPurchasing(true);
+  // Inicia o polling a cada 3 segundos enquanto houver um pedido pendente
+  const startPolling = (orderId: string) => {
+    stopPolling();
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const orderStatus = await api.getPaymentOrderStatus(orderId);
+        if (orderStatus.status === 'PAID') {
+          stopPolling();
+          setPendingPayment(null);
+          setFeedback({
+            type: 'success',
+            message: 'Pagamento confirmado com sucesso! 100 créditos de IA foram liberados na sua conta.',
+          });
+          await loadWalletData();
+        } else if (orderStatus.status === 'FAILED' || orderStatus.status === 'EXPIRED') {
+          stopPolling();
+          setPendingPayment(null);
+          setFeedback({
+            type: 'error',
+            message: 'O pagamento expirou ou não pôde ser concluído. Tente novamente.',
+          });
+        }
+      } catch (err: any) {
+        console.warn('[AiWalletModal] Erro ao consultar status do pedido:', err);
+      }
+    }, 3000);
+  };
+
+  // Dispara a criação da sessão real no Stripe Checkout
+  const handleInitiateCheckout = async () => {
+    setIsCreatingCheckout(true);
     setFeedback(null);
     try {
-      const result = await api.simulatePurchaseWalletLot();
-      setWallet(result);
-      if (onWalletUpdated) {
-        onWalletUpdated(result);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const result = await api.createWalletCheckoutSession(origin);
+
+      const pending: PendingPayment = {
+        orderId: result.orderId,
+        checkoutUrl: result.checkoutUrl,
+        stripeSessionId: result.stripeSessionId,
+        status: 'PENDING',
+        startedAt: Date.now(),
+      };
+
+      setPendingPayment(pending);
+      startPolling(result.orderId);
+
+      // Abre a página do Stripe Checkout em nova aba ou redireciona
+      if (result.checkoutUrl && !result.checkoutUrl.includes('test_checkout_session')) {
+        window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer');
       }
+
       setFeedback({
-        type: 'success',
-        message: 'Lote promocional de 100 créditos adicionado com sucesso! Seus créditos comprados não expiram.',
+        type: 'info',
+        message: 'Pedido gerado! Conclua o pagamento via Cartão ou Pix na Stripe para liberação imediata dos créditos.',
       });
-      // Recarrega extrato
-      const updatedHistory = await api.getAiWalletHistory(30);
-      setHistory(updatedHistory);
+    } catch (err: any) {
+      console.error('Falha ao criar checkout de créditos:', err);
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Falha ao conectar com o gateway de pagamentos da Stripe.',
+      });
+    } finally {
+      setIsCreatingCheckout(false);
+    }
+  };
+
+  // Simulação interativa no ambiente local/sandbox de recebimento de webhook
+  const handleSimulateWebhookSuccess = async () => {
+    if (!pendingPayment) return;
+    setIsSimulatingConfirmation(true);
+    try {
+      // Dispara webhook de simulação na API
+      const response = await fetch('/api/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'checkout.session.completed',
+          data: {
+            object: {
+              id: pendingPayment.stripeSessionId,
+              payment_status: 'paid',
+              metadata: {
+                orderId: pendingPayment.orderId,
+              },
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Erro ao processar confirmação do webhook');
+      }
+
+      // Consulta imediatamente o status atualizado
+      const statusRes = await api.getPaymentOrderStatus(pendingPayment.orderId);
+      if (statusRes.status === 'PAID') {
+        stopPolling();
+        setPendingPayment(null);
+        setFeedback({
+          type: 'success',
+          message: 'Pagamento confirmado via Webhook! 100 créditos adicionados com sucesso ao seu saldo.',
+        });
+        await loadWalletData();
+      }
     } catch (err: any) {
       setFeedback({
         type: 'error',
-        message: err.message || 'Falha ao processar aquisição do lote promocional.',
+        message: `Falha ao processar confirmação: ${err.message}`,
       });
     } finally {
-      setIsPurchasing(false);
+      setIsSimulatingConfirmation(false);
     }
   };
 
@@ -107,6 +224,8 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
       return isoString;
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -179,11 +298,15 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
               className={`p-3.5 rounded-xl text-sm flex items-start gap-2.5 ${
                 feedback.type === 'success'
                   ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800'
+                  : feedback.type === 'info'
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800'
                   : 'bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800'
               }`}
             >
               {feedback.type === 'success' ? (
                 <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+              ) : feedback.type === 'info' ? (
+                <Clock className="w-5 h-5 shrink-0 mt-0.5" />
               ) : (
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               )}
@@ -265,7 +388,72 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
                 </div>
               </div>
 
-              {/* Promotional Purchase Box */}
+              {/* Status: Aguardando Pagamento (quando há checkout em andamento) */}
+              {pendingPayment && (
+                <div className="rounded-2xl border-2 border-amber-300 dark:border-amber-700/80 bg-amber-50/70 dark:bg-amber-950/40 p-4.5 space-y-3 animate-in fade-in duration-300">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Clock className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200">
+                          Aguardando Pagamento
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                          Verificando confirmação automática...
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 mt-1">
+                        Pedido <strong>#{pendingPayment.orderId}</strong> criado. Os créditos serão adicionados instantaneamente assim que o Stripe confirmar o pagamento via Pix ou Cartão.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-800/60">
+                    {pendingPayment.checkoutUrl && !pendingPayment.checkoutUrl.includes('test_checkout_session') && (
+                      <a
+                        href={pendingPayment.checkoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Abrir Checkout Stripe</span>
+                      </a>
+                    )}
+
+                    {/* Botão de teste facilitador em modo sandbox/preview */}
+                    <button
+                      type="button"
+                      onClick={handleSimulateWebhookSuccess}
+                      disabled={isSimulatingConfirmation}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSimulatingConfirmation ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Simular Confirmação Webhook</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopPolling();
+                        setPendingPayment(null);
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline ml-auto cursor-pointer"
+                    >
+                      Cancelar acompanhamento
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Promotional Purchase Box with Stripe Checkout */}
               <div className="relative overflow-hidden rounded-2xl border-2 border-indigo-200 dark:border-indigo-900 bg-linear-to-br from-indigo-50/70 via-blue-50/40 to-white dark:from-indigo-950/40 dark:via-slate-900 dark:to-slate-900 p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
@@ -286,19 +474,36 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
                         (R$ 0,50 por crédito)
                       </span>
                     </div>
+
+                    <div className="mt-2.5 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <CreditCard className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        Cartão de Crédito
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <QrCode className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        Pix com aprovação imediata
+                      </span>
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     id="btn-buy-credit-lot"
-                    onClick={handleSimulatePurchase}
-                    disabled={isPurchasing}
+                    onClick={handleInitiateCheckout}
+                    disabled={isCreatingCheckout || Boolean(pendingPayment)}
                     className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm shadow-md transition disabled:opacity-50 cursor-pointer min-h-[46px] shrink-0"
                   >
-                    {isPurchasing ? (
+                    {isCreatingCheckout ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Processando...</span>
+                        <span>Gerando Checkout...</span>
+                      </>
+                    ) : pendingPayment ? (
+                      <>
+                        <Clock className="w-4 h-4" />
+                        <span>Aguardando Pagamento</span>
                       </>
                     ) : (
                       <>

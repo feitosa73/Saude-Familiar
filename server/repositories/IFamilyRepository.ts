@@ -12,6 +12,8 @@ import {
   AiWalletSummary,
   AiWalletLedgerEntry,
   LedgerEntryStatus,
+  PaymentOrder,
+  PaymentOrderStatus,
 } from '../types';
 
 export interface UserDocument {
@@ -155,5 +157,16 @@ export interface IFamilyRepository {
   getLedgerEntries(userId: string, limit?: number): Promise<AiWalletLedgerEntry[]>;
   findLedgerEntryByOperationId(userId: string, operationId: string): Promise<AiWalletLedgerEntry | null>;
   updateLedgerEntryStatus(userId: string, ledgerId: string, status: LedgerEntryStatus, errorMessage?: string): Promise<void>;
+
+  // Payment Orders (Stripe Monetization)
+  createPaymentOrder(order: PaymentOrder): Promise<PaymentOrder>;
+  getPaymentOrder(orderId: string): Promise<PaymentOrder | null>;
+  getPaymentOrderByStripeSession(stripeSessionId: string): Promise<PaymentOrder | null>;
+  updatePaymentOrderStatus(
+    orderId: string,
+    status: PaymentOrderStatus,
+    paidAt?: string,
+    stripePaymentIntentId?: string
+  ): Promise<PaymentOrder | null>;
 }
 

@@ -23,6 +23,8 @@ import {
   AiWalletSummary,
   AiWalletLedgerEntry,
   LedgerEntryStatus,
+  PaymentOrder,
+  PaymentOrderStatus,
 } from '../types';
 import { IHealthRepository } from './IRepository';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
@@ -54,6 +56,7 @@ export class MemoryFamilyRepository implements IFamilyRepository {
   private cpfRegistry = new Map<string, CpfRegistryRecord>(); // key: cpfHash
   private wallets = new Map<string, AiWalletSummary>(); // key: userId
   private ledger = new Map<string, AiWalletLedgerEntry>(); // key: id
+  private paymentOrders = new Map<string, PaymentOrder>(); // key: id
   private healthRepo?: MemoryHealthRepository;
 
   constructor() {
@@ -91,6 +94,9 @@ export class MemoryFamilyRepository implements IFamilyRepository {
         requests: Array.from(this.requests.entries()),
         invitations: Array.from(this.invitations.entries()),
         cpfRegistry: Array.from(this.cpfRegistry.entries()),
+        wallets: Array.from(this.wallets.entries()),
+        ledger: Array.from(this.ledger.entries()),
+        paymentOrders: Array.from(this.paymentOrders.entries()),
         health: this.healthRepo ? this.healthRepo.exportState() : null,
       };
       fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
@@ -113,6 +119,9 @@ export class MemoryFamilyRepository implements IFamilyRepository {
           this.requests = new Map(data.requests || []);
           this.invitations = new Map(data.invitations || []);
           this.cpfRegistry = new Map(data.cpfRegistry || []);
+          if (data.wallets) this.wallets = new Map(data.wallets);
+          if (data.ledger) this.ledger = new Map(data.ledger);
+          if (data.paymentOrders) this.paymentOrders = new Map(data.paymentOrders);
 
           // Garante que demo-user-cuidador possua CPF regularizado mesmo se carregado de arquivo legado
           const cuidador = this.users.get('demo-user-cuidador');
@@ -898,6 +907,45 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       this.ledger.set(ledgerId, entry);
       this.persist();
     }
+  }
+
+  // Payment Orders (Stripe Monetization)
+  async createPaymentOrder(order: PaymentOrder): Promise<PaymentOrder> {
+    const copy: PaymentOrder = { ...order };
+    this.paymentOrders.set(copy.id, copy);
+    this.persist();
+    return copy;
+  }
+
+  async getPaymentOrder(orderId: string): Promise<PaymentOrder | null> {
+    const order = this.paymentOrders.get(orderId);
+    return order ? { ...order } : null;
+  }
+
+  async getPaymentOrderByStripeSession(stripeSessionId: string): Promise<PaymentOrder | null> {
+    for (const order of this.paymentOrders.values()) {
+      if (order.stripeSessionId === stripeSessionId) {
+        return { ...order };
+      }
+    }
+    return null;
+  }
+
+  async updatePaymentOrderStatus(
+    orderId: string,
+    status: PaymentOrderStatus,
+    paidAt?: string,
+    stripePaymentIntentId?: string
+  ): Promise<PaymentOrder | null> {
+    const order = this.paymentOrders.get(orderId);
+    if (!order) return null;
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    if (paidAt) order.paidAt = paidAt;
+    if (stripePaymentIntentId) order.stripePaymentIntentId = stripePaymentIntentId;
+    this.paymentOrders.set(orderId, order);
+    this.persist();
+    return { ...order };
   }
 }
 

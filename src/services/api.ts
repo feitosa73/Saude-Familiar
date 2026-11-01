@@ -28,6 +28,8 @@ import {
   ItemAgenda,
   AiWalletSummary,
   AiWalletLedgerEntry,
+  PaymentOrder,
+  PaymentOrderStatus,
 } from '../types';
 import { authService } from './authService';
 
@@ -648,6 +650,31 @@ export const api = {
 
   getAiWalletHistory: (limit?: number) =>
     request<AiWalletLedgerEntry[]>(`/user/wallet/history${limit ? `?limit=${limit}` : ''}`),
+
+  createWalletCheckoutSession: (returnUrl?: string) =>
+    request<{
+      success: boolean;
+      orderId: string;
+      order: PaymentOrder;
+      checkoutUrl: string;
+      stripeSessionId: string;
+    }>('/user/wallet/checkout-session', {
+      method: 'POST',
+      body: JSON.stringify({ returnUrl }),
+    }),
+
+  getPaymentOrderStatus: (orderId: string) =>
+    request<{
+      orderId: string;
+      status: PaymentOrderStatus;
+      credits: number;
+      amountCents: number;
+      currency: string;
+      paidAt?: string;
+      stripeSessionId: string;
+      createdAt: string;
+      updatedAt: string;
+    }>(`/user/wallet/orders/${orderId}/status`),
 
   simulatePurchaseWalletLot: () =>
     request<
