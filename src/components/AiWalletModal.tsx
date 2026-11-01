@@ -428,8 +428,9 @@ export const AiWalletModal: React.FC<AiWalletModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSimulateWebhookSuccess}
-                      disabled={isSimulatingConfirmation}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
+                      disabled
+                      aria-label="Simular Confirmação Webhook desabilitado temporariamente"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed cursor-not-allowed"
                     >
                       {isSimulatingConfirmation ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
