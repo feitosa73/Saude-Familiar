@@ -20,6 +20,12 @@ import { createRequireUserCpf } from '../middlewares/requireUserCpf';
 import { requireFamilyOwner } from '../middlewares/requireFamilyOwner';
 import { MemoryFamilyRepository, MemoryHealthRepository } from '../repositories/MemoryRepositories';
 import { CpfDuplicateError, validateCpf, normalizeCpf, hashCpf } from '../utils/cpf';
+import { CreditWalletService } from '../services/creditWalletService';
+import { createRequireAiCredits } from '../middlewares/requireAiCredits';
+import {
+  AI_LOT_PURCHASE_CONFIG,
+  AI_OPERATIONS_CONFIG,
+} from '../config/aiOperationsConfig';
 
 const sharedMemoryFamilyRepo = new MemoryFamilyRepository();
 const sharedMemoryHealthRepo = new MemoryHealthRepository(sharedMemoryFamilyRepo);
@@ -38,6 +44,7 @@ export function createApiRouter(
   const authzService = new ServerAuthorizationService(repository);
   const requireActiveMembership = createRequireActiveMembership(familyRepository);
   const requireUserCpf = createRequireUserCpf(familyRepository);
+  const creditWalletService = new CreditWalletService(familyRepository);
 
   // In-memory Multer for transitory AI file processing (Zero Storage / In-memory only)
   const upload = multer({
@@ -59,6 +66,63 @@ export function createApiRouter(
       email: authUser.email || null,
       authenticated: true,
     });
+  });
+
+  // 1.1 Carteira de Créditos de IA (Pertence ao usuário autenticado, independente de família/paciente)
+  router.get('/user/wallet', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
+      }
+      const wallet = await creditWalletService.getWallet(userId);
+      res.json({
+        ...wallet,
+        config: AI_OPERATIONS_CONFIG,
+        lotPurchaseConfig: AI_LOT_PURCHASE_CONFIG,
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao carregar carteira de créditos de IA:', error);
+      res.status(500).json({ error: 'Erro ao consultar carteira de créditos', code: 'WALLET_FETCH_FAILED' });
+    }
+  });
+
+  router.get('/user/wallet/history', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
+      }
+      const limit = Number(req.query.limit) || 50;
+      const history = await creditWalletService.getLedgerHistory(userId, limit);
+      res.json(history);
+    } catch (error: any) {
+      console.error('[API] Erro ao listar histórico do ledger de créditos:', error);
+      res.status(500).json({ error: 'Erro ao consultar histórico de créditos', code: 'WALLET_HISTORY_FAILED' });
+    }
+  });
+
+  router.post('/user/wallet/simulate-purchase', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado', code: 'UNAUTHORIZED' });
+      }
+      const updatedWallet = await creditWalletService.creditPurchasedLot(
+        userId,
+        AI_LOT_PURCHASE_CONFIG.credits,
+        `sim_${Date.now()}`
+      );
+      res.json({
+        ...updatedWallet,
+        config: AI_OPERATIONS_CONFIG,
+        lotPurchaseConfig: AI_LOT_PURCHASE_CONFIG,
+        message: 'Lote promocional de 100 créditos adquirido com sucesso!',
+      });
+    } catch (error: any) {
+      console.error('[API] Erro ao simular compra de lote de créditos:', error);
+      res.status(500).json({ error: 'Erro ao processar compra de lote de créditos', code: 'PURCHASE_FAILED' });
+    }
   });
 
   // 2. Authoritative User Identity + Membership from Firestore
@@ -2026,11 +2090,12 @@ export function createApiRouter(
     }
   );
 
-  // 7.1 AI Prescription Extraction (In-memory, Zero Storage)
+  // 7.1 AI Prescription Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   router.post(
     '/patients/:patientId/ai/extract-prescription',
     requireAuth,
     requireActiveMembership,
+    createRequireAiCredits(creditWalletService, 'PRESCRIPTION_OCR'),
     upload.single('file'),
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
@@ -2074,11 +2139,12 @@ export function createApiRouter(
     }
   );
 
-  // 7.2 AI Exam Report Extraction (In-memory, Zero Storage)
+  // 7.2 AI Exam Report Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   router.post(
     '/patients/:patientId/ai/extract-exam-report',
     requireAuth,
     requireActiveMembership,
+    createRequireAiCredits(creditWalletService, 'EXAM_REPORT_ANALYSIS'),
     upload.single('file'),
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
@@ -2122,11 +2188,12 @@ export function createApiRouter(
     }
   );
 
-  // 7.2.1 AI Exam Collection Receipt Extraction (In-memory, Zero Storage)
+  // 7.2.1 AI Exam Collection Receipt Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   router.post(
     '/patients/:patientId/ai/extract-collection-receipt',
     requireAuth,
     requireActiveMembership,
+    createRequireAiCredits(creditWalletService, 'COLLECTION_RECEIPT'),
     upload.single('file'),
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {
@@ -2170,11 +2237,12 @@ export function createApiRouter(
     }
   );
 
-  // 7.3 AI Schedule Extraction (In-memory, Zero Storage)
+  // 7.3 AI Schedule Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   router.post(
     '/patients/:patientId/ai/extract-schedule',
     requireAuth,
     requireActiveMembership,
+    createRequireAiCredits(creditWalletService, 'SCHEDULE_EXTRACTION'),
     upload.single('file'),
     async (req: AuthorizedFamilyRequest, res: Response) => {
       try {

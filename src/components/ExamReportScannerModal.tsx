@@ -190,7 +190,11 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
       safeToast('Laudo de exame lido com sucesso! Revise os resultados abaixo.', 'info');
     } catch (err: any) {
       console.error('Erro na extração de laudo de exame:', err);
-      const userMessage = err?.message || 'Erro ao processar laudo de exame com IA';
+      let userMessage = err?.message || 'Erro ao processar laudo de exame com IA';
+      if (err?.status === 402 || err?.code === 'INSUFFICIENT_AI_CREDITS') {
+        userMessage =
+          'Saldo insuficiente de créditos de IA (necessário: 3 créditos). Abra sua Carteira de Créditos de IA no menu para recarregar ou realize o cadastro manual gratuitamente.';
+      }
       setErrorMessage(userMessage);
       safeToast(userMessage, 'error');
       setStep('upload');
@@ -490,6 +494,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                 </button>
                 <button
                   type="button"
+                  id="btn-scanner-start-exam-report"
                   disabled={!selectedFile}
                   onClick={handleStartExtraction}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer ${
@@ -499,7 +504,7 @@ export const ExamReportScannerModal: React.FC<ExamReportScannerModalProps> = ({
                   }`}
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Processar Laudo com IA</span>
+                  <span>Analisar Laudo com IA (Consome 3 créditos)</span>
                 </button>
               </div>
             </div>

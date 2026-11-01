@@ -147,7 +147,13 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
       showToast('Receita analisada com sucesso! Revise os dados abaixo.', 'info');
     } catch (err: any) {
       console.error('Erro na extração de receita:', err);
-      showToast(err.message || 'Erro ao processar a receita com IA', 'error');
+      let userMsg = err?.message || 'Erro ao processar a receita com IA';
+      if (err?.status === 402 || err?.code === 'INSUFFICIENT_AI_CREDITS') {
+        userMsg =
+          'Saldo insuficiente de créditos de IA (necessário: 2 créditos). Abra sua Carteira de Créditos de IA no menu para recarregar ou realize o cadastro manual gratuitamente.';
+      }
+      setErrorMessage(userMsg);
+      showToast(userMsg, 'error');
       setStep('upload');
     }
   };
@@ -299,6 +305,20 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
           {/* STEP 1: UPLOAD */}
           {step === 'upload' && (
             <div className="space-y-5">
+              {errorMessage && (
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-start gap-3 text-xs sm:text-sm text-rose-900 dark:text-rose-200">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium">{errorMessage}</div>
+                  <button
+                    type="button"
+                    onClick={() => setErrorMessage(null)}
+                    className="text-xs underline opacity-80 hover:opacity-100 cursor-pointer"
+                  >
+                    Dispensar
+                  </button>
+                </div>
+              )}
+
               {/* Privacy Notice Banner */}
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-start gap-3 text-xs text-emerald-900">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -408,12 +428,13 @@ export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> =
                 </button>
                 <button
                   type="button"
+                  id="btn-scanner-start-extraction"
                   disabled={!selectedFile}
                   onClick={handleStartExtraction}
                   className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  Analisar e Extrair Medicamentos
+                  <span>Analisar com IA (Consome 2 créditos)</span>
                 </button>
               </div>
             </div>

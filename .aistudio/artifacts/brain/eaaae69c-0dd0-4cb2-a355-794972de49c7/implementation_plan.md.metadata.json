@@ -1,6 +1,6 @@
 {
-  "summary":  "Relatório Final da Auditoria Técnica de Segurança (SAAS-01): Autorização, Multi-Tenancy e Isolamento de Dados Familiares e Clínicos no Saúde Familiar. Todas as 5 falhas identificadas foram corrigidas cirurgicamente, 108/108 testes automatizados aprovados e build 100% verificado. Veredito: Aprovado.",
-  "updatedAt":  "2026-10-31T15:16:48.319257641Z",
+  "summary":  "Plano técnico e arquitetural detalhado para implementação da Carteira de Créditos de IA no Saúde Familiar. Abrange concessão inicial única de 100 créditos, lotes promocionais de 100 créditos por R$ 50,00 sem expiração, segregação de saldo (promocional vs comprado), ledger imutável de transações, modelo de reserva e estorno em duas fases com proteção contra falhas externas do Gemini, tabela configurável de custos por operação e roadmap incremental em 5 fases controlado por feature flags sem alteração no código atual.",
+  "updatedAt":  "2026-10-31T21:57:52.722758236Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

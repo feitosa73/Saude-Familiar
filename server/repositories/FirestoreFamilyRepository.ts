@@ -12,6 +12,9 @@ import {
   PatientRole,
   CpfRegistryRecord,
   MembershipRole,
+  AiWalletSummary,
+  AiWalletLedgerEntry,
+  LedgerEntryStatus,
 } from '../types';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
 import {
@@ -1477,4 +1480,89 @@ export class FirestoreFamilyRepository implements IFamilyRepository {
     }
     return modified;
   }
+
+  // AI Credit Wallet & Ledger
+  async getWallet(userId: string): Promise<AiWalletSummary | null> {
+    const doc = await this.db.collection('users').doc(userId).collection('wallet').doc('summary').get();
+    if (!doc.exists) {
+      return null;
+    }
+    return doc.data() as AiWalletSummary;
+  }
+
+  async saveWallet(wallet: AiWalletSummary): Promise<void> {
+    const now = new Date().toISOString();
+    await this.db
+      .collection('users')
+      .doc(wallet.userId)
+      .collection('wallet')
+      .doc('summary')
+      .set({ ...wallet, updatedAt: now }, { merge: true });
+  }
+
+  async saveLedgerEntry(entry: AiWalletLedgerEntry): Promise<void> {
+    await this.db
+      .collection('users')
+      .doc(entry.userId)
+      .collection('wallet_ledger')
+      .doc(entry.id)
+      .set(entry);
+  }
+
+  async getLedgerEntries(userId: string, limit: number = 50): Promise<AiWalletLedgerEntry[]> {
+    try {
+      const snap = await this.db
+        .collection('users')
+        .doc(userId)
+        .collection('wallet_ledger')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
+
+      if (snap.empty) return [];
+      return snap.docs.map((d) => d.data() as AiWalletLedgerEntry);
+    } catch (err: any) {
+      // Fallback if index isn't built yet
+      const snap = await this.db
+        .collection('users')
+        .doc(userId)
+        .collection('wallet_ledger')
+        .limit(limit)
+        .get();
+
+      if (snap.empty) return [];
+      const list = snap.docs.map((d) => d.data() as AiWalletLedgerEntry);
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }
+
+  async findLedgerEntryByOperationId(userId: string, operationId: string): Promise<AiWalletLedgerEntry | null> {
+    const snap = await this.db
+      .collection('users')
+      .doc(userId)
+      .collection('wallet_ledger')
+      .where('operationId', '==', operationId)
+      .limit(1)
+      .get();
+
+    if (snap.empty) return null;
+    return snap.docs[0].data() as AiWalletLedgerEntry;
+  }
+
+  async updateLedgerEntryStatus(
+    userId: string,
+    ledgerId: string,
+    status: LedgerEntryStatus,
+    errorMessage?: string
+  ): Promise<void> {
+    const updateData: any = { status };
+    if (errorMessage) updateData.errorMessage = errorMessage;
+    await this.db
+      .collection('users')
+      .doc(userId)
+      .collection('wallet_ledger')
+      .doc(ledgerId)
+      .update(updateData);
+  }
 }
+

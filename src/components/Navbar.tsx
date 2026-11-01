@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { authorizationService } from '../services/authorizationService';
@@ -9,6 +9,8 @@ import { ExportDataModal } from './ExportDataModal';
 import { AccountSecurityModal } from './AccountSecurityModal';
 import { DeleteAllDataModal } from './DeleteAllDataModal';
 import { PWAInstallButton } from './PWAInstallButton';
+import { AiWalletModal } from './AiWalletModal';
+import { api } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import {
   HeartPulse,
@@ -23,6 +25,7 @@ import {
   Building2,
   Bell,
   Check,
+  Sparkles,
   RotateCcw,
   UserCheck,
   FileSpreadsheet,
@@ -68,6 +71,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAccountSecurityModalOpen, setIsAccountSecurityModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      api
+        .getAiWallet()
+        .then((w) => setWalletBalance(w.totalBalance))
+        .catch(() => {});
+    }
+  }, [user?.id]);
 
   const permissions = selectedPatient ? getPermissionsForPatient(selectedPatient.id) : null;
   const canAddPatient = isOwner || (permissions ? permissions.canManageAccess : true);
@@ -408,6 +422,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
               </button>
             )}
 
+            {/* AI Credits Wallet Badge / Button */}
+            {user && (
+              <button
+                type="button"
+                id="btn-open-ai-wallet-header"
+                onClick={() => setIsWalletModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700 transition cursor-pointer shadow-2xs min-h-[44px]"
+                title="Carteira de Créditos de IA (Clique para ver saldo e extrato)"
+              >
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="hidden sm:inline">IA:</span>
+                <span>{walletBalance !== null ? `${walletBalance} cr` : 'Créditos'}</span>
+              </button>
+            )}
+
             {/* Authenticated User Menu */}
             <div className="relative">
               <button
@@ -582,6 +611,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
                     <div className="px-2 pt-1 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
                       <button
                         type="button"
+                        id="btn-user-menu-ai-wallet"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setIsWalletModalOpen(true);
+                        }}
+                        className="w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span>Créditos de IA</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                          {walletBalance !== null ? `${walletBalance} cr` : '—'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
                         id="btn-user-menu-account-security"
                         onClick={() => {
                           setUserMenuOpen(false);
@@ -641,6 +688,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewPatient }) => {
           </div>
         </div>
       </div>
+
+      {/* AI Credits Wallet Modal */}
+      <AiWalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onWalletUpdated={(w) => setWalletBalance(w.totalBalance)}
+      />
 
       {/* Account Security Modal (Password & MFA TOTP) */}
       <AccountSecurityModal

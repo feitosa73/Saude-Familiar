@@ -20,6 +20,9 @@ import {
   MemberPatientAccessItem,
   CpfRegistryRecord,
   MembershipRole,
+  AiWalletSummary,
+  AiWalletLedgerEntry,
+  LedgerEntryStatus,
 } from '../types';
 import { IHealthRepository } from './IRepository';
 import { IFamilyRepository, UserDocument } from './IFamilyRepository';
@@ -49,6 +52,8 @@ export class MemoryFamilyRepository implements IFamilyRepository {
   private requests = new Map<string, AccessRequest>();
   private invitations = new Map<string, FamilyInvitation>();
   private cpfRegistry = new Map<string, CpfRegistryRecord>(); // key: cpfHash
+  private wallets = new Map<string, AiWalletSummary>(); // key: userId
+  private ledger = new Map<string, AiWalletLedgerEntry>(); // key: id
   private healthRepo?: MemoryHealthRepository;
 
   constructor() {
@@ -343,7 +348,7 @@ export class MemoryFamilyRepository implements IFamilyRepository {
     ownerEmail?: string | null,
     ownerDisplayName?: string | null
   ): Promise<{ family: Family; membership: FamilyMembership }> {
-    const familyId = `fam-${Date.now()}`;
+    const familyId = `fam-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const family: Family = {
       id: familyId,
       name: familyName,
@@ -353,7 +358,7 @@ export class MemoryFamilyRepository implements IFamilyRepository {
       updatedAt: new Date().toISOString(),
     };
     const membership: FamilyMembership = {
-      id: `mem-${Date.now()}`,
+      id: `mem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       familyId,
       userId: ownerUid,
       role: 'owner',
@@ -846,6 +851,53 @@ export class MemoryFamilyRepository implements IFamilyRepository {
 
   getAccessMap(): Map<string, PatientAccess> {
     return this.accesses;
+  }
+
+  // AI Credit Wallet & Ledger
+  async getWallet(userId: string): Promise<AiWalletSummary | null> {
+    const w = this.wallets.get(userId);
+    return w ? { ...w } : null;
+  }
+
+  async saveWallet(wallet: AiWalletSummary): Promise<void> {
+    this.wallets.set(wallet.userId, { ...wallet, updatedAt: new Date().toISOString() });
+    this.persist();
+  }
+
+  async saveLedgerEntry(entry: AiWalletLedgerEntry): Promise<void> {
+    this.ledger.set(entry.id, { ...entry });
+    this.persist();
+  }
+
+  async getLedgerEntries(userId: string, limit: number = 50): Promise<AiWalletLedgerEntry[]> {
+    const list = Array.from(this.ledger.values())
+      .filter((e) => e.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list.slice(0, limit);
+  }
+
+  async findLedgerEntryByOperationId(userId: string, operationId: string): Promise<AiWalletLedgerEntry | null> {
+    for (const entry of this.ledger.values()) {
+      if (entry.userId === userId && entry.operationId === operationId) {
+        return { ...entry };
+      }
+    }
+    return null;
+  }
+
+  async updateLedgerEntryStatus(
+    userId: string,
+    ledgerId: string,
+    status: LedgerEntryStatus,
+    errorMessage?: string
+  ): Promise<void> {
+    const entry = this.ledger.get(ledgerId);
+    if (entry && entry.userId === userId) {
+      entry.status = status;
+      if (errorMessage) entry.errorMessage = errorMessage;
+      this.ledger.set(ledgerId, entry);
+      this.persist();
+    }
   }
 }
 

@@ -275,8 +275,13 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
       }
     } catch (err: any) {
       console.error('[ScheduleScanner] Erro na extração:', err?.message);
-      setErrorMessage(err.message || 'Erro ao processar comprovante com IA');
-      safeToast(err.message || 'Erro ao processar comprovante com IA', 'error');
+      let userMsg = err?.message || 'Erro ao processar comprovante com IA';
+      if (err?.status === 402 || err?.code === 'INSUFFICIENT_AI_CREDITS') {
+        userMsg =
+          'Saldo insuficiente de créditos de IA (necessário: 1 crédito). Abra sua Carteira de Créditos de IA no menu para recarregar ou realize o cadastro manual gratuitamente.';
+      }
+      setErrorMessage(userMsg);
+      safeToast(userMsg, 'error');
       setStep('upload');
     }
   };
@@ -705,6 +710,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                 </button>
                 <button
                   type="button"
+                  id="btn-scanner-start-schedule"
                   disabled={!selectedFile}
                   onClick={handleStartExtraction}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer ${
@@ -714,7 +720,7 @@ export const ScheduleScannerModal: React.FC<ScheduleScannerModalProps> = ({
                   }`}
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Ler Documento com IA</span>
+                  <span>Ler Guia com IA (Consome 1 crédito)</span>
                 </button>
               </div>
             </div>

@@ -9,6 +9,9 @@ import {
   FamilyMemberWithAccess,
   CpfRegistryRecord,
   MembershipRole,
+  AiWalletSummary,
+  AiWalletLedgerEntry,
+  LedgerEntryStatus,
 } from '../types';
 
 export interface UserDocument {
@@ -144,4 +147,13 @@ export interface IFamilyRepository {
   ): Promise<CpfRegistryRecord>;
   releaseCpf(cpfHash: string, entityType?: 'user' | 'patient'): Promise<boolean>;
   releaseCpfByEntity(entityId: string): Promise<boolean>;
+
+  // AI Credit Wallet & Ledger
+  getWallet(userId: string): Promise<AiWalletSummary | null>;
+  saveWallet(wallet: AiWalletSummary): Promise<void>;
+  saveLedgerEntry(entry: AiWalletLedgerEntry): Promise<void>;
+  getLedgerEntries(userId: string, limit?: number): Promise<AiWalletLedgerEntry[]>;
+  findLedgerEntryByOperationId(userId: string, operationId: string): Promise<AiWalletLedgerEntry | null>;
+  updateLedgerEntryStatus(userId: string, ledgerId: string, status: LedgerEntryStatus, errorMessage?: string): Promise<void>;
 }
+

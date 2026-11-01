@@ -26,6 +26,8 @@ import {
   ExtractedScheduleResponse,
   AgendaUnificadaResponse,
   ItemAgenda,
+  AiWalletSummary,
+  AiWalletLedgerEntry,
 } from '../types';
 import { authService } from './authService';
 
@@ -311,10 +313,11 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // AI Prescription Extraction (In-memory, Zero Storage)
+  // AI Prescription Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   extractPrescriptionWithAi: async (
     patientId: string,
-    file: File
+    file: File,
+    operationId?: string
   ): Promise<ExtractedPrescriptionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -327,6 +330,9 @@ export const api = {
     if (token && token !== 'null' && token !== 'undefined') {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    if (operationId) {
+      headers['x-operation-id'] = operationId;
+    }
 
     const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-prescription`, {
       method: 'POST',
@@ -337,20 +343,23 @@ export const api = {
     const isJson = (response.headers.get('content-type') || '').includes('application/json');
     if (!response.ok) {
       let errorMsg = 'Falha ao processar receita médica com IA';
+      let errorCode: string | undefined;
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
         errorMsg = errorData.error || errorMsg;
+        errorCode = errorData.code;
       }
-      throw new ApiError(errorMsg, response.status);
+      throw new ApiError(errorMsg, response.status, errorCode);
     }
 
     return response.json();
   },
 
-  // AI Exam Report Extraction (In-memory, Zero Storage)
+  // AI Exam Report Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   extractExamReportWithAi: async (
     patientId: string,
-    file: File
+    file: File,
+    operationId?: string
   ): Promise<ExtractedExamReportResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -363,6 +372,9 @@ export const api = {
     if (token && token !== 'null' && token !== 'undefined') {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    if (operationId) {
+      headers['x-operation-id'] = operationId;
+    }
 
     const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-exam-report`, {
       method: 'POST',
@@ -373,20 +385,23 @@ export const api = {
     const isJson = (response.headers.get('content-type') || '').includes('application/json');
     if (!response.ok) {
       let errorMsg = 'Falha ao processar laudo de exame com IA';
+      let errorCode: string | undefined;
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
         errorMsg = errorData.error || errorMsg;
+        errorCode = errorData.code;
       }
-      throw new ApiError(errorMsg, response.status);
+      throw new ApiError(errorMsg, response.status, errorCode);
     }
 
     return response.json();
   },
 
-  // AI Exam Collection Receipt Extraction (In-memory, Zero Storage)
+  // AI Exam Collection Receipt Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   extractCollectionReceiptWithAi: async (
     patientId: string,
-    file: File
+    file: File,
+    operationId?: string
   ): Promise<ExtractedCollectionReceiptResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -399,6 +414,9 @@ export const api = {
     if (token && token !== 'null' && token !== 'undefined') {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    if (operationId) {
+      headers['x-operation-id'] = operationId;
+    }
 
     const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-collection-receipt`, {
       method: 'POST',
@@ -409,20 +427,23 @@ export const api = {
     const isJson = (response.headers.get('content-type') || '').includes('application/json');
     if (!response.ok) {
       let errorMsg = 'Falha ao processar comprovante de coleta com IA';
+      let errorCode: string | undefined;
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
         errorMsg = errorData.error || errorMsg;
+        errorCode = errorData.code;
       }
-      throw new ApiError(errorMsg, response.status);
+      throw new ApiError(errorMsg, response.status, errorCode);
     }
 
     return response.json();
   },
 
-  // AI Schedule Extraction (In-memory, Zero Storage)
+  // AI Schedule Extraction (In-memory, Zero Storage, AI Credit Wallet Protected)
   extractScheduleWithAi: async (
     patientId: string,
-    file: File
+    file: File,
+    operationId?: string
   ): Promise<ExtractedScheduleResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -435,6 +456,9 @@ export const api = {
     if (token && token !== 'null' && token !== 'undefined') {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    if (operationId) {
+      headers['x-operation-id'] = operationId;
+    }
 
     const response = await fetch(`${BASE_URL}/patients/${patientId}/ai/extract-schedule`, {
       method: 'POST',
@@ -445,11 +469,13 @@ export const api = {
     const isJson = (response.headers.get('content-type') || '').includes('application/json');
     if (!response.ok) {
       let errorMsg = 'Falha ao processar comprovante de agendamento com IA';
+      let errorCode: string | undefined;
       if (isJson) {
         const errorData = await response.json().catch(() => ({}));
         errorMsg = errorData.error || errorMsg;
+        errorCode = errorData.code;
       }
-      throw new ApiError(errorMsg, response.status);
+      throw new ApiError(errorMsg, response.status, errorCode);
     }
 
     return response.json();
@@ -610,5 +636,29 @@ export const api = {
     request<{ success: boolean; message: string }>('/user/wipe-all-data', {
       method: 'POST',
     }),
+
+  // AI Credit Wallet (Idempotente, vinculada ao usuário autenticado)
+  getAiWallet: () =>
+    request<
+      AiWalletSummary & {
+        config: Record<string, { operationType: string; cost: number; label: string }>;
+        lotPurchaseConfig: { credits: number; priceBrl: number; promotional: boolean };
+      }
+    >('/user/wallet'),
+
+  getAiWalletHistory: (limit?: number) =>
+    request<AiWalletLedgerEntry[]>(`/user/wallet/history${limit ? `?limit=${limit}` : ''}`),
+
+  simulatePurchaseWalletLot: () =>
+    request<
+      AiWalletSummary & {
+        config: Record<string, { operationType: string; cost: number; label: string }>;
+        lotPurchaseConfig: { credits: number; priceBrl: number; promotional: boolean };
+        message: string;
+      }
+    >('/user/wallet/simulate-purchase', {
+      method: 'POST',
+    }),
 };
+
 

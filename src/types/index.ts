@@ -495,3 +495,41 @@ export interface AgendaUnificadaResponse {
   linhaDoTempoGeral: ItemAgenda[];
 }
 
+export type LedgerEntryType =
+  | 'INITIAL_GRANT'
+  | 'PURCHASE'
+  | 'CONSUMPTION'
+  | 'REFUND_COMPENSATION'
+  | 'ADMIN_ADJUSTMENT';
+
+export type LedgerEntryStatus = 'PENDING' | 'CONFIRMED' | 'REFUNDED';
+
+export interface AiWalletLedgerEntry {
+  id: string;
+  userId: string;
+  type: LedgerEntryType;
+  status: LedgerEntryStatus;
+  amount: number;
+  balanceAfter: number;
+  promotionalDebited?: number;
+  purchasedDebited?: number;
+  operationId?: string;
+  operationType?: string;
+  patientId?: string;
+  description: string;
+  createdAt: string;
+  errorMessage?: string;
+}
+
+export interface AiWalletSummary {
+  userId: string;
+  promotionalCredits: number;
+  purchasedCredits: number;
+  totalBalance: number;
+  initialGrantClaimed: boolean;
+  initialGrantClaimedAt?: string;
+  updatedAt: string;
+  version: number;
+}
+
+

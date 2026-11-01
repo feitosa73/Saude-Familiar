@@ -281,8 +281,13 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
       safeToast('Comprovante de coleta lido! Confira os dados contra a imagem original.', 'info');
     } catch (err: any) {
       console.error('[ReceiptScanner] Erro na extração:', err?.message);
-      setErrorMessage(err.message || 'Erro ao processar comprovante de coleta com IA');
-      safeToast(err.message || 'Erro ao processar comprovante de coleta com IA', 'error');
+      let userMsg = err?.message || 'Erro ao processar comprovante de coleta com IA';
+      if (err?.status === 402 || err?.code === 'INSUFFICIENT_AI_CREDITS') {
+        userMsg =
+          'Saldo insuficiente de créditos de IA (necessário: 1 crédito). Abra sua Carteira de Créditos de IA no menu para recarregar ou realize o cadastro manual gratuitamente.';
+      }
+      setErrorMessage(userMsg);
+      safeToast(userMsg, 'error');
       setStep('upload');
     }
   };
@@ -1069,12 +1074,13 @@ export const ExamCollectionReceiptScannerModal: React.FC<ExamCollectionReceiptSc
               </button>
               <button
                 type="button"
+                id="btn-scanner-start-collection-receipt"
                 disabled={!selectedFile}
                 onClick={handleStartExtraction}
                 className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Processar com IA</span>
+                <span>Processar com IA (Consome 1 crédito)</span>
               </button>
             </>
           ) : step === 'review' ? (
