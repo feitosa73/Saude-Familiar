@@ -421,7 +421,7 @@ export const MedicationsView: React.FC<MedicationsViewProps> = ({
                     {med.endDate && <span> • Término: {med.endDate}</span>}
                   </div>
                   {med.notes && (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm mt-2.5 italic leading-relaxed">
+                    <div className="p-3 rounded-xl bg-white dark:bg-white border border-slate-200 dark:border-slate-200 text-slate-900 dark:text-slate-900 text-sm mt-2.5 italic leading-relaxed">
                       {med.notes}
                     </div>
                   )}
